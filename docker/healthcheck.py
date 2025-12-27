@@ -3,8 +3,8 @@
 
 import os
 import sys
-import time
 import tempfile
+import time
 
 
 def check_health() -> bool:

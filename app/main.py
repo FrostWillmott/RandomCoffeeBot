@@ -44,7 +44,8 @@ async def main():
         try:
             await heartbeat_task
         except asyncio.CancelledError:
-            # Task cancellation is expected during shutdown, so this error can be safely ignored.
+            # Task cancellation is expected during shutdown,
+            # so this error can be safely ignored.
             pass
         # Shutdown scheduler
         await shutdown_scheduler(scheduler)

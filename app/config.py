@@ -32,7 +32,10 @@ class Settings(BaseSettings):
                 raise ValueError(
                     "SECRET_KEY must be set in production (DEBUG=false)"
                 )
-            if not self.telegram_bot_token or not self.telegram_bot_token.strip():
+            if (
+                not self.telegram_bot_token
+                or not self.telegram_bot_token.strip()
+            ):
                 raise ValueError(
                     "TELEGRAM_BOT_TOKEN must be set in production"
                 )
