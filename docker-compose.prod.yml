@@ -130,12 +130,16 @@ services:
     image: redis:7-alpine
     container_name: randomcoffee-redis
     restart: always
-    command: >
-      redis-server
-      --appendonly yes
-      --maxmemory 512mb
-      --maxmemory-policy allkeys-lru
-      --requirepass ${REDIS_PASSWORD}
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --maxmemory
+      - 512mb
+      - --maxmemory-policy
+      - allkeys-lru
+    env_file:
+      - .env.prod
     volumes:
       - redis_data:/data
     deploy:
@@ -149,7 +153,7 @@ services:
     networks:
       - randomcoffee-internal
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
