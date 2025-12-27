@@ -1,5 +1,31 @@
 services:
   # ==========================================================================
+  # Database Migrations (runs once before app starts)
+  # ==========================================================================
+  migrate:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: production
+    image: randomcoffeebot:${IMAGE_TAG:-latest}
+    container_name: randomcoffee-migrate
+    restart: "no"
+    command: alembic upgrade head
+    env_file:
+      - .env.prod
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - randomcoffee-internal
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+
+  # ==========================================================================
   # Application
   # ==========================================================================
   app:
@@ -12,8 +38,6 @@ services:
     restart: always
     env_file:
       - .env.prod
-    environment:
-      - RUN_MIGRATIONS=true
     deploy:
       mode: replicated
       replicas: 2
@@ -36,6 +60,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     networks:
       - randomcoffee-internal
       - randomcoffee-traefik

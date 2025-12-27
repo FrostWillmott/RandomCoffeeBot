@@ -1,6 +1,6 @@
 """Health check endpoints."""
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,6 +17,7 @@ async def health_check() -> dict[str, str]:
 
 @router.get("/ready")
 async def readiness_check(
+    response: Response,
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, str]:
     """Readiness check with database connection test."""
@@ -24,4 +25,5 @@ async def readiness_check(
         await db.execute(text("SELECT 1"))
         return {"status": "ready", "database": "connected"}
     except Exception as e:
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
         return {"status": "not ready", "database": str(e)}
