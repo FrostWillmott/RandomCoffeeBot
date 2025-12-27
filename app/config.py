@@ -3,7 +3,7 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field, computed_field
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -44,12 +44,6 @@ class Settings(BaseSettings):
     mail_password: str = ""
     mail_from: str = "noreply@randomcoffee.local"
     mail_tls: bool = False
-
-    @computed_field  # type: ignore[misc]
-    @property
-    def async_database_url(self) -> str:
-        """Return async database URL."""
-        return self.database_url
 
 
 @lru_cache
