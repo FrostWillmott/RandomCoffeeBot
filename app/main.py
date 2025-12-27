@@ -44,8 +44,7 @@ async def main():
         try:
             await heartbeat_task
         except asyncio.CancelledError:
-            # Task cancellation is expected during shutdown,
-            # so this error can be safely ignored.
+            # Expected during shutdown
             pass
         # Shutdown scheduler
         await shutdown_scheduler(scheduler)
@@ -59,9 +58,14 @@ async def main():
 
 async def run_heartbeat():
     """Update heartbeat file periodically."""
+    from app.config import get_settings
+
+    settings = get_settings()
     while True:
         try:
-            async with aiofiles.open("/tmp/healthy", "w") as f:
+            async with aiofiles.open(
+                settings.healthcheck_heartbeat_file, "w"
+            ) as f:
                 await f.write("ok")
         except Exception as e:
             logger.error(f"Heartbeat error: {e}")

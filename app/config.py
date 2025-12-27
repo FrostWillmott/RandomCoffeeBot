@@ -50,6 +50,9 @@ class Settings(BaseSettings):
         default="postgresql+asyncpg://postgres:postgres@localhost:5432/randomcoffee"
     )
 
+    # Health check
+    healthcheck_heartbeat_file: str = Field(default="/tmp/healthy")
+
 
 @lru_cache
 def get_settings() -> Settings:

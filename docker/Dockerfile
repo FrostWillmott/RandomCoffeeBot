@@ -1,7 +1,7 @@
 # ==============================================================================
 # Stage 1: Base image with uv
 # ==============================================================================
-FROM python:3.13-slim-bookworm AS base
+FROM python:3.12-slim-bookworm AS base
 
 # Prevent Python from writing pyc files and buffering stdout/stderr
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -11,7 +11,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     UV_LINK_MODE=copy \
     UV_COMPILE_BYTECODE=1 \
     UV_PYTHON_DOWNLOADS=never \
-    UV_PYTHON=python3.13
+    UV_PYTHON=python3.12
 
 # Install uv (pinned version for reproducible builds)
 COPY --from=ghcr.io/astral-sh/uv:0.5.11 /uv /uvx /bin/
