@@ -1,0 +1,1 @@
+"""RandomCoffeeBot application package."""

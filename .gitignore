@@ -124,3 +124,13 @@ dmypy.json
 .pytype/
 cython_debug/
 .idea/
+
+# Docker
+.env.prod
+secrets/
+
+# Ruff
+.ruff_cache/
+
+# Snyk Security Extension - AI Rules (auto-generated)
+.cursor/rules/snyk_rules.mdc

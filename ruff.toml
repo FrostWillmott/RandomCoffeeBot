@@ -54,6 +54,7 @@ ignore = [
     "D406",
     "D407",
     "E203",
+    "B008",  # FastAPI Depends() pattern
 ]
 
 fixable = ["ALL"]
