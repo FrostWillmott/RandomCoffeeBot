@@ -19,6 +19,10 @@ class Settings(BaseSettings):
     # Application
     debug: bool = False
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
+    # Secret key for cryptographic operations
+    # SECURITY: Must be set to a random value in production
+    # Generate with:
+    # python -c "import secrets; print(secrets.token_urlsafe(64))"
     secret_key: str = Field(default="dev-secret-key-change-in-production")
 
     @model_validator(mode="after")
@@ -51,6 +55,8 @@ class Settings(BaseSettings):
     )
 
     # Health check
+    # NOTE: Uses /tmp for ephemeral health status
+    # (intentionally non-persistent)
     healthcheck_heartbeat_file: str = Field(default="/tmp/healthy")
 
 
