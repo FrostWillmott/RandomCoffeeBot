@@ -139,8 +139,8 @@ services:
     env_file:
       - .env.dev
     environment:
-      # Development-only credentials; override via .env.dev for other environments
-      - FLOWER_BASIC_AUTH=${FLOWER_BASIC_AUTH:-admin:admin}
+      # Set FLOWER_BASIC_AUTH in .env.dev (format: user:password)
+      - FLOWER_BASIC_AUTH=${FLOWER_BASIC_AUTH:?FLOWER_BASIC_AUTH must be set}
     ports:
       - "5555:5555"
     depends_on:

@@ -3,7 +3,7 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -20,6 +20,18 @@ class Settings(BaseSettings):
     debug: bool = False
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
     secret_key: str = Field(default="dev-secret-key-change-in-production")
+
+    @model_validator(mode="after")
+    def validate_secret_key_in_production(self) -> "Settings":
+        """Ensure secret_key is changed in production."""
+        if (
+            not self.debug
+            and self.secret_key == "dev-secret-key-change-in-production"
+        ):
+            raise ValueError(
+                "SECRET_KEY must be set in production (DEBUG=false)"
+            )
+        return self
 
     # Telegram
     telegram_bot_token: str = ""

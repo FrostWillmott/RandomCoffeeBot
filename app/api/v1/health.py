@@ -24,6 +24,6 @@ async def readiness_check(
     try:
         await db.execute(text("SELECT 1"))
         return {"status": "ready", "database": "connected"}
-    except Exception as e:
+    except Exception:
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
-        return {"status": "not ready", "database": str(e)}
+        return {"status": "not ready", "database": "unavailable"}
