@@ -4,13 +4,17 @@
 import os
 import sys
 import time
+import tempfile
 
 
 def check_health() -> bool:
     """Check if the application is healthy."""
     try:
         # Check if heartbeat file exists and was modified recently
-        heartbeat_file = "/tmp/healthy"
+        heartbeat_file = os.environ.get(
+            "HEALTHCHECK_HEARTBEAT_FILE",
+            os.path.join(tempfile.gettempdir(), "healthy"),
+        )
         if not os.path.exists(heartbeat_file):
             return False
 
