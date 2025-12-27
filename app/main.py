@@ -17,6 +17,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
 async def main():
     """Main entry point."""
     # Initialize Bot and Dispatcher
@@ -53,6 +54,7 @@ async def main():
         if polling_error is not None:
             sys.exit(1)
 
+
 async def run_heartbeat():
     """Update heartbeat file periodically."""
     while True:
@@ -62,6 +64,7 @@ async def run_heartbeat():
         except Exception as e:
             logger.error(f"Heartbeat error: {e}")
         await asyncio.sleep(15)
+
 
 if __name__ == "__main__":
     try:

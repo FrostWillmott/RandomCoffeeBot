@@ -47,14 +47,6 @@ class Settings(BaseSettings):
         default="postgresql+asyncpg://postgres:postgres@localhost:5432/randomcoffee"
     )
 
-    # Mail
-    mail_server: str = "localhost"
-    mail_port: int = 1025
-    mail_username: str = ""
-    mail_password: str = ""
-    mail_from: str = "noreply@randomcoffee.local"
-    mail_tls: bool = False
-
 
 @lru_cache
 def get_settings() -> Settings:

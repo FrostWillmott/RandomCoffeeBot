@@ -9,12 +9,14 @@ from app.config import get_settings
 
 settings = get_settings()
 
+
 async def get_bot() -> Bot:
     """Initialize and return the Bot instance."""
     return Bot(
         token=settings.telegram_bot_token,
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
     )
+
 
 def get_dispatcher() -> Dispatcher:
     """Initialize and return the Dispatcher instance."""
