@@ -17,6 +17,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
 async def main():
     """Main entry point."""
     # Initialize Bot and Dispatcher
@@ -43,6 +44,7 @@ async def main():
         try:
             await heartbeat_task
         except asyncio.CancelledError:
+            # Expected during shutdown
             pass
         # Shutdown scheduler
         await shutdown_scheduler(scheduler)
@@ -53,15 +55,22 @@ async def main():
         if polling_error is not None:
             sys.exit(1)
 
+
 async def run_heartbeat():
     """Update heartbeat file periodically."""
+    from app.config import get_settings
+
+    settings = get_settings()
     while True:
         try:
-            async with aiofiles.open("/tmp/healthy", "w") as f:
+            async with aiofiles.open(
+                settings.healthcheck_heartbeat_file, "w"
+            ) as f:
                 await f.write("ok")
         except Exception as e:
             logger.error(f"Heartbeat error: {e}")
         await asyncio.sleep(15)
+
 
 if __name__ == "__main__":
     try:

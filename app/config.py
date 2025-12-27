@@ -19,6 +19,10 @@ class Settings(BaseSettings):
     # Application
     debug: bool = False
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
+    # Secret key for cryptographic operations
+    # SECURITY: Must be set to a random value in production
+    # Generate with:
+    # python -c "import secrets; print(secrets.token_urlsafe(64))"
     secret_key: str = Field(default="dev-secret-key-change-in-production")
 
     @model_validator(mode="after")
@@ -32,7 +36,10 @@ class Settings(BaseSettings):
                 raise ValueError(
                     "SECRET_KEY must be set in production (DEBUG=false)"
                 )
-            if not self.telegram_bot_token:
+            if (
+                not self.telegram_bot_token
+                or not self.telegram_bot_token.strip()
+            ):
                 raise ValueError(
                     "TELEGRAM_BOT_TOKEN must be set in production"
                 )
@@ -47,13 +54,10 @@ class Settings(BaseSettings):
         default="postgresql+asyncpg://postgres:postgres@localhost:5432/randomcoffee"
     )
 
-    # Mail
-    mail_server: str = "localhost"
-    mail_port: int = 1025
-    mail_username: str = ""
-    mail_password: str = ""
-    mail_from: str = "noreply@randomcoffee.local"
-    mail_tls: bool = False
+    # Health check
+    # NOTE: Uses /tmp for ephemeral health status
+    # (intentionally non-persistent)
+    healthcheck_heartbeat_file: str = Field(default="/tmp/healthy")
 
 
 @lru_cache

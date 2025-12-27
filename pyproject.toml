@@ -1,8 +1,8 @@
 [project]
 name = "randomcoffeebot"
 version = "0.1.0"
-description = "A FastAPI-based bot for organizing random coffee meetings"
-requires-python = ">=3.13"
+description = "Telegram bot for organizing random coffee meetings"
+requires-python = ">=3.12"
 dependencies = [
     # Telegram
     "aiogram>=3.23.0",
@@ -32,6 +32,7 @@ dev = [
     "pre-commit>=4.5.1",
     "ruff>=0.14.10",
     "mypy>=1.15.0",
+    "types-aiofiles>=25.1.0",
 ]
 
 [build-system]

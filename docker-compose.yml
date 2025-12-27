@@ -28,6 +28,8 @@ services:
     container_name: randomcoffee-db
     restart: unless-stopped
     environment:
+      # WARNING: Default credentials for development only
+      # NEVER use these values in production!
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: randomcoffee

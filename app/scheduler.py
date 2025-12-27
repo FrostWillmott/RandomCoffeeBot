@@ -2,9 +2,12 @@
 
 import logging
 
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.schedulers.asyncio import (
+    AsyncIOScheduler,  # type: ignore[import-untyped]
+)
 
 logger = logging.getLogger(__name__)
+
 
 def setup_scheduler() -> AsyncIOScheduler:
     """Initialize options for the scheduler."""
@@ -19,6 +22,7 @@ def setup_scheduler() -> AsyncIOScheduler:
     # )
 
     return scheduler
+
 
 async def start_scheduler(scheduler: AsyncIOScheduler):
     """Start the scheduler."""
