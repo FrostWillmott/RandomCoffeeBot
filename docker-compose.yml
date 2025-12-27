@@ -1,0 +1,220 @@
+services:
+  # ==========================================================================
+  # Application
+  # ==========================================================================
+  app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: development
+    container_name: randomcoffee-app
+    restart: unless-stopped
+    env_file:
+      - .env.dev
+    volumes:
+      - .:/app:cached
+      - /app/.venv
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - randomcoffee-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.app.rule=Host(`localhost`) || Host(`api.localhost`)"
+      - "traefik.http.routers.app.entrypoints=web"
+      - "traefik.http.services.app.loadbalancer.server.port=8000"
+
+  # ==========================================================================
+  # PostgreSQL Database
+  # ==========================================================================
+  db:
+    image: postgres:16-alpine
+    container_name: randomcoffee-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: randomcoffee
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - randomcoffee-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d randomcoffee"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ==========================================================================
+  # Redis
+  # ==========================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: randomcoffee-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - randomcoffee-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  # ==========================================================================
+  # Celery Worker
+  # ==========================================================================
+  celery-worker:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: development
+    container_name: randomcoffee-celery-worker
+    restart: unless-stopped
+    command: celery -A app.workers.celery_app worker --loglevel=info --concurrency=2
+    env_file:
+      - .env.dev
+    volumes:
+      - .:/app:cached
+      - /app/.venv
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - randomcoffee-network
+
+  # ==========================================================================
+  # Celery Beat (Scheduler)
+  # ==========================================================================
+  celery-beat:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: development
+    container_name: randomcoffee-celery-beat
+    restart: unless-stopped
+    command: celery -A app.workers.celery_app beat --loglevel=info
+    env_file:
+      - .env.dev
+    volumes:
+      - .:/app:cached
+      - /app/.venv
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      celery-worker:
+        condition: service_started
+    networks:
+      - randomcoffee-network
+
+  # ==========================================================================
+  # Flower (Celery Monitoring)
+  # ==========================================================================
+  flower:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: development
+    container_name: randomcoffee-flower
+    restart: unless-stopped
+    command: celery -A app.workers.celery_app flower --port=5555
+    env_file:
+      - .env.dev
+    environment:
+      - FLOWER_BASIC_AUTH=admin:admin
+    ports:
+      - "5555:5555"
+    depends_on:
+      redis:
+        condition: service_healthy
+      celery-worker:
+        condition: service_started
+    networks:
+      - randomcoffee-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.flower.rule=Host(`flower.localhost`)"
+      - "traefik.http.routers.flower.entrypoints=web"
+      - "traefik.http.services.flower.loadbalancer.server.port=5555"
+
+  # ==========================================================================
+  # Mailhog (Development SMTP)
+  # ==========================================================================
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: randomcoffee-mailhog
+    restart: unless-stopped
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    networks:
+      - randomcoffee-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mailhog.rule=Host(`mail.localhost`)"
+      - "traefik.http.routers.mailhog.entrypoints=web"
+      - "traefik.http.services.mailhog.loadbalancer.server.port=8025"
+
+  # ==========================================================================
+  # Traefik (Reverse Proxy) - Development
+  # ==========================================================================
+  traefik:
+    image: traefik:v3.2
+    container_name: randomcoffee-traefik
+    restart: unless-stopped
+    command:
+      - "--api.dashboard=true"
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entryPoints.web.address=:80"
+      - "--log.level=DEBUG"
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - randomcoffee-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.localhost`)"
+      - "traefik.http.routers.traefik.entrypoints=web"
+      - "traefik.http.services.traefik.loadbalancer.server.port=8080"
+
+# ==========================================================================
+# Networks
+# ==========================================================================
+networks:
+  randomcoffee-network:
+    driver: bridge
+    name: randomcoffee-network
+
+# ==========================================================================
+# Volumes
+# ==========================================================================
+volumes:
+  postgres_data:
+    driver: local
+    name: randomcoffee-postgres-data
+  redis_data:
+    driver: local
+    name: randomcoffee-redis-data

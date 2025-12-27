@@ -124,3 +124,10 @@ dmypy.json
 .pytype/
 cython_debug/
 .idea/
+
+# Docker
+.env.prod
+secrets/
+
+# Ruff
+.ruff_cache/
