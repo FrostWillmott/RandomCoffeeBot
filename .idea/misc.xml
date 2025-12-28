@@ -3,7 +3,6 @@
   <component name="Black">
     <option name="sdkName" value="uv (RandomCoffeeBot)" />
   </component>
-  <component name="KubernetesApiProvider"><![CDATA[{}]]></component>
   <component name="ProjectRootManager" version="2" project-jdk-name="uv (RandomCoffeeBot)" project-jdk-type="Python SDK" />
   <component name="RuffConfiguration">
     <option name="enabled" value="true" />
