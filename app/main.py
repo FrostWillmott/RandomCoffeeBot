@@ -25,7 +25,7 @@ async def main():
     dp = get_dispatcher()
 
     # Initialize and start Scheduler
-    scheduler = setup_scheduler()
+    scheduler = setup_scheduler(bot)
     await start_scheduler(scheduler)
 
     # Start heartbeat task

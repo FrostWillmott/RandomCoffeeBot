@@ -1,7 +1,4 @@
 services:
-  # ==========================================================================
-  # Bot Application
-  # ==========================================================================
   bot:
     build:
       context: .
@@ -20,16 +17,11 @@ services:
     networks:
       - randomcoffee-network
 
-  # ==========================================================================
-  # PostgreSQL Database
-  # ==========================================================================
   db:
     image: postgres:16-alpine
     container_name: randomcoffee-db
     restart: unless-stopped
     environment:
-      # WARNING: Default credentials for development only
-      # NEVER use these values in production!
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: randomcoffee
@@ -47,17 +39,11 @@ services:
       retries: 5
       start_period: 10s
 
-# ==========================================================================
-# Networks
-# ==========================================================================
 networks:
   randomcoffee-network:
     driver: bridge
     name: randomcoffee-network
 
-# ==========================================================================
-# Volumes
-# ==========================================================================
 volumes:
   postgres_data:
     driver: local
