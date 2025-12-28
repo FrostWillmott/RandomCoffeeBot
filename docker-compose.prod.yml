@@ -1,0 +1,125 @@
+services:
+  # ==========================================================================
+  # Database Migrations (runs once before app starts)
+  # ==========================================================================
+  migrate:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: production
+    image: randomcoffeebot:${IMAGE_TAG:-latest}
+    container_name: randomcoffee-migrate
+    restart: "no"
+    command: alembic upgrade head
+    env_file:
+      - .env.prod
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - randomcoffee-internal
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+
+  # ==========================================================================
+  # Application
+  # ==========================================================================
+  app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: production
+    image: randomcoffeebot:${IMAGE_TAG:-latest}
+    container_name: randomcoffee-app
+    restart: always
+    env_file:
+      - .env.prod
+    deploy:
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    networks:
+      - randomcoffee-internal
+    healthcheck:
+      test: [ "CMD", "python", "healthcheck.py" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ==========================================================================
+  # PostgreSQL Database
+  # ==========================================================================
+  db:
+    image: postgres:16-alpine
+    container_name: randomcoffee-db
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-randomcoffee}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+      POSTGRES_DB: ${POSTGRES_DB:-randomcoffee}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2G
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+    networks:
+      - randomcoffee-internal
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-randomcoffee} -d ${POSTGRES_DB:-randomcoffee}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# ==========================================================================
+# Networks
+# ==========================================================================
+networks:
+  randomcoffee-internal:
+    driver: bridge
+    name: randomcoffee-internal
+
+# ==========================================================================
+# Volumes
+# ==========================================================================
+volumes:
+  postgres_data:
+    driver: local
+    name: randomcoffee-postgres-data-prod

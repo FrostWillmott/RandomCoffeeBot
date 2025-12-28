@@ -1,0 +1,64 @@
+services:
+  # ==========================================================================
+  # Bot Application
+  # ==========================================================================
+  bot:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: development
+    container_name: randomcoffee-bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - .:/app:cached
+      - /app/.venv
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - randomcoffee-network
+
+  # ==========================================================================
+  # PostgreSQL Database
+  # ==========================================================================
+  db:
+    image: postgres:16-alpine
+    container_name: randomcoffee-db
+    restart: unless-stopped
+    environment:
+      # WARNING: Default credentials for development only
+      # NEVER use these values in production!
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: randomcoffee
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - randomcoffee-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d randomcoffee"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+# ==========================================================================
+# Networks
+# ==========================================================================
+networks:
+  randomcoffee-network:
+    driver: bridge
+    name: randomcoffee-network
+
+# ==========================================================================
+# Volumes
+# ==========================================================================
+volumes:
+  postgres_data:
+    driver: local
+    name: randomcoffee-postgres-data
