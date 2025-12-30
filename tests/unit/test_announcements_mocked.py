@@ -26,9 +26,10 @@ async def test_post_session_announcement_success(bot):
     mock_message.message_id = 12345
     bot.send_message = AsyncMock(return_value=mock_message)
 
-    with patch(
-        "app.services.announcements.async_session_maker"
-    ) as mock_session_maker, patch("app.services.announcements.settings") as mock_settings:
+    with (
+        patch("app.services.announcements.async_session_maker") as mock_session_maker,
+        patch("app.services.announcements.settings") as mock_settings,
+    ):
         mock_settings.channel_id = "@test_channel"
 
         mock_db_session = AsyncMock()

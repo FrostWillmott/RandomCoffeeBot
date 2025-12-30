@@ -238,8 +238,7 @@ async def notify_all_matches_for_session(bot: Bot, session_id: int) -> int:
                     notifications_sent += 1
 
             logger.info(
-                f"Sent {notifications_sent} match notifications "
-                f"for session {session_id}"
+                f"Sent {notifications_sent} match notifications for session {session_id}"
             )
             return notifications_sent
 

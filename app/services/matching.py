@@ -138,8 +138,7 @@ async def _create_matches_logic(
 
     if len(registrations) < 2:
         logger.warning(
-            f"Not enough registrations for session {session_id} "
-            f"(only {len(registrations)})"
+            f"Not enough registrations for session {session_id} (only {len(registrations)})"
         )
         return 0, [r.user_id for r in registrations]
 
@@ -205,8 +204,7 @@ async def _create_matches_logic(
 
     if len(unmatched_ids) > 0:
         logger.info(
-            f"Session {session_id}: {len(unmatched_ids)}"
-            f" users unmatched: {unmatched_ids}"
+            f"Session {session_id}: {len(unmatched_ids)} users unmatched: {unmatched_ids}"
         )
 
     session_obj.status = SessionStatus.MATCHED

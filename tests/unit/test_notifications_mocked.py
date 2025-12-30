@@ -148,9 +148,10 @@ async def test_send_unmatched_notification_success():
     user_id = 4001
     telegram_id = 4001
 
-    with patch(
-        "app.services.notifications.async_session_maker"
-    ) as mock_session_maker, patch("app.services.notifications.Bot") as mock_bot_class:
+    with (
+        patch("app.services.notifications.async_session_maker") as mock_session_maker,
+        patch("app.services.notifications.Bot") as mock_bot_class,
+    ):
         mock_session = AsyncMock()
         mock_user = User(
             id=user_id, telegram_id=telegram_id, username="test", is_active=True
@@ -177,11 +178,10 @@ async def test_send_unmatched_notification_forbidden():
     user_id = 4002
     telegram_id = 4002
 
-    with patch(
-        "app.services.notifications.async_session_maker"
-    ) as mock_session_maker, patch(
-        "app.services.notifications.mark_user_inactive"
-    ) as mock_mark_inactive:
+    with (
+        patch("app.services.notifications.async_session_maker") as mock_session_maker,
+        patch("app.services.notifications.mark_user_inactive") as mock_mark_inactive,
+    ):
         mock_session = AsyncMock()
         mock_user = User(
             id=user_id, telegram_id=telegram_id, username="blocked", is_active=True
@@ -232,11 +232,10 @@ async def test_send_unmatched_notification_chat_not_found():
     user_id = 4003
     telegram_id = 4003
 
-    with patch(
-        "app.services.notifications.async_session_maker"
-    ) as mock_session_maker, patch(
-        "app.services.notifications.mark_user_inactive"
-    ) as mock_mark_inactive:
+    with (
+        patch("app.services.notifications.async_session_maker") as mock_session_maker,
+        patch("app.services.notifications.mark_user_inactive") as mock_mark_inactive,
+    ):
         mock_session = AsyncMock()
         mock_user = User(
             id=user_id, telegram_id=telegram_id, username="notfound", is_active=True
@@ -362,11 +361,10 @@ async def test_notify_all_matches_for_session():
         created_at=datetime.now(UTC),
     )
 
-    with patch(
-        "app.services.notifications.async_session_maker"
-    ) as mock_session_maker, patch(
-        "app.services.notifications.send_match_notification"
-    ) as mock_send_match:
+    with (
+        patch("app.services.notifications.async_session_maker") as mock_session_maker,
+        patch("app.services.notifications.send_match_notification") as mock_send_match,
+    ):
         mock_session = AsyncMock()
         mock_result = MagicMock()
         mock_result.scalars.return_value.all.return_value = [match1, match2]
