@@ -35,7 +35,7 @@ class Match(Base):
         nullable=False,
         index=True,
     )
-    topic_id: Mapped[int] = mapped_column(
+    topic_id: Mapped[int | None] = mapped_column(
         ForeignKey("topics.id", ondelete="SET NULL"), nullable=True
     )
     status: Mapped[str] = mapped_column(
@@ -58,7 +58,7 @@ class Match(Base):
     user2: Mapped[User] = relationship(
         foreign_keys=[user2_id], back_populates="matches_as_user2"
     )
-    topic: Mapped[Topic] = relationship(back_populates="matches")
+    topic: Mapped[Topic | None] = relationship(back_populates="matches")
     feedbacks: Mapped[list[Feedback]] = relationship(
         back_populates="match", cascade="all, delete-orphan"
     )

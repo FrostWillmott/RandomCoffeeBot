@@ -10,14 +10,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.bot.keyboards import get_main_menu_keyboard
 from app.bot.states.feedback import FeedbackStates
 from app.models.feedback import Feedback
-from app.repositories.feedback import FeedbackRepository
-from app.repositories.match import MatchRepository
-from app.repositories.user import UserRepository
+from app.models.match import Match
 from app.schemas.callbacks import (
     RatingCallback,
     StartFeedbackCallback,
     parse_callback_data,
 )
+from app.services.helpers import get_user_by_telegram_id
 
 router = Router()
 logger = logging.getLogger(__name__)
@@ -29,13 +28,7 @@ logger = logging.getLogger(__name__)
 async def start_feedback(
     callback: CallbackQuery, session: AsyncSession, state: FSMContext
 ) -> None:
-    """Start a feedback process.
-
-    Args:
-        callback: Callback query
-        session: Database session
-        state: FSM context
-    """
+    """Start a feedback process."""
     if not callback.message:
         return
 
@@ -58,20 +51,9 @@ async def start_feedback(
         await callback.answer("Неверный ID пары")
         return
 
-    match_repo = MatchRepository(session)
-    match = await match_repo.get_by_id(match_id)
+    match = await session.get(Match, match_id)
     if not match:
         await callback.answer("Пара не найдена")
-        return
-
-    # Authorization check: verify user is a participant of this match
-    if not callback.from_user:
-        return
-
-    user_repo = UserRepository(session)
-    user = await user_repo.get_by_telegram_id(callback.from_user.id)
-    if not user or user.id not in (match.user1_id, match.user2_id):
-        await callback.answer("⛔ У вас нет доступа к этой паре", show_alert=True)
         return
 
     await state.update_data(match_id=match_id)
@@ -102,12 +84,7 @@ async def start_feedback(
 
 @router.callback_query(FeedbackStates.waiting_for_rating, F.data.startswith("rating:"))
 async def process_rating(callback: CallbackQuery, state: FSMContext) -> None:
-    """Process rating.
-
-    Args:
-        callback: Callback query
-        state: FSM context
-    """
+    """Process rating."""
     if not callback.message:
         return
 
@@ -141,13 +118,7 @@ async def process_rating(callback: CallbackQuery, state: FSMContext) -> None:
 async def process_comment(
     message: Message, session: AsyncSession, state: FSMContext
 ) -> None:
-    """Process comment.
-
-    Args:
-        message: User message
-        session: Database session
-        state: FSM context
-    """
+    """Process comment."""
     data = await state.get_data()
     match_id = data.get("match_id")
     rating = data.get("rating")
@@ -169,20 +140,9 @@ async def process_comment(
         return
 
     # Get database user ID from Telegram ID
-    user_repo = UserRepository(session)
-    user = await user_repo.get_by_telegram_id(message.from_user.id)
+    user = await get_user_by_telegram_id(session, message.from_user.id)
     if not user:
         await message.answer("Пользователь не найден. Пожалуйста, начните с /start.")
-        await state.clear()
-        return
-
-    # Check if feedback already exists for this match and user
-    feedback_repo = FeedbackRepository(session)
-    if await feedback_repo.exists(match_id, user.id):
-        await message.answer(
-            "Вы уже оставили отзыв для этой встречи. Спасибо! 🙏",
-            reply_markup=get_main_menu_keyboard(),
-        )
         await state.clear()
         return
 
@@ -192,7 +152,9 @@ async def process_comment(
         rating=rating,
         comment=comment,
     )
-    await feedback_repo.create(feedback)
+    session.add(feedback)
+
+    await session.commit()
 
     await message.answer(
         "Спасибо за ваш отзыв! 🙏\nДо встречи на следующей сессии!",

@@ -54,14 +54,14 @@ def setup_signal_handlers() -> None:
 
 
 async def shutdown_services(
-    scheduler, bot, heartbeat_task, polling_task=None, polling_error=None
+    scheduler, bot, dp, heartbeat_task, polling_task=None, polling_error=None
 ):
     """Cleanly shut down all running services."""
     logger.info("Shutting down services...")
 
     if polling_task and not polling_task.done():
         logger.info("Stopping polling...")
-        await get_dispatcher().stop_polling()
+        await dp.stop_polling()
         polling_task.cancel()
         try:
             await polling_task
@@ -125,7 +125,9 @@ async def main():
             if not task.done():
                 task.cancel()
 
-        await shutdown_services(scheduler, bot, heartbeat_task, polling_task, polling_error)
+        await shutdown_services(
+            scheduler, bot, dp, heartbeat_task, polling_task, polling_error
+        )
 
 
 async def run_heartbeat():
