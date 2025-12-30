@@ -2,7 +2,7 @@
 
 from aiogram import Router
 from aiogram.filters import CommandStart
-from aiogram.types import Message
+from aiogram.types import Message, ReplyKeyboardRemove
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -50,7 +50,14 @@ async def cmd_start(message: Message, session: AsyncSession) -> None:
             f"👋 С возвращением, {message.from_user.first_name}!\n\nВыберите опцию:"
         )
 
+    # Remove old ReplyKeyboard buttons from previous bot
     await message.answer(
         welcome_text,
+        reply_markup=ReplyKeyboardRemove(),
+    )
+
+    # Send new message with InlineKeyboard menu
+    await message.answer(
+        "📱 Используйте кнопки ниже:",
         reply_markup=get_main_menu_keyboard(),
     )
