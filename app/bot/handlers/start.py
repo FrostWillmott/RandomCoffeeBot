@@ -1,5 +1,7 @@
 """Start a command handler."""
 
+import asyncio
+
 from aiogram import Router
 from aiogram.filters import CommandStart
 from aiogram.types import Message, ReplyKeyboardRemove
@@ -50,14 +52,21 @@ async def cmd_start(message: Message, session: AsyncSession) -> None:
             f"👋 С возвращением, {message.from_user.first_name}!\n\nВыберите опцию:"
         )
 
-    # Remove old ReplyKeyboard buttons from previous bot
-    await message.answer(
-        welcome_text,
+    # Remove old ReplyKeyboard buttons (send temporary message)
+    temp_msg = await message.answer(
+        "🔄 Обновление...",
         reply_markup=ReplyKeyboardRemove(),
     )
 
-    # Send new message with InlineKeyboard menu
+    # Small delay and delete temp message
+    await asyncio.sleep(0.2)
+    try:
+        await temp_msg.delete()
+    except Exception:
+        pass
+
+    # Send welcome message with InlineKeyboard menu
     await message.answer(
-        "📱 Используйте кнопки ниже:",
+        welcome_text,
         reply_markup=get_main_menu_keyboard(),
     )
