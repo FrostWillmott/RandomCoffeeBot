@@ -14,7 +14,13 @@ TEST_DATABASE_URL = os.getenv(
     f"{TEST_DATABASE_HOST}:{TEST_DATABASE_PORT}/{TEST_DATABASE_NAME}",
 )
 
+# Set environment variables BEFORE importing app modules
 os.environ["DATABASE_URL"] = TEST_DATABASE_URL
+os.environ["DEBUG"] = "true"
+os.environ["SECRET_KEY"] = "test-secret-key-for-testing-only"
+os.environ["TELEGRAM_BOT_TOKEN"] = "test:token"
+os.environ["CHANNEL_ID"] = "@test_channel"
+os.environ["REDIS_URL"] = "redis://localhost:6379/0"
 
 import itertools
 from collections.abc import AsyncGenerator

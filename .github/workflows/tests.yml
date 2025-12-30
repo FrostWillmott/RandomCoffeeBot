@@ -74,6 +74,11 @@ jobs:
           TEST_DATABASE_USER: postgres
           TEST_DATABASE_PASSWORD: postgres
           TEST_DATABASE_NAME: randomcoffee_test
+          DEBUG: "true"
+          SECRET_KEY: "test-secret-key-for-ci"
+          TELEGRAM_BOT_TOKEN: "test:token"
+          CHANNEL_ID: "@test_channel"
+          REDIS_URL: "redis://localhost:6379/0"
         run: |
           uv run pytest tests/ -v --cov=app --cov-report=xml --cov-report=term
 
