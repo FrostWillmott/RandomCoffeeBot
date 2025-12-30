@@ -64,7 +64,9 @@ async def test_get_next_open_session_found():
 
     mock_session = AsyncMock()
     mock_result = MagicMock()
-    mock_result.scalar_one_or_none.return_value = session
+    mock_scalars = MagicMock()
+    mock_scalars.first.return_value = session
+    mock_result.scalars.return_value = mock_scalars
     mock_session.execute = AsyncMock(return_value=mock_result)
 
     result = await get_next_open_session(mock_session)
@@ -79,7 +81,9 @@ async def test_get_next_open_session_not_found():
     """Test getting next open session when not found."""
     mock_session = AsyncMock()
     mock_result = MagicMock()
-    mock_result.scalar_one_or_none.return_value = None
+    mock_scalars = MagicMock()
+    mock_scalars.first.return_value = None
+    mock_result.scalars.return_value = mock_scalars
     mock_session.execute = AsyncMock(return_value=mock_result)
 
     result = await get_next_open_session(mock_session)
