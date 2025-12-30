@@ -90,20 +90,14 @@ jobs:
         run: pip install uv
       - name: Install security tools
         run: pip install safety pip-audit
-      - name: Export dependencies
-        run: uv export --format requirements-txt --output-file requirements.txt
+
+      - name: Export dependencies (no editable, no hashes)
+        run: uv export --format requirements-txt --no-editable --no-hashes --output-file requirements.txt
       - name: Run safety check
-        run: safety check --file requirements.txt || true
+        run: safety check --file requirements.txt
+
       - name: Run pip-audit
-        run: pip-audit --requirement requirements.txt || true
-      - name: Check for vulnerabilities
-        run: |
-          if pip-audit --requirement requirements.txt --format json | grep -q '"vulnerabilities"'; then
-            echo "Vulnerabilities found!"
-            pip-audit --requirement requirements.txt
-            exit 1
-          fi
-        continue-on-error: true
+        run: pip-audit --requirement requirements.txt
 
   build:
     runs-on: ubuntu-latest
