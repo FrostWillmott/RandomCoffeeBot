@@ -103,9 +103,9 @@ def _format_status_message(user: User, registrations: Sequence, matches: Sequenc
         text += f"\n🤝 <b>Активные пары:</b> {len(matches)}\n"
         for match, sess in matches[:3]:
             status_ru = {
-                "CREATED": "Создана",
-                "CONFIRMED": "Подтверждена",
-                "COMPLETED": "Завершена",
+                "created": "Создана",
+                "confirmed": "Подтверждена",
+                "completed": "Завершена",
             }.get(match.status.value, match.status.value)
             text += f"   • {sess.date.strftime('%Y-%m-%d')} - {status_ru}\n"
 
