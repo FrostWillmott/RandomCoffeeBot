@@ -204,13 +204,11 @@ Examples:
 
     args = parser.parse_args()
 
-    # Setup logging
     settings = get_settings()
     log_level = args.log_level or settings.log_level
     log_format = args.log_format or settings.log_format
     setup_logging(log_level, log_format)
 
-    # Run the async main function
     asyncio.run(main_async(args.action))
 
 
