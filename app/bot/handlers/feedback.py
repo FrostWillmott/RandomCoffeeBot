@@ -16,6 +16,7 @@ from app.schemas.callbacks import (
     StartFeedbackCallback,
     parse_callback_data,
 )
+from app.services.helpers import get_user_by_telegram_id
 
 router = Router()
 logger = logging.getLogger(__name__)
@@ -36,7 +37,11 @@ async def start_feedback(
         return
 
     try:
-        callback_data_str = callback.data.replace("feedback:", "start_feedback:", 1)
+        # Handle both "feedback:" and "start_feedback:" prefixes
+        if callback.data.startswith("feedback:"):
+            callback_data_str = "start_feedback:" + callback.data[9:]
+        else:
+            callback_data_str = callback.data
         callback_data = parse_callback_data(callback_data_str)
         if not isinstance(callback_data, StartFeedbackCallback):
             raise ValueError("Invalid callback type")
@@ -59,13 +64,13 @@ async def start_feedback(
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [
-                InlineKeyboardButton(text="1 ⭐️", callback_data="rate:1"),
-                InlineKeyboardButton(text="2 ⭐️", callback_data="rate:2"),
-                InlineKeyboardButton(text="3 ⭐️", callback_data="rate:3"),
+                InlineKeyboardButton(text="1 ⭐️", callback_data="rating:1"),
+                InlineKeyboardButton(text="2 ⭐️", callback_data="rating:2"),
+                InlineKeyboardButton(text="3 ⭐️", callback_data="rating:3"),
             ],
             [
-                InlineKeyboardButton(text="4 ⭐️", callback_data="rate:4"),
-                InlineKeyboardButton(text="5 ⭐️", callback_data="rate:5"),
+                InlineKeyboardButton(text="4 ⭐️", callback_data="rating:4"),
+                InlineKeyboardButton(text="5 ⭐️", callback_data="rating:5"),
             ],
         ]
     )
@@ -77,7 +82,7 @@ async def start_feedback(
     await callback.answer()
 
 
-@router.callback_query(FeedbackStates.waiting_for_rating, F.data.startswith("rate:"))
+@router.callback_query(FeedbackStates.waiting_for_rating, F.data.startswith("rating:"))
 async def process_rating(callback: CallbackQuery, state: FSMContext) -> None:
     """Process rating."""
     if not callback.message:
@@ -134,9 +139,16 @@ async def process_comment(
         await state.clear()
         return
 
+    # Get database user ID from Telegram ID
+    user = await get_user_by_telegram_id(session, message.from_user.id)
+    if not user:
+        await message.answer("Пользователь не найден. Пожалуйста, начните с /start.")
+        await state.clear()
+        return
+
     feedback = Feedback(
         match_id=match_id,
-        user_id=message.from_user.id,
+        user_id=user.id,
         rating=rating,
         comment=comment,
     )
