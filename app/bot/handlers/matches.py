@@ -78,7 +78,7 @@ async def confirm_match(callback: CallbackQuery, session: AsyncSession) -> None:
             status_ru = {
                 "CONFIRMED": "подтверждена",
                 "COMPLETED": "завершена",
-            }.get(match.status.value, match.status.value.lower())
+            }.get(match.status, match.status.lower())
             await callback.message.edit_text(
                 f"ℹ️ Эта пара уже {status_ru}.",
                 reply_markup=get_main_menu_keyboard(),

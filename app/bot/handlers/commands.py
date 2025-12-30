@@ -106,7 +106,7 @@ def _format_status_message(user: User, registrations: Sequence, matches: Sequenc
                 "created": "Создана",
                 "confirmed": "Подтверждена",
                 "completed": "Завершена",
-            }.get(match.status.value, match.status.value)
+            }.get(match.status, match.status)
             text += f"   • {sess.date.strftime('%Y-%m-%d')} - {status_ru}\n"
 
     if not registrations and not matches:

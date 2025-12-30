@@ -17,7 +17,7 @@ async def create_weekly_session() -> Session | None:
     async with async_session_maker() as db_session:
         try:
             now = datetime.now(UTC)
-            days_ahead = 5 - now.weekday()
+            days_ahead = 4 - now.weekday()
             if days_ahead <= 0:
                 days_ahead += 7
 
