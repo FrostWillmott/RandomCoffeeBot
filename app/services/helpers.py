@@ -20,7 +20,7 @@ async def get_user_by_telegram_id(session: AsyncSession, telegram_id: int) -> Us
 
 
 async def get_next_open_session(session: AsyncSession) -> Session | None:
-    """Get the next session in the future."""
+    """Get the next open session with future registration deadline."""
     result = await session.execute(
         select(Session)
         .where(
@@ -28,8 +28,9 @@ async def get_next_open_session(session: AsyncSession) -> Session | None:
             Session.registration_deadline > datetime.now(UTC),
         )
         .order_by(Session.date)
+        .limit(1)
     )
-    return result.scalar_one_or_none()
+    return result.scalars().first()
 
 
 async def get_active_user(session: AsyncSession, telegram_id: int) -> User:
