@@ -1,9 +1,10 @@
 """Notification service for sending match notifications."""
 
 import logging
+from typing import Any
 
 from aiogram import Bot
-from aiogram.exceptions import TelegramAPIError
+from aiogram.exceptions import TelegramAPIError, TelegramForbiddenError
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
@@ -11,8 +12,28 @@ from sqlalchemy.orm import selectinload
 from app.db.session import async_session_maker
 from app.models.match import Match
 from app.models.user import User
+from app.utils.retry import retry_telegram_api
 
 logger = logging.getLogger(__name__)
+
+
+async def mark_user_inactive(user_id: int) -> None:
+    """Mark the user as inactive in the database."""
+    async with async_session_maker() as session:
+        try:
+            user = await session.get(User, user_id)
+            if not user:
+                logger.warning(f"User {user_id} not found, cannot mark inactive")
+                return
+            user.is_active = False
+            await session.commit()
+            logger.info(f"Marked user {user_id} as inactive")
+        except Exception as e:
+            logger.exception(
+                f"Error marking user {user_id} inactive",
+                exc_info=e,
+            )
+            await session.rollback()
 
 
 def _format_user_info(user: User) -> str:
@@ -29,7 +50,7 @@ def _format_user_info(user: User) -> str:
 
 
 def _create_match_keyboard(match_id: int) -> InlineKeyboardMarkup:
-    """Create keyboard for match notification."""
+    """Create a keyboard for match notification."""
     buttons = [
         [
             InlineKeyboardButton(
@@ -51,7 +72,6 @@ async def send_match_notification(bot: Bot, match_id: int) -> bool:
     """Send match notification to both users."""
     async with async_session_maker() as session:
         try:
-            # Get match with all related data
             result = await session.execute(
                 select(Match)
                 .options(
@@ -68,7 +88,6 @@ async def send_match_notification(bot: Bot, match_id: int) -> bool:
                 logger.error(f"Match {match_id} not found")
                 return False
 
-            # Send notification to both users
             success = True
             for user, partner in [
                 (match.user1, match.user2),
@@ -76,69 +95,128 @@ async def send_match_notification(bot: Bot, match_id: int) -> bool:
             ]:
                 try:
                     message_text = _create_match_message(user, partner, match)
-                    await bot.send_message(
+                    await _send_message_with_retry(
+                        bot,
                         chat_id=user.telegram_id,
                         text=message_text,
                         parse_mode="HTML",
                         reply_markup=_create_match_keyboard(match.id),
                     )
-                    logger.info(
-                        f"Sent match notification to user {user.telegram_id}"
+                    logger.info(f"Sent match notification to user {user.telegram_id}")
+                except TelegramForbiddenError:
+                    logger.warning(
+                        f"User {user.telegram_id} blocked the bot. Marking inactive."
                     )
-                except TelegramAPIError as e:
-                    logger.error(
-                        f"Failed to send match notification to "
-                        f"user {user.telegram_id}: {e}"
-                    )
+                    await mark_user_inactive(user.id)
                     success = False
+                except TelegramAPIError as e:
+                    error_str = str(e).lower()
+                    if "chat not found" in error_str or "bad request" in error_str:
+                        logger.error(f"Bad request for user {user.telegram_id}: {e}")
+                        if "chat not found" in error_str:
+                            await mark_user_inactive(user.id)
+                        success = False
+                    else:
+                        logger.error(
+                            f"Failed to send match notification to "
+                            f"user {user.telegram_id}: {e}"
+                        )
+                        success = False
 
             return success
 
         except Exception as e:
-            logger.error(
-                f"Error sending match notification for match {match_id}: {e}"
+            logger.exception(
+                f"Error sending match notification for match {match_id}",
+                exc_info=e,
             )
             return False
 
 
+from app.resources import messages
+
+
+@retry_telegram_api(max_attempts=3, initial_wait=1.0, max_wait=30.0)
+async def _send_message_with_retry(bot: Bot, **kwargs: Any) -> None:
+    """Send a message with retry logic for transient errors."""
+    await bot.send_message(**kwargs)
+
+
 def _create_match_message(user: User, partner: User, match: Match) -> str:
-    """Create match notification message."""
+    """Create a match notification message."""
     partner_info = _format_user_info(partner)
     session_date = match.session.date.strftime("%A, %B %d at %H:%M UTC")
 
     message = (
-        f"🎉 <b>You've been matched for Random Coffee!</b>\n\n"
-        f"👤 <b>Your match:</b> {partner_info}\n"
-        f"📅 <b>Session date:</b> {session_date}\n\n"
+        f"{messages.MATCH_NOTIFICATION_TITLE}\n\n"
+        f"{messages.MATCH_NOTIFICATION_USER.format(partner_info=partner_info)}\n"
+        f"{messages.MATCH_NOTIFICATION_DATE.format(session_date=session_date)}\n\n"
     )
 
     if match.topic:
         message += (
-            f"📚 <b>Discussion Topic:</b> {match.topic.title}\n\n"
-            f"<i>{match.topic.description}</i>\n\n"
-            f"<b>Discussion Questions:</b>\n"
+            f"{messages.MATCH_NOTIFICATION_TOPIC.format(title=match.topic.title)}\n\n"
+            f"{messages.MATCH_NOTIFICATION_TOPIC_DESC.format(description=match.topic.description)}\n\n"
+            f"{messages.MATCH_NOTIFICATION_QUESTIONS}\n"
         )
         for i, question in enumerate(match.topic.questions[:4], 1):
             message += f"{i}. {question}\n"
 
         if match.topic.resources:
-            message += "\n<b>Resources:</b>\n"
+            message += f"{messages.MATCH_NOTIFICATION_RESOURCES}\n"
             for resource in match.topic.resources[:3]:
                 message += f"• {resource}\n"
 
-    message += (
-        "\n<b>Next Steps:</b>\n"
-        "1️⃣ Reach out to your match via Telegram\n"
-        "2️⃣ Coordinate a meeting time (30-60 minutes recommended)\n"
-        "3️⃣ Choose a format: Zoom, Google Meet, or Telegram call\n"
-        "4️⃣ Discuss the assigned topic together\n"
-        "5️⃣ Share feedback after your meeting\n\n"
-        "💡 <b>Tip:</b> Start with introductions, then dive into the topic! "
-        "Don't worry about knowing everything - it's about learning together.\n\n"
-        "Have a great conversation! ☕️"
-    )
+    message += messages.MATCH_NOTIFICATION_FOOTER
 
     return message
+
+
+async def send_unmatched_notification(bot: Bot, user_id: int) -> bool:
+    """Send notification to user who wasn't matched."""
+    async with async_session_maker() as session:
+        try:
+            user = await session.get(User, user_id)
+            if not user:
+                logger.warning(f"User {user_id} not found for unmatched notification")
+                return False
+
+            try:
+                await _send_message_with_retry(
+                    bot,
+                    chat_id=user.telegram_id,
+                    text=messages.UNMATCHED_NOTIFICATION,
+                    parse_mode="HTML",
+                )
+                logger.info(f"Sent unmatched notification to user {user.telegram_id}")
+                return True
+            except TelegramForbiddenError:
+                logger.warning(
+                    f"User {user.telegram_id} blocked the bot. Marking inactive."
+                )
+                await mark_user_inactive(user.id)
+                return False
+            except TelegramAPIError as e:
+                error_str = str(e).lower()
+                if "chat not found" in error_str or "bad request" in error_str:
+                    logger.error(
+                        f"Bad request sending unmatched notification to "
+                        f"user {user.telegram_id}: {e}"
+                    )
+                    if "chat not found" in error_str:
+                        await mark_user_inactive(user.id)
+                    return False
+                logger.error(
+                    f"Telegram API error sending unmatched notification to "
+                    f"user {user.telegram_id}: {e}"
+                )
+                return False
+        except Exception as e:
+            logger.exception(
+                f"Error sending unmatched notification to {user_id}",
+                exc_info=e,
+            )
+            return False
 
 
 async def notify_all_matches_for_session(bot: Bot, session_id: int) -> int:
@@ -148,7 +226,6 @@ async def notify_all_matches_for_session(bot: Bot, session_id: int) -> int:
     """
     async with async_session_maker() as session:
         try:
-            # Get all matches for this session
             result = await session.execute(
                 select(Match).where(Match.session_id == session_id)
             )
@@ -167,7 +244,8 @@ async def notify_all_matches_for_session(bot: Bot, session_id: int) -> int:
             return notifications_sent
 
         except Exception as e:
-            logger.error(
-                f"Error notifying matches for session {session_id}: {e}"
+            logger.exception(
+                f"Error notifying matches for session {session_id}",
+                exc_info=e,
             )
             return 0

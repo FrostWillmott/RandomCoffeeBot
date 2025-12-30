@@ -1,4 +1,4 @@
-"""Start command handler."""
+"""Start a command handler."""
 
 from aiogram import Router
 from aiogram.filters import CommandStart
@@ -18,13 +18,11 @@ async def cmd_start(message: Message, session: AsyncSession) -> None:
     if not message.from_user:
         return
 
-    # Check if user exists
     result = await session.execute(
         select(User).where(User.telegram_id == message.from_user.id)
     )
     user = result.scalar_one_or_none()
 
-    # Create user if doesn't exist
     if not user:
         user = User(
             telegram_id=message.from_user.id,
@@ -37,20 +35,19 @@ async def cmd_start(message: Message, session: AsyncSession) -> None:
         await session.commit()
 
         welcome_text = (
-            f"👋 Welcome, {message.from_user.first_name}!\n\n"
-            "🤝 Random Coffee Bot connects Python developers for weekly coffee chats "
-            "to discuss interesting technical topics.\n\n"
-            "📋 How it works:\n"
-            "1️⃣ Register for upcoming sessions\n"
-            "2️⃣ Get matched with another developer\n"
-            "3️⃣ Discuss assigned Python Middle topics\n"
-            "4️⃣ Share feedback after the meeting\n\n"
-            "Choose an option below to get started:"
+            f"👋 Добро пожаловать, {message.from_user.first_name}!\n\n"
+            "🤝 Random Coffee Bot объединяет Python-разработчиков для еженедельных "
+            "кофе-чатов, чтобы обсуждать интересные технические темы.\n\n"
+            "📋 Как это работает:\n"
+            "1️⃣ Зарегистрируйтесь на предстоящие сессии\n"
+            "2️⃣ Получите пару с другим разработчиком\n"
+            "3️⃣ Обсудите назначенные темы Python Middle\n"
+            "4️⃣ Поделитесь отзывом после встречи\n\n"
+            "Выберите опцию ниже, чтобы начать:"
         )
     else:
         welcome_text = (
-            f"👋 Welcome back, {message.from_user.first_name}!\n\n"
-            "Choose an option:"
+            f"👋 С возвращением, {message.from_user.first_name}!\n\nВыберите опцию:"
         )
 
     await message.answer(

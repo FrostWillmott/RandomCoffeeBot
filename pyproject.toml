@@ -12,6 +12,10 @@ dependencies = [
     "pydantic-settings>=2.12.0",
     "python-dotenv>=1.2.1",
     "aiofiles>=23.2.1",
+    "redis>=5.0.0",
+    "python-json-logger>=3.2.0",
+    "tenacity>=9.0.0",
+    "types-redis>=4.6.0.20241004",
 ]
 
 [project.optional-dependencies]
@@ -24,6 +28,7 @@ dev = [
     "ruff>=0.14.10",
     "mypy>=1.15.0",
     "types-aiofiles>=25.1.0",
+    "aiosqlite>=0.20.0",
 ]
 
 [build-system]
@@ -32,3 +37,31 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["app"]
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = [
+    "app.models.*",
+]
+disable_error_code = ["name-defined"]
+
+[[tool.mypy.overrides]]
+module = [
+    "alembic.versions.*",
+    "app.bot.middlewares.throttling",
+]
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = [
+    "app.services.helpers",
+    "app.services.sessions",
+    "app.utils.retry",
+]
+disable_error_code = ["no-any-return"]

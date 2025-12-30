@@ -10,10 +10,10 @@ from app.models.user import User
 
 __all__ = [
     "Base",
-    "User",
-    "Session",
-    "Registration",
-    "Match",
-    "Topic",
     "Feedback",
+    "Match",
+    "Registration",
+    "Session",
+    "Topic",
+    "User",
 ]

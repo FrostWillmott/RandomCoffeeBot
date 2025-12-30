@@ -1,11 +1,15 @@
 """Registration model for session participation."""
 
-from datetime import datetime
+from __future__ import annotations
 
-from sqlalchemy import DateTime, ForeignKey
+from datetime import UTC, datetime
+
+from sqlalchemy import DateTime, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+from app.models.session import Session
+from app.models.user import User
 
 
 class Registration(Base):
@@ -25,12 +29,15 @@ class Registration(Base):
         index=True,
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, nullable=False
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        nullable=False,
     )
 
-    # Relationships
-    session: Mapped["Session"] = relationship(back_populates="registrations")
-    user: Mapped["User"] = relationship(back_populates="registrations")
+    session: Mapped[Session] = relationship(back_populates="registrations")
+    user: Mapped[User] = relationship(back_populates="registrations")
+
+    __table_args__ = (UniqueConstraint("session_id", "user_id", name="uq_session_user"),)
 
     def __repr__(self) -> str:
         """String representation."""

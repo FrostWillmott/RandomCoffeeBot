@@ -1,11 +1,14 @@
 """Session model for Random Coffee events."""
 
-from datetime import datetime
+from __future__ import annotations
+
+from datetime import UTC, datetime
 
 from sqlalchemy import BigInteger, DateTime, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+from app.models.enums import SessionStatus
 
 
 class Session(Base):
@@ -15,24 +18,25 @@ class Session(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     date: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, index=True
+        DateTime(timezone=True), nullable=False, index=True
     )
     registration_deadline: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False
+        DateTime(timezone=True), nullable=False
     )
     status: Mapped[str] = mapped_column(
-        String(50), default="open", nullable=False
-    )  # open, closed, matching, completed
+        String(50), default=SessionStatus.OPEN, nullable=False, index=True
+    )
     announcement_message_id: Mapped[int | None] = mapped_column(BigInteger)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, nullable=False
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        nullable=False,
     )
 
-    # Relationships
-    registrations: Mapped[list["Registration"]] = relationship(
+    registrations: Mapped[list[Registration]] = relationship(
         back_populates="session", cascade="all, delete-orphan"
     )
-    matches: Mapped[list["Match"]] = relationship(
+    matches: Mapped[list[Match]] = relationship(
         back_populates="session", cascade="all, delete-orphan"
     )
 

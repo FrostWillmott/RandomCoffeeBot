@@ -1,7 +1,7 @@
-"""Seed database with Python Middle interview topics."""
+"""Заполнение базы данных темами для интервью Python Middle."""
 
 import asyncio
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import func, select
 
@@ -9,121 +9,121 @@ from app.db.session import async_session_maker
 from app.models.topic import Topic
 
 TOPICS = [
-    # Core Python (10 topics)
     {
-        "title": "Decorators and closures",
-        "description": "Understanding Python decorators, closures, and their practical applications",
+        "title": "Декораторы и замыкания",
+        "description": "Понимание декораторов Python, замыканий и их"
+        " практического применения",
         "category": "core_python",
         "difficulty": "middle",
         "questions": [
-            "What is a closure and how does it work?",
-            "How do decorators work internally?",
-            "What are class decorators vs function decorators?",
-            "How would you create a decorator with arguments?",
+            "Что такое замыкание и как оно работает?",
+            "Как декораторы работают внутри?",
+            "В чем разница между декораторами классов и функций?",
+            "Как создать декоратор с аргументами?",
         ],
         "resources": [
-            "https://realpython.com/primer-on-python-decorators/",
+            "https://habr.com/ru/companies/otus/articles/461087/",
             "https://docs.python.org/3/glossary.html#term-decorator",
         ],
     },
     {
-        "title": "Context managers",
-        "description": "Deep dive into context managers and the with statement",
+        "title": "Менеджеры контекста",
+        "description": "Глубокое погружение в менеджеры контекста и оператор with",
         "category": "core_python",
         "difficulty": "middle",
         "questions": [
-            "What is a context manager?",
-            "How do __enter__ and __exit__ work?",
-            "When would you use contextlib.contextmanager?",
-            "How do context managers help with resource management?",
+            "Что такое менеджер контекста?",
+            "Как работают методы __enter__ и __exit__?",
+            "Когда стоит использовать contextlib.contextmanager?",
+            "Как менеджеры контекста помогают в управлении ресурсами?",
         ],
         "resources": [
             "https://docs.python.org/3/library/contextlib.html",
-            "https://realpython.com/python-with-statement/",
+            "https://habr.com/ru/articles/196382/",
         ],
     },
     {
-        "title": "Generators and iterators",
-        "description": "Understanding generators, iterators, and lazy evaluation",
+        "title": "Генераторы и итераторы",
+        "description": "Понимание генераторов, итераторов и ленивых вычислений",
         "category": "core_python",
         "difficulty": "middle",
         "questions": [
-            "What's the difference between an iterator and an iterable?",
-            "How do generators work? What is yield?",
-            "What are generator expressions vs list comprehensions?",
-            "When would you use itertools?",
+            "В чем разница между итератором и итерируемым объектом?",
+            "Как работают генераторы? Что такое yield?",
+            "Выражения-генераторы против списковых включений (list comprehensions)?",
+            "Когда стоит использовать модуль itertools?",
         ],
         "resources": [
-            "https://realpython.com/introduction-to-python-generators/",
+            "https://habr.com/ru/articles/488112/",
             "https://docs.python.org/3/library/itertools.html",
         ],
     },
     {
-        "title": "Metaclasses and descriptors",
-        "description": "Advanced Python: metaclasses, descriptors, and the object model",
+        "title": "Метаклассы и дескрипторы",
+        "description": "Продвинутый Python: метаклассы, дескрипторы и объектная модель",
         "category": "core_python",
         "difficulty": "middle",
         "questions": [
-            "What is a metaclass?",
-            "How do descriptors work (__get__, __set__, __delete__)?",
-            "What's the difference between __new__ and __init__?",
-            "How does attribute lookup work in Python?",
+            "Что такое метакласс?",
+            "Как работают дескрипторы (__get__, __set__, __delete__)?",
+            "В чем разница между __new__ и __init__?",
+            "Как работает поиск атрибутов в Python?",
         ],
         "resources": [
-            "https://realpython.com/python-metaclasses/",
+            "https://habr.com/ru/articles/145835/",
             "https://docs.python.org/3/howto/descriptor.html",
         ],
     },
     {
-        "title": "Memory management and GC",
-        "description": "Understanding Python's memory model and garbage collection",
+        "title": "Управление памятью и GC",
+        "description": "Понимание модели памяти Python и сборки мусора",
         "category": "core_python",
         "difficulty": "middle",
         "questions": [
-            "How does Python manage memory?",
-            "What is reference counting?",
-            "How does the garbage collector work?",
-            "What are circular references and how are they handled?",
+            "Как Python управляет памятью?",
+            "Что такое подсчет ссылок?",
+            "Как работает сборщик мусора (GC)?",
+            "Что такое циклические ссылки и как они обрабатываются?",
         ],
         "resources": [
-            "https://realpython.com/python-memory-management/",
+            "https://habr.com/ru/articles/417559/",
             "https://docs.python.org/3/library/gc.html",
         ],
     },
     {
-        "title": "GIL and concurrency",
+        "title": "GIL и многопоточность",
         "description": "Global Interpreter Lock and its implications",
         "category": "core_python",
         "difficulty": "middle",
         "questions": [
-            "What is the GIL?",
+            "Что такое GIL?",
             "How does the GIL affect multithreading?",
             "When should you use threading vs multiprocessing?",
             "How do asyncio and threading differ?",
         ],
         "resources": [
-            "https://realpython.com/python-gil/",
+            "https://habr.com/ru/articles/84629/",
             "https://docs.python.org/3/library/threading.html",
         ],
     },
     {
-        "title": "Type hints and mypy",
-        "description": "Static typing in Python with type hints",
+        "title": "Type hints и mypy",
+        "description": "Статическая типизация в Python с использованием подсказок типов",
         "category": "core_python",
         "difficulty": "middle",
         "questions": [
-            "What are type hints and why use them?",
-            "How does mypy work?",
-            "What are generic types?",
-            "How do you type decorators and higher-order functions?",
+            "Что такое type hints и зачем они нужны?",
+            "Как работает mypy?",
+            "Что такое Generic типы?",
+            "Как типизировать декораторы и функции высшего порядка?",
         ],
         "resources": [
-            "https://realpython.com/python-type-checking/",
+            "https://habr.com/ru/articles/346542/",
             "https://mypy.readthedocs.io/",
         ],
     },
     {
-        "title": "Data classes and attrs",
+        "title": "Data classes и attrs",
         "description": "Modern approaches to creating classes in Python",
         "category": "core_python",
         "difficulty": "middle",
@@ -134,12 +134,12 @@ TOPICS = [
             "How do you handle immutability?",
         ],
         "resources": [
-            "https://realpython.com/python-data-classes/",
+            "https://habr.com/ru/articles/415829/",
             "https://www.attrs.org/",
         ],
     },
     {
-        "title": "Protocol and ABC",
+        "title": "Protocol и ABC",
         "description": "Abstract base classes vs protocols for polymorphism",
         "category": "core_python",
         "difficulty": "middle",
@@ -155,7 +155,7 @@ TOPICS = [
         ],
     },
     {
-        "title": "Python internals",
+        "title": "Внутреннее устройство Python",
         "description": "How Python works under the hood",
         "category": "core_python",
         "difficulty": "middle",
@@ -166,13 +166,12 @@ TOPICS = [
             "What are slots and when to use them?",
         ],
         "resources": [
-            "https://realpython.com/cpython-source-code-guide/",
+            "https://habr.com/ru/articles/430338/",
             "https://docs.python.org/3/library/dis.html",
         ],
     },
-    # Async Python (7 topics)
     {
-        "title": "Asyncio fundamentals",
+        "title": "Основы Asyncio",
         "description": "Understanding async/await and the event loop",
         "category": "async_programming",
         "difficulty": "middle",
@@ -183,12 +182,12 @@ TOPICS = [
             "When should you use asyncio?",
         ],
         "resources": [
-            "https://realpython.com/async-io-python/",
+            "https://habr.com/ru/articles/337420/",
             "https://docs.python.org/3/library/asyncio.html",
         ],
     },
     {
-        "title": "Async patterns",
+        "title": "Паттерны Asyncio",
         "description": "Common patterns in asyncio programming",
         "category": "async_programming",
         "difficulty": "middle",
@@ -200,11 +199,11 @@ TOPICS = [
         ],
         "resources": [
             "https://docs.python.org/3/library/asyncio-task.html",
-            "https://realpython.com/python-async-features/",
+            "https://habr.com/ru/articles/667630/",
         ],
     },
     {
-        "title": "Async libraries",
+        "title": "Асинхронные библиотеки",
         "description": "Popular async libraries: aiohttp, httpx, asyncpg",
         "category": "async_programming",
         "difficulty": "middle",
@@ -220,7 +219,7 @@ TOPICS = [
         ],
     },
     {
-        "title": "Async vs threading",
+        "title": "Async против Threading",
         "description": "Choosing between async and threading",
         "category": "async_programming",
         "difficulty": "middle",
@@ -231,12 +230,12 @@ TOPICS = [
             "What is run_in_executor?",
         ],
         "resources": [
-            "https://realpython.com/python-concurrency/",
+            "https://habr.com/ru/articles/437354/",
             "https://docs.python.org/3/library/asyncio-eventloop.html",
         ],
     },
     {
-        "title": "Async generators",
+        "title": "Асинхронные генераторы",
         "description": "Asynchronous iteration and generators",
         "category": "async_programming",
         "difficulty": "middle",
@@ -252,7 +251,7 @@ TOPICS = [
         ],
     },
     {
-        "title": "Async debugging",
+        "title": "Отладка Asyncio",
         "description": "Debugging and profiling async code",
         "category": "async_programming",
         "difficulty": "middle",
@@ -264,11 +263,11 @@ TOPICS = [
         ],
         "resources": [
             "https://docs.python.org/3/library/asyncio-dev.html",
-            "https://realpython.com/async-io-python/#debugging",
+            "https://habr.com/ru/articles/667630/",
         ],
     },
     {
-        "title": "Async testing",
+        "title": "Тестирование асинхронного кода",
         "description": "Testing asynchronous code",
         "category": "async_programming",
         "difficulty": "middle",
@@ -280,12 +279,11 @@ TOPICS = [
         ],
         "resources": [
             "https://pytest-asyncio.readthedocs.io/",
-            "https://realpython.com/python-async-testing/",
+            "https://habr.com/ru/articles/671752/",
         ],
     },
-    # Web Development (8 topics)
     {
-        "title": "FastAPI fundamentals",
+        "title": "Основы FastAPI",
         "description": "Building APIs with FastAPI",
         "category": "web_development",
         "difficulty": "middle",
@@ -297,11 +295,11 @@ TOPICS = [
         ],
         "resources": [
             "https://fastapi.tiangolo.com/",
-            "https://realpython.com/fastapi-python-web-apis/",
+            "https://habr.com/ru/articles/513310/",
         ],
     },
     {
-        "title": "REST API design",
+        "title": "Проектирование REST API",
         "description": "Best practices for REST API design",
         "category": "web_development",
         "difficulty": "middle",
@@ -313,7 +311,7 @@ TOPICS = [
         ],
         "resources": [
             "https://restfulapi.net/",
-            "https://realpython.com/api-integration-in-python/",
+            "https://habr.com/ru/articles/483202/",
         ],
     },
     {
@@ -329,11 +327,11 @@ TOPICS = [
         ],
         "resources": [
             "https://docs.djangoproject.com/en/stable/topics/db/",
-            "https://realpython.com/django-performance-optimization/",
+            "https://habr.com/ru/articles/475148/",
         ],
     },
     {
-        "title": "Authentication and authorization",
+        "title": "Аутентификация и авторизация",
         "description": "Implementing auth in web applications",
         "category": "web_development",
         "difficulty": "middle",
@@ -344,12 +342,12 @@ TOPICS = [
             "How do you implement role-based access control?",
         ],
         "resources": [
-            "https://realpython.com/token-based-authentication-with-flask/",
+            "https://habr.com/ru/articles/340146/",
             "https://fastapi.tiangolo.com/tutorial/security/",
         ],
     },
     {
-        "title": "Middleware and CORS",
+        "title": "Middleware и CORS",
         "description": "Understanding middleware and CORS in web apps",
         "category": "web_development",
         "difficulty": "middle",
@@ -361,7 +359,7 @@ TOPICS = [
         ],
         "resources": [
             "https://fastapi.tiangolo.com/tutorial/middleware/",
-            "https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS",
+            "https://developer.mozilla.org/ru/docs/Web/HTTP/CORS",
         ],
     },
     {
@@ -377,11 +375,11 @@ TOPICS = [
         ],
         "resources": [
             "https://fastapi.tiangolo.com/advanced/websockets/",
-            "https://realpython.com/python-websockets/",
+            "https://habr.com/ru/articles/513310/",
         ],
     },
     {
-        "title": "API documentation",
+        "title": "Документирование API",
         "description": "Generating and maintaining API documentation",
         "category": "web_development",
         "difficulty": "middle",
@@ -397,7 +395,7 @@ TOPICS = [
         ],
     },
     {
-        "title": "Request validation",
+        "title": "Валидация запросов",
         "description": "Input validation and error handling",
         "category": "web_development",
         "difficulty": "middle",
@@ -412,9 +410,8 @@ TOPICS = [
             "https://fastapi.tiangolo.com/tutorial/response-model/",
         ],
     },
-    # Databases (7 topics)
     {
-        "title": "SQLAlchemy Core vs ORM",
+        "title": "SQLAlchemy Core против ORM",
         "description": "Understanding SQLAlchemy architecture",
         "category": "databases",
         "difficulty": "middle",
@@ -426,11 +423,11 @@ TOPICS = [
         ],
         "resources": [
             "https://docs.sqlalchemy.org/en/20/",
-            "https://realpython.com/python-sqlalchemy/",
+            "https://habr.com/ru/articles/556314/",
         ],
     },
     {
-        "title": "Database transactions",
+        "title": "Транзакции базы данных",
         "description": "ACID properties and transaction management",
         "category": "databases",
         "difficulty": "middle",
@@ -442,11 +439,11 @@ TOPICS = [
         ],
         "resources": [
             "https://www.postgresql.org/docs/current/tutorial-transactions.html",
-            "https://realpython.com/python-sql-libraries/",
+            "https://habr.com/ru/articles/463669/",
         ],
     },
     {
-        "title": "Query optimization",
+        "title": "Оптимизация запросов",
         "description": "Optimizing database queries and indexes",
         "category": "databases",
         "difficulty": "middle",
@@ -458,11 +455,11 @@ TOPICS = [
         ],
         "resources": [
             "https://www.postgresql.org/docs/current/performance-tips.html",
-            "https://realpython.com/advanced-sql/",
+            "https://habr.com/ru/articles/276633/",
         ],
     },
     {
-        "title": "Database migrations",
+        "title": "Миграции базы данных",
         "description": "Managing schema changes with Alembic",
         "category": "databases",
         "difficulty": "middle",
@@ -474,11 +471,11 @@ TOPICS = [
         ],
         "resources": [
             "https://alembic.sqlalchemy.org/",
-            "https://realpython.com/alembic-migrations/",
+            "https://habr.com/ru/articles/510444/",
         ],
     },
     {
-        "title": "Connection pooling",
+        "title": "Пул соединений",
         "description": "Managing database connections efficiently",
         "category": "databases",
         "difficulty": "middle",
@@ -490,11 +487,11 @@ TOPICS = [
         ],
         "resources": [
             "https://docs.sqlalchemy.org/en/20/core/pooling.html",
-            "https://realpython.com/connection-pooling-with-sqlalchemy/",
+            "https://habr.com/ru/articles/333162/",
         ],
     },
     {
-        "title": "Relationships in ORM",
+        "title": "Отношения в ORM",
         "description": "Modeling relationships with SQLAlchemy",
         "category": "databases",
         "difficulty": "middle",
@@ -506,11 +503,11 @@ TOPICS = [
         ],
         "resources": [
             "https://docs.sqlalchemy.org/en/20/orm/relationships.html",
-            "https://realpython.com/sqlalchemy-relationships/",
+            "https://habr.com/ru/articles/556314/",
         ],
     },
     {
-        "title": "Database testing",
+        "title": "Тестирование баз данных",
         "description": "Testing code that uses databases",
         "category": "databases",
         "difficulty": "middle",
@@ -521,13 +518,12 @@ TOPICS = [
             "What is database seeding?",
         ],
         "resources": [
-            "https://realpython.com/testing-in-django-part-1-best-practices-and-examples/",
             "https://docs.pytest.org/en/stable/fixture.html",
+            "https://habr.com/ru/articles/443626/",
         ],
     },
-    # Testing (6 topics)
     {
-        "title": "Pytest fundamentals",
+        "title": "Основы Pytest",
         "description": "Testing with pytest framework",
         "category": "testing",
         "difficulty": "middle",
@@ -539,11 +535,11 @@ TOPICS = [
         ],
         "resources": [
             "https://docs.pytest.org/",
-            "https://realpython.com/pytest-python-testing/",
+            "https://habr.com/ru/articles/448792/",
         ],
     },
     {
-        "title": "Mocking and patching",
+        "title": "Моки и патчи",
         "description": "Using unittest.mock and pytest-mock",
         "category": "testing",
         "difficulty": "middle",
@@ -554,12 +550,12 @@ TOPICS = [
             "How do you patch objects?",
         ],
         "resources": [
-            "https://realpython.com/python-mock-library/",
             "https://docs.python.org/3/library/unittest.mock.html",
+            "https://habr.com/ru/articles/450102/",
         ],
     },
     {
-        "title": "Test coverage",
+        "title": "Покрытие тестами",
         "description": "Measuring and improving test coverage",
         "category": "testing",
         "difficulty": "middle",
@@ -571,11 +567,11 @@ TOPICS = [
         ],
         "resources": [
             "https://coverage.readthedocs.io/",
-            "https://realpython.com/python-code-coverage/",
+            "https://habr.com/ru/articles/151795/",
         ],
     },
     {
-        "title": "Integration testing",
+        "title": "Интеграционное тестирование",
         "description": "Testing multiple components together",
         "category": "testing",
         "difficulty": "middle",
@@ -586,12 +582,12 @@ TOPICS = [
             "How do you use test containers?",
         ],
         "resources": [
-            "https://realpython.com/python-testing/",
             "https://testcontainers-python.readthedocs.io/",
+            "https://habr.com/ru/articles/514120/",
         ],
     },
     {
-        "title": "TDD and BDD",
+        "title": "TDD и BDD",
         "description": "Test-driven and behavior-driven development",
         "category": "testing",
         "difficulty": "middle",
@@ -602,12 +598,12 @@ TOPICS = [
             "What are the benefits of TDD?",
         ],
         "resources": [
-            "https://realpython.com/python-testing/#test-driven-development",
             "https://behave.readthedocs.io/",
+            "https://habr.com/ru/articles/437142/",
         ],
     },
     {
-        "title": "Performance testing",
+        "title": "Тестирование производительности",
         "description": "Load testing and profiling",
         "category": "testing",
         "difficulty": "middle",
@@ -618,13 +614,12 @@ TOPICS = [
             "What tools exist for performance testing?",
         ],
         "resources": [
-            "https://realpython.com/python-profiling/",
             "https://locust.io/",
+            "https://habr.com/ru/articles/342132/",
         ],
     },
-    # DevOps (6 topics)
     {
-        "title": "Docker fundamentals",
+        "title": "Основы Docker",
         "description": "Containerization with Docker",
         "category": "devops",
         "difficulty": "middle",
@@ -636,7 +631,7 @@ TOPICS = [
         ],
         "resources": [
             "https://docs.docker.com/get-started/",
-            "https://realpython.com/docker-in-action-fitter-happier-more-productive/",
+            "https://habr.com/ru/articles/253877/",
         ],
     },
     {
@@ -652,11 +647,11 @@ TOPICS = [
         ],
         "resources": [
             "https://docs.docker.com/compose/",
-            "https://realpython.com/docker-compose-python/",
+            "https://habr.com/ru/articles/350640/",
         ],
     },
     {
-        "title": "CI/CD pipelines",
+        "title": "CI/CD пайплайны",
         "description": "Continuous integration and deployment",
         "category": "devops",
         "difficulty": "middle",
@@ -668,11 +663,11 @@ TOPICS = [
         ],
         "resources": [
             "https://docs.github.com/en/actions",
-            "https://realpython.com/python-continuous-integration/",
+            "https://habr.com/ru/articles/504318/",
         ],
     },
     {
-        "title": "Logging and monitoring",
+        "title": "Логирование и мониторинг",
         "description": "Application logging and monitoring best practices",
         "category": "devops",
         "difficulty": "middle",
@@ -684,11 +679,11 @@ TOPICS = [
         ],
         "resources": [
             "https://docs.python.org/3/library/logging.html",
-            "https://realpython.com/python-logging/",
+            "https://habr.com/ru/articles/534126/",
         ],
     },
     {
-        "title": "Environment management",
+        "title": "Управление окружением",
         "description": "Managing dependencies and environments",
         "category": "devops",
         "difficulty": "middle",
@@ -699,12 +694,12 @@ TOPICS = [
             "How do you handle dependency conflicts?",
         ],
         "resources": [
-            "https://realpython.com/python-virtual-environments-a-primer/",
             "https://python-poetry.org/docs/",
+            "https://habr.com/ru/articles/502120/",
         ],
     },
     {
-        "title": "Configuration management",
+        "title": "Управление конфигурацией",
         "description": "Managing application configuration",
         "category": "devops",
         "difficulty": "middle",
@@ -715,13 +710,12 @@ TOPICS = [
             "How do you manage secrets?",
         ],
         "resources": [
-            "https://12factor.net/",
+            "https://12factor.net/ru/",
             "https://pydantic-docs.helpmanual.io/usage/settings/",
         ],
     },
-    # Design Patterns (5 topics)
     {
-        "title": "Creational patterns",
+        "title": "Порождающие паттерны",
         "description": "Singleton, Factory, Builder patterns",
         "category": "design_patterns",
         "difficulty": "middle",
@@ -732,12 +726,12 @@ TOPICS = [
             "What are the downsides of Singleton?",
         ],
         "resources": [
-            "https://refactoring.guru/design-patterns/creational-patterns",
-            "https://realpython.com/factory-method-python/",
+            "https://refactoring.guru/ru/design-patterns/creational-patterns",
+            "https://habr.com/ru/articles/463031/",
         ],
     },
     {
-        "title": "Structural patterns",
+        "title": "Структурные паттерны",
         "description": "Adapter, Decorator, Facade patterns",
         "category": "design_patterns",
         "difficulty": "middle",
@@ -748,12 +742,12 @@ TOPICS = [
             "When should you use Proxy pattern?",
         ],
         "resources": [
-            "https://refactoring.guru/design-patterns/structural-patterns",
-            "https://realpython.com/primer-on-python-decorators/",
+            "https://refactoring.guru/ru/design-patterns/structural-patterns",
+            "https://habr.com/ru/articles/463031/",
         ],
     },
     {
-        "title": "Behavioral patterns",
+        "title": "Поведенческие паттерны",
         "description": "Strategy, Observer, Command patterns",
         "category": "design_patterns",
         "difficulty": "middle",
@@ -764,12 +758,12 @@ TOPICS = [
             "When should you use State pattern?",
         ],
         "resources": [
-            "https://refactoring.guru/design-patterns/behavioral-patterns",
-            "https://realpython.com/python-design-patterns/",
+            "https://refactoring.guru/ru/design-patterns/behavioral-patterns",
+            "https://habr.com/ru/articles/463031/",
         ],
     },
     {
-        "title": "Dependency Injection",
+        "title": "Внедрение зависимостей",
         "description": "Implementing dependency injection in Python",
         "category": "design_patterns",
         "difficulty": "middle",
@@ -781,11 +775,11 @@ TOPICS = [
         ],
         "resources": [
             "https://python-dependency-injector.ets-labs.org/",
-            "https://fastapi.tiangolo.com/tutorial/dependencies/",
+            "https://habr.com/ru/articles/434400/",
         ],
     },
     {
-        "title": "Repository pattern",
+        "title": "Паттерн Репозиторий",
         "description": "Data access layer abstraction",
         "category": "design_patterns",
         "difficulty": "middle",
@@ -797,12 +791,11 @@ TOPICS = [
         ],
         "resources": [
             "https://cosmicpython.com/book/chapter_02_repository.html",
-            "https://realpython.com/python-design-patterns/",
+            "https://habr.com/ru/articles/556314/",
         ],
     },
-    # Data Structures & Algorithms (4 topics)
     {
-        "title": "Complexity analysis",
+        "title": "Анализ сложности",
         "description": "Big O notation and algorithm complexity",
         "category": "algorithms",
         "difficulty": "middle",
@@ -813,12 +806,12 @@ TOPICS = [
             "What is amortized complexity?",
         ],
         "resources": [
-            "https://realpython.com/python-time-complexity/",
+            "https://habr.com/ru/articles/104219/",
             "https://wiki.python.org/moin/TimeComplexity",
         ],
     },
     {
-        "title": "Data structures",
+        "title": "Структуры данных",
         "description": "Common data structures in Python",
         "category": "algorithms",
         "difficulty": "middle",
@@ -829,12 +822,12 @@ TOPICS = [
             "How do dictionaries achieve O(1) lookup?",
         ],
         "resources": [
-            "https://realpython.com/python-data-structures/",
             "https://docs.python.org/3/library/collections.html",
+            "https://habr.com/ru/articles/430338/",
         ],
     },
     {
-        "title": "Sorting and searching",
+        "title": "Сортировка и поиск",
         "description": "Common algorithms for sorting and searching",
         "category": "algorithms",
         "difficulty": "middle",
@@ -845,12 +838,12 @@ TOPICS = [
             "When should you use heapq?",
         ],
         "resources": [
-            "https://realpython.com/sorting-algorithms-python/",
             "https://docs.python.org/3/library/heapq.html",
+            "https://habr.com/ru/articles/188010/",
         ],
     },
     {
-        "title": "Recursion and dynamic programming",
+        "title": "Рекурсия и динамическое программирование",
         "description": "Solving problems with recursion and DP",
         "category": "algorithms",
         "difficulty": "middle",
@@ -861,13 +854,12 @@ TOPICS = [
             "How do you use functools.lru_cache?",
         ],
         "resources": [
-            "https://realpython.com/python-recursion/",
             "https://docs.python.org/3/library/functools.html",
+            "https://habr.com/ru/articles/423939/",
         ],
     },
-    # Code Quality (4 topics)
     {
-        "title": "Clean code principles",
+        "title": "Принципы чистого кода",
         "description": "Writing readable and maintainable code",
         "category": "code_quality",
         "difficulty": "middle",
@@ -878,12 +870,12 @@ TOPICS = [
             "How do you handle code complexity?",
         ],
         "resources": [
-            "https://realpython.com/python-pep8/",
-            "https://realpython.com/python-refactoring/",
+            "https://habr.com/ru/articles/655403/",
+            "https://habr.com/ru/articles/343270/",
         ],
     },
     {
-        "title": "Code review best practices",
+        "title": "Лучшие практики Code Review",
         "description": "Effective code review techniques",
         "category": "code_quality",
         "difficulty": "middle",
@@ -895,11 +887,11 @@ TOPICS = [
         ],
         "resources": [
             "https://google.github.io/eng-practices/review/",
-            "https://realpython.com/python-code-quality/",
+            "https://habr.com/ru/articles/451314/",
         ],
     },
     {
-        "title": "Linting and formatting",
+        "title": "Линтинг и форматирование",
         "description": "Automated code quality tools",
         "category": "code_quality",
         "difficulty": "middle",
@@ -915,7 +907,7 @@ TOPICS = [
         ],
     },
     {
-        "title": "Refactoring techniques",
+        "title": "Техники рефакторинга",
         "description": "Improving existing code structure",
         "category": "code_quality",
         "difficulty": "middle",
@@ -926,13 +918,12 @@ TOPICS = [
             "How do you refactor safely?",
         ],
         "resources": [
-            "https://refactoring.guru/refactoring",
-            "https://realpython.com/python-refactoring/",
+            "https://refactoring.guru/ru/refactoring",
+            "https://habr.com/ru/articles/443568/",
         ],
     },
-    # System Design (3 topics)
     {
-        "title": "API design",
+        "title": "Проектирование API",
         "description": "Designing scalable and maintainable APIs",
         "category": "system_design",
         "difficulty": "middle",
@@ -943,12 +934,12 @@ TOPICS = [
             "What is rate limiting?",
         ],
         "resources": [
-            "https://realpython.com/api-integration-in-python/",
             "https://restfulapi.net/",
+            "https://habr.com/ru/articles/483202/",
         ],
     },
     {
-        "title": "Caching strategies",
+        "title": "Стратегии кэширования",
         "description": "Implementing caching for performance",
         "category": "system_design",
         "difficulty": "middle",
@@ -959,12 +950,12 @@ TOPICS = [
             "What is CDN caching?",
         ],
         "resources": [
-            "https://realpython.com/python-redis/",
+            "https://habr.com/ru/articles/276413/",
             "https://redis.io/docs/",
         ],
     },
     {
-        "title": "Message queues",
+        "title": "Очереди сообщений",
         "description": "Async communication with message queues",
         "category": "system_design",
         "difficulty": "middle",
@@ -975,7 +966,7 @@ TOPICS = [
             "When should you use message queues?",
         ],
         "resources": [
-            "https://realpython.com/asynchronous-tasks-with-django-and-celery/",
+            "https://habr.com/ru/articles/414459/",
             "https://www.rabbitmq.com/tutorials/tutorial-one-python.html",
         ],
     },
@@ -983,17 +974,15 @@ TOPICS = [
 
 
 async def seed_topics() -> None:
-    """Seed database with topics."""
+    """Заполняет базу данных темами."""
     async with async_session_maker() as session:
-        # Check if topics already exist
         result = await session.execute(select(func.count()).select_from(Topic))
         count = result.scalar()
 
         if count > 0:
-            print(f"Topics already seeded ({count} topics exist)")
+            print(f"Темы уже загружены ({count} тем существует)")
             return
 
-        # Create topics
         topics = []
         for topic_data in TOPICS:
             topic = Topic(
@@ -1006,15 +995,15 @@ async def seed_topics() -> None:
                 is_active=True,
                 times_used=0,
                 avg_rating=0.0,
-                created_at=datetime.utcnow(),
+                created_at=datetime.now(UTC),
             )
             topics.append(topic)
 
         session.add_all(topics)
         await session.commit()
 
-        print(f"Successfully seeded {len(topics)} topics")
-        print("\nTopics by category:")
+        print(f"Успешно загружено {len(topics)} тем")
+        print("\nТемы по категориям:")
         categories: dict[str, int] = {}
         for topic in topics:
             categories[topic.category] = categories.get(topic.category, 0) + 1

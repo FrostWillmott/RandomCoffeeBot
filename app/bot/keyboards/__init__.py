@@ -6,6 +6,6 @@ from app.bot.keyboards.inline import (
 )
 
 __all__ = [
-    "get_main_menu_keyboard",
     "get_confirm_registration_keyboard",
+    "get_main_menu_keyboard",
 ]

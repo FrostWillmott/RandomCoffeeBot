@@ -1,6 +1,8 @@
 """User model."""
 
-from datetime import datetime
+from __future__ import annotations
+
+from datetime import UTC, datetime
 
 from sqlalchemy import BigInteger, Boolean, DateTime, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -21,28 +23,28 @@ class User(Base):
     first_name: Mapped[str | None] = mapped_column(String(255))
     last_name: Mapped[str | None] = mapped_column(String(255))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    level: Mapped[str] = mapped_column(
-        String(20), default="middle", nullable=False
-    )
+    level: Mapped[str] = mapped_column(String(20), default="middle", nullable=False)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, nullable=False
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        nullable=False,
     )
 
     # Relationships
-    registrations: Mapped[list["Registration"]] = relationship(
+    registrations: Mapped[list[Registration]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
-    matches_as_user1: Mapped[list["Match"]] = relationship(
+    matches_as_user1: Mapped[list[Match]] = relationship(
         foreign_keys="Match.user1_id",
         back_populates="user1",
         cascade="all, delete-orphan",
     )
-    matches_as_user2: Mapped[list["Match"]] = relationship(
+    matches_as_user2: Mapped[list[Match]] = relationship(
         foreign_keys="Match.user2_id",
         back_populates="user2",
         cascade="all, delete-orphan",
     )
-    feedbacks: Mapped[list["Feedback"]] = relationship(
+    feedbacks: Mapped[list[Feedback]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
 

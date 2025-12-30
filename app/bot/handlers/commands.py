@@ -1,12 +1,15 @@
 """Command handlers."""
 
+from collections.abc import Sequence
+
 from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.types import CallbackQuery, Message
-from sqlalchemy import and_, select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot.keyboards import get_main_menu_keyboard
+from app.models.enums import MatchStatus, SessionStatus
 from app.models.match import Match
 from app.models.registration import Registration
 from app.models.session import Session
@@ -20,25 +23,26 @@ router = Router()
 async def cmd_help(event: Message | CallbackQuery) -> None:
     """Handle /help command or help button."""
     help_text = (
-        "❓ <b>Random Coffee Bot Help</b>\n\n"
-        "<b>Available Commands:</b>\n"
-        "/start - Start the bot and see main menu\n"
-        "/help - Show this help message\n"
-        "/status - Check your current status\n\n"
-        "<b>How Random Coffee Works:</b>\n\n"
-        "1️⃣ <b>Registration</b>\n"
-        "   • Every week a new session is announced in the channel\n"
-        "   • Use the bot to register for upcoming sessions\n\n"
-        "2️⃣ <b>Matching</b>\n"
-        "   • After registration closes, participants are randomly paired\n"
-        "   • Each pair receives a Python Middle interview topic\n\n"
-        "3️⃣ <b>Meeting</b>\n"
-        "   • Coordinate meeting time and format with your match\n"
-        "   • Discuss the assigned topic together\n\n"
-        "4️⃣ <b>Feedback</b>\n"
-        "   • Share your experience after the meeting\n"
-        "   • Help improve future sessions\n\n"
-        "<b>Need help?</b> Contact @your_support"
+        "❓ <b>Справка Random Coffee Bot</b>\n\n"
+        "<b>Доступные команды:</b>\n"
+        "/start - Запустить бота и увидеть главное меню\n"
+        "/help - Показать это сообщение справки\n"
+        "/status - Проверить ваш текущий статус\n\n"
+        "<b>Как работает Random Coffee:</b>\n\n"
+        "1️⃣ <b>Регистрация</b>\n"
+        "   • Каждую неделю в канале объявляется новая сессия\n"
+        "   • Используйте бота для регистрации на предстоящие сессии\n\n"
+        "2️⃣ <b>Подбор пары</b>\n"
+        "   • После закрытия регистрации участники случайным образом "
+        "объединяются в пары\n"
+        "   • Каждая пара получает тему для собеседования Python Middle\n\n"
+        "3️⃣ <b>Встреча</b>\n"
+        "   • Согласуйте время и формат встречи с вашей парой\n"
+        "   • Обсудите назначенную тему вместе\n\n"
+        "4️⃣ <b>Отзыв</b>\n"
+        "   • Поделитесь своим опытом после встречи\n"
+        "   • Помогите улучшить будущие сессии\n\n"
+        "<b>Нужна помощь?</b> Свяжитесь с @your_support"
     )
 
     if isinstance(event, Message):
@@ -53,87 +57,91 @@ async def cmd_help(event: Message | CallbackQuery) -> None:
         await event.answer()
 
 
+async def _get_user_status_data(session: AsyncSession, user: User):
+    """Retrieve active registrations and matches for a user."""
+    reg_stmt = (
+        select(Registration, Session)
+        .join(Session)
+        .where(
+            and_(
+                Registration.user_id == user.id,
+                Session.status.in_([SessionStatus.OPEN, SessionStatus.CLOSED]),
+            )
+        )
+        .order_by(Session.date.desc())
+    )
+    match_stmt = (
+        select(Match, Session)
+        .join(Session)
+        .where(
+            and_(
+                or_(Match.user1_id == user.id, Match.user2_id == user.id),
+                Match.status.in_([MatchStatus.CREATED, MatchStatus.CONFIRMED]),
+            )
+        )
+        .order_by(Session.date.desc())
+    )
+
+    registrations = (await session.execute(reg_stmt)).all()
+    matches = (await session.execute(match_stmt)).all()
+    return registrations, matches
+
+
+def _format_status_message(user: User, registrations: Sequence, matches: Sequence) -> str:
+    """Construct the status text message."""
+    text = (
+        f"ℹ️ <b>Ваш статус</b>\n\n👤 Имя: {user.first_name or 'Не указано'}\n🎯"
+        f" Уровень: {user.level}\n\n"
+    )
+
+    if registrations:
+        text += f"📝 <b>Активные регистрации:</b> {len(registrations)}\n"
+        for _, sess in registrations[:3]:
+            text += f"   • {sess.date.strftime('%Y-%m-%d')}\n"
+
+    if matches:
+        text += f"\n🤝 <b>Активные пары:</b> {len(matches)}\n"
+        for match, sess in matches[:3]:
+            status_ru = {
+                "CREATED": "Создана",
+                "CONFIRMED": "Подтверждена",
+                "COMPLETED": "Завершена",
+            }.get(match.status.value, match.status.value)
+            text += f"   • {sess.date.strftime('%Y-%m-%d')} - {status_ru}\n"
+
+    if not registrations and not matches:
+        text += (
+            "Нет активных регистраций или пар.\n"
+            "Используйте меню для регистрации на следующую сессию!"
+        )
+    return text
+
+
 @router.message(Command("status"))
 @router.callback_query(F.data == "status")
-async def cmd_status(
-    event: Message | CallbackQuery, session: AsyncSession
-) -> None:
+async def cmd_status(event: Message | CallbackQuery, session: AsyncSession) -> None:
     """Handle /status command or status button."""
-    if isinstance(event, Message):
-        user_id = event.from_user.id if event.from_user else None
-        message = event
-    else:
-        user_id = event.from_user.id if event.from_user else None
-        message = event.message
+    user_id = event.from_user.id if event.from_user else None
+    message = event if isinstance(event, Message) else event.message
 
     if not user_id or not message:
         return
 
-    # Get user
-    result = await session.execute(
-        select(User).where(User.telegram_id == user_id)
-    )
-    user = result.scalar_one_or_none()
+    user = (
+        await session.execute(select(User).where(User.telegram_id == user_id))
+    ).scalar_one_or_none()
 
     if not user:
-        status_text = "⚠️ You're not registered. Use /start to register."
+        status_text = "⚠️ Вы не зарегистрированы. Используйте /start для регистрации."
     else:
-        # Get active registrations
-        result = await session.execute(
-            select(Registration, Session)
-            .join(Session)
-            .where(
-                and_(
-                    Registration.user_id == user.id,
-                    Session.status.in_(["open", "closed"]),
-                )
-            )
-            .order_by(Session.date.desc())
-        )
-        registrations = result.all()
-
-        # Get active matches
-        result = await session.execute(
-            select(Match, Session)
-            .join(Session)
-            .where(
-                and_(
-                    (Match.user1_id == user.id) | (Match.user2_id == user.id),
-                    Match.status.in_(["created", "confirmed"]),
-                )
-            )
-            .order_by(Session.date.desc())
-        )
-        matches = result.all()
-
-        status_text = "ℹ️ <b>Your Status</b>\n\n"
-        status_text += f"👤 Name: {user.first_name or 'N/A'}\n"
-        status_text += f"🎯 Level: {user.level}\n\n"
-
-        if registrations:
-            status_text += (
-                f"📝 <b>Active Registrations:</b> {len(registrations)}\n"
-            )
-            for reg, sess in registrations[:3]:
-                status_text += f"   • {sess.date.strftime('%Y-%m-%d')}\n"
-
-        if matches:
-            status_text += f"\n🤝 <b>Active Matches:</b> {len(matches)}\n"
-            for match, sess in matches[:3]:
-                status_text += (
-                    f"   • {sess.date.strftime('%Y-%m-%d')} - {match.status}\n"
-                )
-
-        if not registrations and not matches:
-            status_text += "No active registrations or matches.\n"
-            status_text += "Use the menu to register for the next session!"
+        registrations, matches = await _get_user_status_data(session, user)
+        status_text = _format_status_message(user, registrations, matches)
 
     if isinstance(event, Message):
         await message.answer(status_text, parse_mode="HTML")
     else:
-        await message.edit_text(
-            status_text,
-            parse_mode="HTML",
-            reply_markup=get_main_menu_keyboard(),
-        )
+        if hasattr(message, "edit_text"):
+            await message.edit_text(
+                status_text, parse_mode="HTML", reply_markup=get_main_menu_keyboard()
+            )
         await event.answer()

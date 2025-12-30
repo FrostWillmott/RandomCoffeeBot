@@ -28,7 +28,7 @@ exclude = [
     "venv",
 ]
 
-line-length = 79
+line-length = 92
 indent-width = 4
 target-version = "py312"
 
@@ -78,8 +78,15 @@ inline-quotes = "double"
 [lint.per-file-ignores]
 "__init__.py" = ["F401"]
 "tests/*" = ["D"]
-"conftest.py" = ["D"]
+"conftest.py" = ["D", "E402"]
 "test_*.py" = ["D"]
+"app/models/*.py" = ["F821"]
+"app/bot/handlers/*.py" = ["RUF001", "E402"]
+"app/bot/keyboards/*.py" = ["RUF001"]
+"app/resources/*.py" = ["RUF001"]
+"app/services/*.py" = ["RUF001", "E402", "C901"]
+"scripts/*.py" = ["RUF001"]
+"alembic/versions/*.py" = ["D415"]
 
 [format]
 preview = true

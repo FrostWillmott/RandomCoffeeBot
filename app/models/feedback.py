@@ -1,11 +1,14 @@
 """Feedback model for match reviews."""
 
-from datetime import datetime
+from __future__ import annotations
+
+from datetime import UTC, datetime
 
 from sqlalchemy import DateTime, ForeignKey, Integer, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+from app.models.user import User
 
 
 class Feedback(Base):
@@ -24,22 +27,19 @@ class Feedback(Base):
         nullable=False,
         index=True,
     )
-    rating: Mapped[int] = mapped_column(Integer, nullable=False)  # 1-5 stars
-    topic_difficulty: Mapped[int | None] = mapped_column(
-        Integer
-    )  # 1-5: too easy - too hard
+    rating: Mapped[int] = mapped_column(Integer, nullable=False)
+    topic_difficulty: Mapped[int | None] = mapped_column(Integer)
     comment: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, nullable=False
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        nullable=False,
     )
 
     # Relationships
-    match: Mapped["Match"] = relationship(back_populates="feedbacks")
-    user: Mapped["User"] = relationship(back_populates="feedbacks")
+    match: Mapped[Match] = relationship(back_populates="feedbacks")
+    user: Mapped[User] = relationship(back_populates="feedbacks")
 
     def __repr__(self) -> str:
         """String representation."""
-        return (
-            f"<Feedback match={self.match_id} "
-            f"user={self.user_id} rating={self.rating}>"
-        )
+        return f"<Feedback match={self.match_id} user={self.user_id} rating={self.rating}>"

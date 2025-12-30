@@ -18,7 +18,7 @@ class DatabaseMiddleware(BaseMiddleware):
         event: TelegramObject,
         data: dict[str, Any],
     ) -> Any:
-        """Process update with database session."""
+        """Process update with a database session."""
         async with async_session_maker() as session:
             data["session"] = session
             try:

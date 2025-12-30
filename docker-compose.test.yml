@@ -1,0 +1,28 @@
+services:
+  db-test:
+    image: postgres:16-alpine
+    container_name: randomcoffee-db-test
+    restart: "no"  # Don't restart automatically for tests
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: randomcoffee_test
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5434:5432"  # Different port to avoid conflicts with production DB (5432)
+    # Use tmpfs for in-memory storage - faster and automatically cleaned
+    tmpfs:
+      - /var/lib/postgresql/data
+    networks:
+      - randomcoffee-test-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d randomcoffee_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+networks:
+  randomcoffee-test-network:
+    driver: bridge
+    name: randomcoffee-test-network

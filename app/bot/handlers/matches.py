@@ -1,6 +1,7 @@
 """Match interaction handlers."""
 
-from datetime import datetime
+import logging
+from datetime import UTC, datetime
 
 from aiogram import F, Router
 from aiogram.types import CallbackQuery
@@ -8,60 +9,80 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot.keyboards import get_main_menu_keyboard
+from app.models.enums import MatchStatus
 from app.models.match import Match
+from app.schemas.callbacks import (
+    ConfirmMatchCallback,
+    SuggestTimeCallback,
+    parse_callback_data,
+)
 
 router = Router()
+logger = logging.getLogger(__name__)
 
 
 @router.callback_query(F.data.startswith("confirm_match:"))
-async def confirm_match(
-    callback: CallbackQuery, session: AsyncSession
-) -> None:
+async def confirm_match(callback: CallbackQuery, session: AsyncSession) -> None:
     """Handle match confirmation."""
     if not callback.message or not callback.from_user:
         return
 
-    try:
-        match_id = int(callback.data.split(":")[1])
-    except (IndexError, ValueError):
-        await callback.answer("Invalid match ID")
+    if not callback.data:
+        await callback.answer("Неверный ID пары")
         return
 
-    # Get the match
+    try:
+        callback_data = parse_callback_data(callback.data)
+        if not isinstance(callback_data, ConfirmMatchCallback):
+            raise ValueError("Invalid callback type")
+        match_id = callback_data.match_id
+    except (ValueError, TypeError) as e:
+        logger.warning(f"Invalid confirm_match callback data: {callback.data}, error: {e}")
+        await callback.answer("Неверный ID пары")
+        return
+
     result = await session.execute(select(Match).where(Match.id == match_id))
     match = result.scalar_one_or_none()
 
     if not match:
-        await callback.message.edit_text(
-            "❌ Match not found.",
-            reply_markup=get_main_menu_keyboard(),
-        )
+        if callback.message:
+            await callback.message.edit_text(
+                "❌ Пара не найдена.",
+                reply_markup=get_main_menu_keyboard(),
+            )
         await callback.answer()
         return
 
-    # Update match status
-    if match.status == "created":
-        match.status = "confirmed"
-        match.confirmed_at = datetime.utcnow()
+    if match.status == MatchStatus.CREATED:
+        match.status = MatchStatus.CONFIRMED
+        match.confirmed_at = datetime.now(UTC)
         session.add(match)
         await session.commit()
 
-        await callback.message.edit_text(
-            "✅ <b>Match Confirmed!</b>\n\n"
-            "Great! You've confirmed the match. "
-            "Now reach out to your partner to coordinate the meeting details.\n\n"
-            "💡 <b>Suggested meeting length:</b> 30-60 minutes\n"
-            "📞 <b>Format options:</b> Zoom, Google Meet, or Telegram call\n\n"
-            "Have a productive conversation!",
-            parse_mode="HTML",
-            reply_markup=get_main_menu_keyboard(),
-        )
-        await callback.answer("Match confirmed!")
+        if callback.message:
+            await callback.message.edit_text(
+                "✅ <b>Пара подтверждена!</b>\n\n"
+                "Отлично! Вы подтвердили пару. "
+                "Теперь свяжитесь с вашим партнёром, чтобы согласовать детали "
+                "встречи.\n\n"
+                "💡 <b>Рекомендуемая длительность встречи:</b> 30-60 минут\n"
+                "📞 <b>Варианты формата:</b> Zoom, Google Meet или звонок в "
+                "Telegram\n\n"
+                "Приятного общения!",
+                parse_mode="HTML",
+                reply_markup=get_main_menu_keyboard(),
+            )
+        await callback.answer("Пара подтверждена!")
     else:
-        await callback.message.edit_text(
-            f"ℹ️ This match has already been {match.status}.",
-            reply_markup=get_main_menu_keyboard(),
-        )
+        if callback.message:
+            status_ru = {
+                "CONFIRMED": "подтверждена",
+                "COMPLETED": "завершена",
+            }.get(match.status.value, match.status.value.lower())
+            await callback.message.edit_text(
+                f"ℹ️ Эта пара уже {status_ru}.",
+                reply_markup=get_main_menu_keyboard(),
+            )
         await callback.answer()
 
 
@@ -71,15 +92,30 @@ async def suggest_time(callback: CallbackQuery) -> None:
     if not callback.message:
         return
 
-    await callback.message.edit_text(
-        "📅 <b>Coordinate Meeting Time</b>\n\n"
-        "To coordinate your meeting:\n\n"
-        "1️⃣ Contact your match directly via Telegram\n"
-        "2️⃣ Discuss your availability\n"
-        "3️⃣ Choose a time that works for both of you\n"
-        "4️⃣ Decide on the meeting format (Zoom, Meet, Telegram)\n\n"
-        "💡 <b>Tip:</b> Share your calendar or suggest 2-3 time slots!",
-        parse_mode="HTML",
-        reply_markup=get_main_menu_keyboard(),
-    )
+    if not callback.data:
+        await callback.answer("Неверный запрос")
+        return
+
+    try:
+        callback_data = parse_callback_data(callback.data)
+        if not isinstance(callback_data, SuggestTimeCallback):
+            raise ValueError("Invalid callback type")
+    except (ValueError, TypeError) as e:
+        logger.warning(f"Invalid suggest_time callback data: {callback.data}, error: {e}")
+        await callback.answer("Неверный запрос")
+        return
+
+    if callback.message:
+        await callback.message.edit_text(
+            "📅 <b>Согласование времени встречи</b>\n\n"
+            "Чтобы согласовать встречу:\n\n"
+            "1️⃣ Свяжитесь с вашей парой напрямую через Telegram\n"
+            "2️⃣ Обсудите вашу доступность\n"
+            "3️⃣ Выберите время, которое подходит вам обоим\n"
+            "4️⃣ Решите формат встречи (Zoom, Meet, Telegram)\n\n"
+            "💡 <b>Совет:</b> Поделитесь своим календарём или предложите 2-3 "
+            "варианта времени!",
+            parse_mode="HTML",
+            reply_markup=get_main_menu_keyboard(),
+        )
     await callback.answer()

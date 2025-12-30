@@ -1,403 +1,494 @@
-# Random Coffee Bot - Архитектурный анализ и план
+# Random Coffee Bot - Архитектура
 
-## 📋 Текущее состояние проекта
+## Обзор системы
 
-**Что уже есть:**
-- ✅ Базовая структура бота (aiogram 3)
-- ✅ PostgreSQL + SQLAlchemy (async)
-- ✅ APScheduler для фоновых задач
-- ✅ Docker-инфраструктура
-- ✅ CI/CD (GitHub Actions)
-- ✅ Миграции (Alembic)
+Random Coffee Bot - это Telegram бот для организации случайных встреч между участниками сообщества. Бот автоматически создает пары, назначает темы для обсуждения и управляет процессом регистрации.
 
-**Что отсутствует:**
-- ❌ Модели данных (БД пустая)
-- ❌ Хендлеры бота
-- ❌ Бизнес-логика
-- ❌ Планировщик задач (не настроен)
+## Архитектурные диаграммы
 
-**Текущий объем кода:** ~278 строк (только скелет)
+### Поток данных при регистрации
 
----
+```mermaid
+sequenceDiagram
+    participant User
+    participant Bot
+    participant Handler
+    participant Service
+    participant DB
 
-## 🎯 Требования к функциональности
-
-### 1. Публикация приглашений
-- Ежедневная публикация в канал по расписанию
-- Кнопка "Участвовать"
-- Дедлайн для регистрации
-
-### 2. Формирование пар
-- Рандомное распределение участников
-- Учет предыдущих встреч (избегать повторов)
-- Обработка нечетного количества участников
-
-### 3. Темы для обсуждения
-- База тем по Python Middle собеседованиям
-- Случайный выбор темы для каждой пары
-- Категории: алгоритмы, Django/FastAPI, async, базы данных, best practices
-
-### 4. Согласование встречи
-- Предложение временных слотов
-- Выбор формата (Zoom, Meet, Telegram Call)
-- Подтверждение от обеих сторон
-
-### 5. Напоминания и follow-up
-- Напоминание за час до встречи
-- Запрос обратной связи после встречи
-
----
-
-## 🏗️ Архитектурные решения
-
-### 1. Модель данных
-
-```
-┌─────────────┐
-│   User      │
-├─────────────┤
-│ id          │◄────┐
-│ telegram_id │     │
-│ username    │     │
-│ first_name  │     │
-│ is_active   │     │
-│ created_at  │     │
-└─────────────┘     │
-                    │
-┌─────────────┐     │
-│ Session     │     │
-├─────────────┤     │
-│ id          │     │
-│ date        │     │
-│ deadline    │     │
-│ status      │     │
-│ message_id  │     │
-└─────────────┘     │
-                    │
-┌──────────────┐    │
-│ Registration │    │
-├──────────────┤    │
-│ id           │    │
-│ session_id   │────┘
-│ user_id      │────┘
-│ created_at   │
-└──────────────┘
-        │
-        │
-┌──────────────┐
-│ Match        │
-├──────────────┤
-│ id           │
-│ session_id   │
-│ user1_id     │────┘
-│ user2_id     │────┘
-│ topic_id     │────┐
-│ status       │    │
-│ meeting_time │    │
-│ format       │    │
-│ confirmed_at │    │
-└──────────────┘    │
-                    │
-┌──────────────┐    │
-│ Topic        │◄───┘
-├──────────────┤
-│ id           │
-│ title        │
-│ description  │
-│ category     │
-│ difficulty   │
-└──────────────┘
-
-┌──────────────┐
-│ Feedback     │
-├──────────────┤
-│ id           │
-│ match_id     │
-│ user_id      │
-│ rating       │
-│ comment      │
-│ created_at   │
-└──────────────┘
+    User->>Bot: /start или кнопка "Register"
+    Bot->>Handler: start_registration()
+    Handler->>Service: get_next_open_session()
+    Service->>DB: SELECT session WHERE status=OPEN
+    DB-->>Service: Session
+    Service-->>Handler: Session
+    Handler->>DB: Check existing registration
+    DB-->>Handler: Registration or None
+    Handler->>User: Show confirmation dialog
+    User->>Bot: Confirm registration
+    Bot->>Handler: confirm_registration()
+    Handler->>DB: INSERT registration
+    DB-->>Handler: Success
+    Handler->>User: Registration confirmed
 ```
 
-### 2. Структура кода
+### Поток создания матчей
 
-```
-app/
-├── models/
-│   ├── user.py          # Модель пользователя
-│   ├── session.py       # Сессия Random Coffee
-│   ├── registration.py  # Регистрация на сессию
-│   ├── match.py         # Пара участников
-│   ├── topic.py         # Темы для обсуждения
-│   └── feedback.py      # Обратная связь
-│
-├── handlers/
-│   ├── start.py         # /start, приветствие
-│   ├── registration.py  # Регистрация на сессию
-│   ├── matching.py      # Обработка пар
-│   └── admin.py         # Админ-команды
-│
-├── services/
-│   ├── session_service.py    # Управление сессиями
-│   ├── matching_service.py   # Алгоритм распределения пар
-│   ├── topic_service.py      # Работа с темами
-│   ├── notification_service.py # Отправка уведомлений
-│   └── stats_service.py      # Статистика
-│
-├── jobs/
-│   ├── daily_announcement.py # Публикация приглашения
-│   ├── create_matches.py     # Создание пар
-│   └── send_reminders.py     # Напоминания
-│
-├── keyboards/
-│   ├── inline.py        # Inline кнопки
-│   └── reply.py         # Reply клавиатуры
-│
-└── utils/
-    ├── states.py        # FSM состояния
-    └── texts.py         # Текстовые сообщения
+```mermaid
+sequenceDiagram
+    participant Scheduler
+    participant MatchingService
+    participant DB
+    participant NotificationService
+    participant User1
+    participant User2
+
+    Scheduler->>MatchingService: run_matching_for_closed_sessions()
+    MatchingService->>DB: Get closed sessions
+    DB-->>MatchingService: Sessions
+    MatchingService->>DB: Get registrations
+    DB-->>MatchingService: Registrations
+    MatchingService->>DB: Get previous matches
+    DB-->>MatchingService: Past matches
+    MatchingService->>MatchingService: Create pairs (avoid duplicates)
+    MatchingService->>DB: INSERT matches
+    MatchingService->>NotificationService: notify_all_matches_for_session()
+    NotificationService->>User1: Send match notification
+    NotificationService->>User2: Send match notification
 ```
 
-### 3. Состояния FSM (Finite State Machine)
+### Компонентная архитектура
+
+```mermaid
+graph TB
+    subgraph "Application Layer"
+        Main[main.py]
+        Bot[Bot Dispatcher]
+        Scheduler[APScheduler]
+    end
+
+    subgraph "Handler Layer"
+        StartHandler[Start Handler]
+        RegHandler[Registration Handler]
+        MatchHandler[Match Handler]
+        FeedbackHandler[Feedback Handler]
+    end
+
+    subgraph "Service Layer"
+        SessionService[Session Service]
+        MatchingService[Matching Service]
+        NotificationService[Notification Service]
+        AnnouncementService[Announcement Service]
+    end
+
+    subgraph "Data Layer"
+        DB[(PostgreSQL)]
+        Redis[(Redis FSM)]
+    end
+
+    Main-->Bot
+    Main-->Scheduler
+    Bot-->StartHandler
+    Bot-->RegHandler
+    Bot-->MatchHandler
+    Bot-->FeedbackHandler
+    Handler-->SessionService
+    Handler-->MatchingService
+    Handler-->NotificationService
+    Scheduler-->SessionService
+    Scheduler-->MatchingService
+    Scheduler-->AnnouncementService
+    Service-->DB
+    Bot-->Redis
+```
+
+## Модель данных
+
+### ER-диаграмма
+
+```mermaid
+erDiagram
+    User ||--o{ Registration : has
+    User ||--o{ Match : "user1"
+    User ||--o{ Match : "user2"
+    User ||--o{ Feedback : gives
+    Session ||--o{ Registration : has
+    Session ||--o{ Match : contains
+    Match ||--o{ Feedback : receives
+    Topic ||--o{ Match : assigned_to
+
+    User {
+        int id PK
+        bigint telegram_id UK
+        string username
+        string first_name
+        string last_name
+        string level
+        bool is_active
+        datetime created_at
+    }
+
+    Session {
+        int id PK
+        datetime date
+        datetime registration_deadline
+        string status
+        int announcement_message_id
+        datetime created_at
+    }
+
+    Registration {
+        int id PK
+        int session_id FK
+        int user_id FK
+        datetime created_at
+    }
+
+    Match {
+        int id PK
+        int session_id FK
+        int user1_id FK
+        int user2_id FK
+        int topic_id FK
+        string status
+        datetime meeting_time
+        string meeting_format
+        datetime created_at
+        datetime confirmed_at
+    }
+
+    Topic {
+        int id PK
+        string title
+        string description
+        array questions
+        array resources
+        string difficulty
+        bool is_active
+        int times_used
+    }
+
+    Feedback {
+        int id PK
+        int match_id FK
+        int user_id FK
+        int rating
+        string comment
+        datetime created_at
+    }
+```
+
+## Основные компоненты
+
+### 1. Handlers (`app/bot/handlers/`)
+
+Обработчики пользовательских команд и callback'ов.
+
+**Пример использования:**
 
 ```python
-class RegistrationStates(StatesGroup):
-    waiting_confirmation = State()
+# app/bot/handlers/registration.py
+@router.callback_query(F.data == "register")
+async def start_registration(
+    callback: CallbackQuery,
+    session: AsyncSession,
+    state: FSMContext
+) -> None:
+    """Handle registration button click."""
+    # Получить следующую открытую сессию
+    next_session = await get_next_open_session(session)
 
-class MatchingStates(StatesGroup):
-    proposing_time = State()
-    waiting_confirmation = State()
-    choosing_format = State()
+    # Проверить существующую регистрацию
+    # Показать подтверждение
+    # Сохранить регистрацию
 ```
 
-### 4. Планировщик задач
+### 2. Services (`app/services/`)
+
+Бизнес-логика приложения.
+
+**Пример использования:**
 
 ```python
-# app/scheduler.py
-scheduler.add_job(
-    publish_daily_announcement,
-    CronTrigger(hour=10, minute=0),  # Каждый день в 10:00
-    id="daily_announcement"
-)
+# app/services/matching.py
+async def create_matches_for_session(
+    session_id: int,
+    db_session: AsyncSession | None = None
+) -> tuple[int, list[int]]:
+    """Create random matches for a session.
 
-scheduler.add_job(
-    create_matches,
-    CronTrigger(hour=18, minute=0),  # Каждый день в 18:00
-    id="create_matches"
-)
-
-scheduler.add_job(
-    send_reminders,
-    IntervalTrigger(minutes=30),  # Каждые 30 минут
-    id="send_reminders"
-)
+    Returns:
+        Tuple of (matches_created, unmatched_user_ids)
+    """
+    # Получить регистрации
+    # Получить предыдущие матчи
+    # Создать пары (избегая дубликатов)
+    # Назначить темы
+    # Вернуть результат
 ```
 
-### 5. Алгоритм распределения пар
+### 3. Models (`app/models/`)
 
-**Стратегия:**
-1. Получить всех зарегистрированных пользователей
-2. Исключить пары, которые уже встречались
-3. Случайная перетасовка
-4. Формирование пар
-5. Обработка нечетного числа участников (группа из 3 или ожидание следующей сессии)
+SQLAlchemy модели для работы с БД.
 
-**Псевдокод:**
+**Пример использования:**
+
 ```python
-def create_matches(session_id):
-    users = get_registered_users(session_id)
+# app/models/match.py
+class Match(Base):
+    """Matched pair of users."""
+    __tablename__ = "matches"
 
-    # Shuffle для рандомности
-    random.shuffle(users)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    session_id: Mapped[int] = mapped_column(ForeignKey("sessions.id"))
+    user1_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    user2_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    topic_id: Mapped[int | None] = mapped_column(ForeignKey("topics.id"))
+    status: Mapped[str] = mapped_column(String(50))
+```
+
+### 4. Middlewares (`app/bot/middlewares/`)
+
+Промежуточное ПО для обработки запросов.
+
+**Примеры:**
+- `DatabaseMiddleware` - предоставляет сессию БД для каждого запроса
+- `ThrottlingMiddleware` - ограничивает частоту запросов
+
+
+## Алгоритм матчинга
+
+### Псевдокод
+
+```python
+async def create_matches(session_id: int) -> tuple[int, list[int]]:
+    # 1. Получить все регистрации для сессии
+    registrations = get_registrations(session_id)
+
+    if len(registrations) < 2:
+        return 0, [r.user_id for r in registrations]
+
+    # 2. Получить предыдущие матчи для избежания дубликатов
+    user_ids = [r.user_id for r in registrations]
+    past_matches = get_previous_matches(user_ids)
+
+    # 3. Перемешать пользователей
+    pool = list(registrations)
+    random.shuffle(pool)
 
     matches = []
-    for i in range(0, len(users) - 1, 2):
-        user1, user2 = users[i], users[i+1]
 
-        # Проверка на предыдущие встречи
-        if not have_met_before(user1, user2):
-            topic = get_random_topic()
-            match = create_match(user1, user2, topic)
+    # 4. Greedy matching с избежанием дубликатов
+    while len(pool) >= 2:
+        u1 = pool.pop()
+
+        # Найти совместимого партнера
+        partner = find_fresh_partner(u1, pool, past_matches)
+
+        if partner:
+            # Создать матч
+            topic = select_topic_for_users(u1.user_id, partner.user_id)
+            match = create_match(u1, partner, topic)
             matches.append(match)
+            pool.remove(partner)
+        else:
+            # Если все пары уже встречались, создать матч все равно
+            if len(pool) > 0:
+                partner = pool.pop()
+                create_match(u1, partner, topic)
 
-    # Обработка оставшегося пользователя
-    if len(users) % 2 == 1:
-        handle_odd_user(users[-1])
-
-    return matches
+    # 5. Вернуть результат
+    unmatched = [u.user_id for u in pool]
+    return len(matches), unmatched
 ```
 
----
+## Конфигурация
 
-## 📝 План трансформации
+### Переменные окружения
 
-### Фаза 1: Модели данных и миграции (2-3 часа)
-**Задачи:**
-- [ ] Создать модель User
-- [ ] Создать модель Session
-- [ ] Создать модель Registration
-- [ ] Создать модель Match
-- [ ] Создать модель Topic
-- [ ] Создать модель Feedback
-- [ ] Создать миграции Alembic
-- [ ] Заполнить базу тем для обсуждения
+Все настройки через переменные окружения (см. `.env.example`):
 
-**Критерий готовности:** БД создана, миграции применены, есть тестовые данные
+- `TELEGRAM_BOT_TOKEN` - токен бота от @BotFather
+- `DATABASE_URL` - строка подключения к PostgreSQL
+- `REDIS_URL` - строка подключения к Redis
+- `LOG_LEVEL` - уровень логирования (DEBUG, INFO, WARNING, ERROR)
+- `LOG_FORMAT` - формат логов (text, json)
 
----
+### Настройка логирования
 
-### Фаза 2: Базовые хендлеры (3-4 часа)
-**Задачи:**
-- [ ] /start - приветствие и регистрация пользователя
-- [ ] Обработка callback для регистрации на сессию
-- [ ] Отображение активных пар пользователя
-- [ ] /help - справка по боту
+```python
+# Структурированное логирование (JSON) для продакшена
+LOG_FORMAT=json
 
-**Критерий готовности:** Пользователь может зарегистрироваться в системе
+# Текстовое логирование для разработки
+LOG_FORMAT=text
+```
 
----
+## Планировщик задач
 
-### Фаза 3: Планировщик и публикация (2-3 часа)
-**Задачи:**
-- [ ] Настроить задачу публикации приглашения
-- [ ] Создать сервис управления сессиями
-- [ ] Отправка сообщения в канал с inline-кнопкой
-- [ ] Обработка регистраций на сессию
+### Расписание
 
-**Критерий готовности:** Бот публикует приглашения по расписанию
+```python
+# Каждый понедельник в 10:00 UTC
+scheduler.add_job(
+    create_and_announce_session,
+    CronTrigger(day_of_week="mon", hour=10, minute=0),
+    id="create_weekly_session"
+)
 
----
+# Каждый час в :00
+scheduler.add_job(
+    close_registration_for_expired_sessions,
+    CronTrigger(minute=0),
+    id="close_registrations"
+)
 
-### Фаза 4: Алгоритм распределения пар (4-5 часов)
-**Задачи:**
-- [ ] Реализовать matching_service.py
-- [ ] Алгоритм случайного распределения
-- [ ] Проверка на предыдущие встречи
-- [ ] Обработка нечетного количества участников
-- [ ] Назначение тем для обсуждения
-- [ ] Отправка уведомлений парам
+# Каждый час в :15
+scheduler.add_job(
+    run_matching_for_closed_sessions,
+    CronTrigger(minute=15),
+    id="run_matching"
+)
+```
 
-**Критерий готовности:** Пары формируются корректно и получают уведомления
+## Безопасность
 
----
+### Валидация входных данных
 
-### Фаза 5: Согласование встречи (3-4 часа)
-**Задачи:**
-- [ ] FSM для согласования времени
-- [ ] Предложение временных слотов
-- [ ] Выбор формата встречи
-- [ ] Подтверждение от обеих сторон
-- [ ] Создание события в календаре (опционально)
+Все callback данные валидируются через Pydantic схемы:
 
-**Критерий готовности:** Пары могут согласовать время и формат встречи
+```python
+from app.schemas.callbacks import parse_callback_data
 
----
+callback_data = parse_callback_data(callback.data)
+# Raises ValueError if invalid
+```
 
-### Фаза 6: Напоминания и feedback (2-3 часа)
-**Задачи:**
-- [ ] Задача отправки напоминаний
-- [ ] Напоминание за час до встречи
-- [ ] Запрос feedback после встречи
-- [ ] Сохранение обратной связи
+### Обработка ошибок
 
-**Критерий готовности:** Пары получают напоминания и могут оставить отзыв
+- Все исключения логируются с полным контекстом
+- Используется `logger.exception()` для трейсинга
+- Retry логика для транзиентных ошибок Telegram API
 
----
+### SQL Injection защита
 
-### Фаза 7: Админ-панель (2-3 часа)
-**Задачи:**
-- [ ] /admin - доступ для админа
-- [ ] Просмотр статистики
-- [ ] Управление темами
-- [ ] Ручное создание сессий
-- [ ] Просмотр feedback
+- Все SQL запросы через SQLAlchemy ORM
+- Параметризованные запросы для raw SQL
 
-**Критерий готовности:** Админ может управлять ботом
+## Мониторинг
 
----
+### Логирование
 
-### Фаза 8: Тестирование и оптимизация (3-4 часа)
-**Задачи:**
-- [ ] Unit-тесты для сервисов
-- [ ] Интеграционные тесты
-- [ ] Тестирование на малой группе пользователей
-- [ ] Оптимизация запросов к БД
-- [ ] Логирование и мониторинг
+Приложение использует структурированное логирование для мониторинга:
 
-**Критерий готовности:** Бот стабильно работает, покрытие тестами >70%
+- **JSON формат** для продакшена (легко парсится системами логирования)
+- **Текстовый формат** для разработки (удобно читать)
+- **Correlation IDs** для отслеживания запросов
+- **Уровни логирования** (DEBUG, INFO, WARNING, ERROR)
 
----
+### Heartbeat файл
 
-## 📊 Оценка трудозатрат
+Приложение создает heartbeat файл (`/tmp/healthy` по умолчанию) для проверки работоспособности. Файл обновляется каждые 15 секунд.
 
-| Фаза | Время | Сложность |
-|------|-------|-----------|
-| 1. Модели и миграции | 2-3 ч | Низкая |
-| 2. Базовые хендлеры | 3-4 ч | Средняя |
-| 3. Планировщик | 2-3 ч | Средняя |
-| 4. Алгоритм пар | 4-5 ч | Высокая |
-| 5. Согласование | 3-4 ч | Средняя |
-| 6. Напоминания | 2-3 ч | Низкая |
-| 7. Админ-панель | 2-3 ч | Низкая |
-| 8. Тестирование | 3-4 ч | Средняя |
-| **ИТОГО** | **21-29 ч** | - |
+Это позволяет оркестраторам (Docker, Kubernetes) проверять состояние приложения без необходимости в отдельном HTTP сервере.
 
-**Реалистичная оценка:** 3-4 рабочих дня активной разработки
+## Развертывание
 
----
+### Docker
 
-## 🚀 Рекомендации
+```bash
+# Development
+docker-compose up -d
 
-### Технические
-1. **Используйте transaction-scope для критических операций** (создание пар)
-2. **Добавьте индексы** на часто запрашиваемые поля (telegram_id, session_id)
-3. **Кэшируйте темы** в памяти (не меняются часто)
-4. **Логируйте все важные события** для debugging
+# Production
+docker-compose -f docker-compose.prod.yml up -d
+```
 
-### Бизнес-логика
-1. **Дедлайн регистрации** - за 2 часа до создания пар
-2. **Максимум участников** - ограничение для масштабируемости
-3. **Cooldown между встречами** - не чаще 1 раза в неделю на одну пару
-4. **Категории тем** - разные сложности (junior/middle/senior)
+### Миграции
 
-### UX
-1. **Понятные сообщения** - четко объяснять следующие шаги
-2. **Подтверждения действий** - избегать случайных нажатий
-3. **Статус прогресса** - показывать, на каком этапе пользователь
-4. **Возможность отмены** - пользователь может отменить регистрацию
+```bash
+# Применить миграции
+alembic upgrade head
 
----
+# Создать новую миграцию
+alembic revision --autogenerate -m "description"
+```
 
-## 🎯 Приоритеты для MVP
+## Тестирование
 
-**Must have (критично для работы):**
-1. ✅ Публикация приглашений
-2. ✅ Регистрация пользователей
-3. ✅ Создание пар
-4. ✅ Отправка тем для обсуждения
+### Запуск тестов
 
-**Should have (важно, но можно отложить):**
-5. Согласование времени
-6. Напоминания
-7. Сбор feedback
+```bash
+# Все тесты
+pytest
 
-**Could have (можно добавить позже):**
-8. Админ-панель
-9. Статистика
-10. Интеграция с календарем
+# С покрытием
+pytest --cov=app --cov-report=html
 
-**Стратегия:** Начать с MVP (пункты 1-4), затем итеративно добавлять функции.
+# Конкретный файл
+pytest tests/unit/test_matching.py
+```
 
----
+### Покрытие
 
-## 📌 Следующие шаги
+Минимальное покрытие: 80% (проверяется в CI)
 
-1. **Утвердить архитектуру** ✅
-2. **Создать первую миграцию** (модели User, Session, Registration)
-3. **Реализовать базовые хендлеры**
-4. **Настроить планировщик**
-5. **Реализовать алгоритм распределения**
-6. **Итеративная разработка оставшихся фич**
+## Примеры использования API
 
-**Готов начать реализацию?** 🚀
+### Создание сессии
+
+```python
+from app.services.sessions import create_weekly_session
+
+session = await create_weekly_session()
+# Создает сессию на следующую пятницу в 10:00 UTC
+```
+
+### Создание матчей
+
+```python
+from app.services.matching import create_matches_for_session
+
+matches_count, unmatched = await create_matches_for_session(session_id=1)
+# Возвращает (количество_матчей, [список_несовмещенных_пользователей])
+```
+
+### Отправка уведомлений
+
+```python
+from app.services.notifications import send_match_notification
+
+success = await send_match_notification(bot, match_id=1)
+# Отправляет уведомление обоим пользователям в паре
+```
+
+## Расширение функциональности
+
+### Добавление нового handler
+
+1. Создать файл в `app/bot/handlers/`
+2. Определить router и handlers
+3. Зарегистрировать router в `app/bot/__init__.py`
+
+### Добавление новой миграции
+
+```bash
+alembic revision --autogenerate -m "add new field"
+# Проверить сгенерированную миграцию
+alembic upgrade head
+```
+
+## Производительность
+
+### Оптимизации
+
+- Индексы на часто запрашиваемые поля
+- Connection pooling для БД
+- Retry логика для API вызовов
+- Асинхронная обработка всех операций
+
+### Масштабирование
+
+- Горизонтальное масштабирование через несколько инстансов бота
+- Redis для разделения FSM состояния
+- PostgreSQL для надежного хранения данных

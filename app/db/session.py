@@ -29,7 +29,7 @@ async_session_maker = async_sessionmaker(
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
-    """Get async database session with auto-commit on success.
+    """Get an async database session with auto-commit on success.
 
     Yields a session that automatically commits on successful completion
     or rolls back on exception.

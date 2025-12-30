@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 async def create_and_announce_session(bot: Bot) -> None:
-    """Create a new session and post announcement to channel."""
+    """Create a new session and post an announcement to the channel."""
     try:
         logger.info("Creating weekly session...")
         session = await create_weekly_session()
@@ -35,14 +35,16 @@ async def create_and_announce_session(bot: Bot) -> None:
             logger.warning("No new session created")
 
     except Exception as e:
-        logger.error(f"Error in create_and_announce_session: {e}")
+        logger.exception(
+            "Error in create_and_announce_session",
+            exc_info=e,
+        )
 
 
 def setup_scheduler(bot: Bot) -> AsyncIOScheduler:
     """Initialize and configure the scheduler."""
     scheduler = AsyncIOScheduler()
 
-    # Create new session every Monday at 10:00 UTC
     scheduler.add_job(
         create_and_announce_session,
         CronTrigger(day_of_week="mon", hour=10, minute=0),
@@ -51,18 +53,16 @@ def setup_scheduler(bot: Bot) -> AsyncIOScheduler:
         replace_existing=True,
     )
 
-    # Close registration for expired sessions (runs every hour)
     scheduler.add_job(
         close_registration_for_expired_sessions,
-        CronTrigger(minute=0),  # Every hour at :00
+        CronTrigger(minute=0),
         id="close_registrations",
         replace_existing=True,
     )
 
-    # Run matching for closed sessions (runs every hour at :15)
     scheduler.add_job(
         run_matching_for_closed_sessions,
-        CronTrigger(minute=15),  # Every hour at :15
+        CronTrigger(minute=15),
         args=[bot],
         id="run_matching",
         replace_existing=True,
@@ -82,7 +82,10 @@ async def start_scheduler(scheduler: AsyncIOScheduler):
         scheduler.start()
         logger.info("Scheduler started")
     except Exception as e:
-        logger.error(f"Failed to start scheduler: {e}")
+        logger.exception(
+            "Failed to start scheduler",
+            exc_info=e,
+        )
         raise
 
 
@@ -93,4 +96,7 @@ async def shutdown_scheduler(scheduler: AsyncIOScheduler):
             scheduler.shutdown(wait=True)
             logger.info("Scheduler stopped")
     except Exception as e:
-        logger.error(f"Error stopping scheduler: {e}")
+        logger.exception(
+            "Error stopping scheduler",
+            exc_info=e,
+        )

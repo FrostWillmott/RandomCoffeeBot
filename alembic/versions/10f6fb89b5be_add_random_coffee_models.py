@@ -1,4 +1,4 @@
-"""Add Random Coffee models
+"""Add Random Coffee models.
 
 Revision ID: 10f6fb89b5be
 Revises:
@@ -6,18 +6,17 @@ Create Date: 2025-12-28 12:21:52.751793
 """
 
 from collections.abc import Sequence
-from typing import Union
 
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
-from alembic import op
+from alembic import op  # type: ignore[attr-defined]
 
 # revision identifiers, used by Alembic.
 revision: str = "10f6fb89b5be"
-down_revision: Union[str, None] = None
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
@@ -33,9 +32,7 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index(
-        op.f("ix_sessions_date"), "sessions", ["date"], unique=False
-    )
+    op.create_index(op.f("ix_sessions_date"), "sessions", ["date"], unique=False)
     op.create_table(
         "topics",
         sa.Column("id", sa.Integer(), nullable=False),
@@ -55,9 +52,7 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index(
-        op.f("ix_topics_category"), "topics", ["category"], unique=False
-    )
+    op.create_index(op.f("ix_topics_category"), "topics", ["category"], unique=False)
     op.create_table(
         "users",
         sa.Column("id", sa.Integer(), nullable=False),
@@ -70,9 +65,7 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index(
-        op.f("ix_users_telegram_id"), "users", ["telegram_id"], unique=True
-    )
+    op.create_index(op.f("ix_users_telegram_id"), "users", ["telegram_id"], unique=True)
     op.create_table(
         "matches",
         sa.Column("id", sa.Integer(), nullable=False),
@@ -86,38 +79,22 @@ def upgrade() -> None:
         sa.Column("notes", sa.Text(), nullable=True),
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.Column("confirmed_at", sa.DateTime(), nullable=True),
-        sa.ForeignKeyConstraint(
-            ["session_id"], ["sessions.id"], ondelete="CASCADE"
-        ),
-        sa.ForeignKeyConstraint(
-            ["topic_id"], ["topics.id"], ondelete="SET NULL"
-        ),
-        sa.ForeignKeyConstraint(
-            ["user1_id"], ["users.id"], ondelete="CASCADE"
-        ),
-        sa.ForeignKeyConstraint(
-            ["user2_id"], ["users.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["session_id"], ["sessions.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["topic_id"], ["topics.id"], ondelete="SET NULL"),
+        sa.ForeignKeyConstraint(["user1_id"], ["users.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["user2_id"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index(
-        op.f("ix_matches_session_id"), "matches", ["session_id"], unique=False
-    )
-    op.create_index(
-        op.f("ix_matches_user1_id"), "matches", ["user1_id"], unique=False
-    )
-    op.create_index(
-        op.f("ix_matches_user2_id"), "matches", ["user2_id"], unique=False
-    )
+    op.create_index(op.f("ix_matches_session_id"), "matches", ["session_id"], unique=False)
+    op.create_index(op.f("ix_matches_user1_id"), "matches", ["user1_id"], unique=False)
+    op.create_index(op.f("ix_matches_user2_id"), "matches", ["user2_id"], unique=False)
     op.create_table(
         "registrations",
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("session_id", sa.Integer(), nullable=False),
         sa.Column("user_id", sa.Integer(), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False),
-        sa.ForeignKeyConstraint(
-            ["session_id"], ["sessions.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["session_id"], ["sessions.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
     )
@@ -142,18 +119,12 @@ def upgrade() -> None:
         sa.Column("topic_difficulty", sa.Integer(), nullable=True),
         sa.Column("comment", sa.Text(), nullable=True),
         sa.Column("created_at", sa.DateTime(), nullable=False),
-        sa.ForeignKeyConstraint(
-            ["match_id"], ["matches.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["match_id"], ["matches.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index(
-        op.f("ix_feedbacks_match_id"), "feedbacks", ["match_id"], unique=False
-    )
-    op.create_index(
-        op.f("ix_feedbacks_user_id"), "feedbacks", ["user_id"], unique=False
-    )
+    op.create_index(op.f("ix_feedbacks_match_id"), "feedbacks", ["match_id"], unique=False)
+    op.create_index(op.f("ix_feedbacks_user_id"), "feedbacks", ["user_id"], unique=False)
     # ### end Alembic commands ###
 
 
@@ -164,9 +135,7 @@ def downgrade() -> None:
     op.drop_index(op.f("ix_feedbacks_match_id"), table_name="feedbacks")
     op.drop_table("feedbacks")
     op.drop_index(op.f("ix_registrations_user_id"), table_name="registrations")
-    op.drop_index(
-        op.f("ix_registrations_session_id"), table_name="registrations"
-    )
+    op.drop_index(op.f("ix_registrations_session_id"), table_name="registrations")
     op.drop_table("registrations")
     op.drop_index(op.f("ix_matches_user2_id"), table_name="matches")
     op.drop_index(op.f("ix_matches_user1_id"), table_name="matches")

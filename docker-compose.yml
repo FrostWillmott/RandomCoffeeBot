@@ -14,6 +14,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - randomcoffee-network
 
@@ -22,22 +24,37 @@ services:
     container_name: randomcoffee-db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: randomcoffee
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-randomcoffee}
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     networks:
       - randomcoffee-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d randomcoffee"]
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d randomcoffee" ]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 10s
+
+  redis:
+    image: redis:7-alpine
+    container_name: randomcoffee-redis
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - randomcoffee-network
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 networks:
   randomcoffee-network:
@@ -48,3 +65,6 @@ volumes:
   postgres_data:
     driver: local
     name: randomcoffee-postgres-data
+  redis_data:
+    driver: local
+    name: randomcoffee-redis-data

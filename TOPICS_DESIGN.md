@@ -5,12 +5,12 @@
 ```python
 class Topic:
     id: int
-    title: str              # "Декораторы в Python"
-    description: str        # Подробное описание
-    category: str           # "python_core", "frameworks", "databases", etc.
-    difficulty: str         # "junior", "middle", "senior"
-    questions: list[str]    # Вопросы для обсуждения
-    resources: list[str]    # Ссылки на материалы
+    title: str
+    description: str
+    category: str
+    difficulty: str
+    questions: list[str]
+    resources: list[str]
     is_active: bool
     created_at: datetime
 ```
@@ -108,7 +108,6 @@ class Topic:
 
 **Реализация:**
 ```python
-# alembic/versions/xxx_add_topics.py
 def upgrade():
     topics_data = [
         {
@@ -131,7 +130,6 @@ def upgrade():
                 "https://peps.python.org/pep-0318/"
             ]
         },
-        # ... еще ~50-100 тем
     ]
 
     for topic in topics_data:
@@ -195,23 +193,20 @@ async def generate_topic(category: str, difficulty: str) -> dict:
 ```python
 class TopicService:
     def __init__(self):
-        self.manual_topics = []  # Предзаполненные
-        self.ai_generated = []   # AI темы
+        self.manual_topics = []
+        self.ai_generated = []
 
     async def get_topic_for_match(self, match: Match) -> Topic:
         """Выбирает тему для пары"""
 
-        # 80% времени - проверенные ручные темы
         if random.random() < 0.8:
             return await self._get_manual_topic(match)
 
-        # 20% - AI темы для разнообразия
         else:
             return await self._get_or_generate_ai_topic(match)
 
     async def _get_manual_topic(self, match: Match) -> Topic:
         """Выбирает из предзаполненных тем"""
-        # Исключаем темы, которые пара уже обсуждала
         used_topics = await self._get_used_topics(match.user1, match.user2)
 
         available = [t for t in self.manual_topics if t.id not in used_topics]
@@ -236,24 +231,20 @@ async def select_topic_for_match(
     3. Предпочтений (опционально)
     """
 
-    # 1. Получить все темы, которые пара УЖЕ обсуждала
     discussed_topics = await get_discussed_topics(user1, user2)
 
-    # 2. Отфильтровать доступные темы
     available_topics = await Topic.query.filter(
         Topic.id.not_in(discussed_topics),
         Topic.is_active == True,
-        Topic.difficulty == "middle"  # Можно сделать динамическим
+        Topic.difficulty == "middle"
     ).all()
 
-    # 3. Приоритизировать по категориям (если есть предпочтения)
     if user_preferences := await get_user_preferences(user1, user2):
         available_topics = prioritize_by_preferences(
             available_topics,
             user_preferences
         )
 
-    # 4. Случайный выбор из топ-10
     top_topics = random.sample(
         available_topics,
         min(10, len(available_topics))
@@ -298,12 +289,10 @@ async def select_topic_for_match(
 async def weekly_topic_refresh():
     """Еженедельное пополнение базы тем"""
 
-    # Проверить, сколько неиспользованных тем осталось
     unused_count = await Topic.query.filter(
         Topic.times_used == 0
     ).count()
 
-    # Если меньше 20 - добавить новые
     if unused_count < 20:
         new_topics = await generate_topics_batch(
             count=10,
@@ -328,11 +317,10 @@ async def weekly_topic_refresh():
 
 ```python
 class Topic:
-    # ... другие поля
 
-    times_used: int = 0          # Сколько раз использовалась
-    avg_rating: float = 0.0      # Средняя оценка от пар
-    last_used_at: datetime       # Когда последний раз использовалась
+    times_used: int = 0
+    avg_rating: float = 0.0
+    last_used_at: datetime
 ```
 
 Это позволит:
