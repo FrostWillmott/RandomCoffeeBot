@@ -105,7 +105,7 @@ async def test_get_active_user_found():
 
     with patch("app.services.helpers.UserRepository") as mock_repo_class:
         mock_repo = AsyncMock()
-        mock_repo.get_active_by_telegram_id.return_value = user
+        mock_repo.get_by_telegram_id.return_value = user
         mock_repo_class.return_value = mock_repo
 
         result = await get_active_user(mock_session, telegram_id)
@@ -124,10 +124,10 @@ async def test_get_active_user_not_found():
 
     with patch("app.services.helpers.UserRepository") as mock_repo_class:
         mock_repo = AsyncMock()
-        mock_repo.get_active_by_telegram_id.return_value = None
+        mock_repo.get_by_telegram_id.return_value = None
         mock_repo_class.return_value = mock_repo
 
-        with pytest.raises(ValueError, match=f"User {telegram_id} not found or inactive"):
+        with pytest.raises(ValueError, match=f"User {telegram_id} not found"):
             await get_active_user(mock_session, telegram_id)
 
 
@@ -135,15 +135,14 @@ async def test_get_active_user_not_found():
 async def test_get_active_user_inactive():
     """Test getting inactive user - should raise ValueError."""
     telegram_id = 9002
+    user = User(id=1, telegram_id=telegram_id, username="inactive", is_active=False)
 
     mock_session = AsyncMock()
 
     with patch("app.services.helpers.UserRepository") as mock_repo_class:
         mock_repo = AsyncMock()
-        mock_repo.get_active_by_telegram_id.return_value = (
-            None  # Returns None for inactive users
-        )
+        mock_repo.get_by_telegram_id.return_value = user
         mock_repo_class.return_value = mock_repo
 
-        with pytest.raises(ValueError, match=f"User {telegram_id} not found or inactive"):
+        with pytest.raises(ValueError, match=f"User {telegram_id} is inactive"):
             await get_active_user(mock_session, telegram_id)
