@@ -8,6 +8,8 @@ import pytest
 from app.models.enums import SessionStatus
 from app.models.session import Session
 from app.models.topic import Topic
+from app.repositories.match import MatchRepository
+from app.repositories.topic import TopicRepository
 from app.services.matching import (
     close_registration_for_expired_sessions,
     select_topic_for_users,
@@ -32,33 +34,25 @@ async def test_select_topic_for_users_with_session():
         times_used=0,
     )
 
-    mock_session = AsyncMock()
+    # Mock TopicRepository
+    mock_topic_repo = AsyncMock(spec=TopicRepository)
+    mock_topic_repo.get_active_by_difficulty.return_value = [topic]
+    mock_topic_repo.increment_usage.return_value = topic
 
-    mock_result1 = MagicMock()
-    mock_result1.all.return_value = []
+    # Mock MatchRepository
+    mock_match_repo = AsyncMock(spec=MatchRepository)
+    mock_match_repo.get_topic_ids_used_by_users.return_value = set()
 
-    mock_result2 = MagicMock()
-    mock_result2.scalars.return_value.all.return_value = [topic]
-
-    call_count = [0]
-
-    def mock_execute(query):
-        call_count[0] += 1
-        if call_count[0] == 1:
-            return mock_result1
-        else:
-            return mock_result2
-
-    mock_session.execute = AsyncMock(side_effect=mock_execute)
-    mock_session.add = MagicMock()
-    mock_session.flush = AsyncMock()
-    mock_session.refresh = AsyncMock()
-
-    result = await select_topic_for_users(user1_id, user2_id, db_session=mock_session)
+    with patch("app.services.matching.TopicRepository", return_value=mock_topic_repo):
+        with patch("app.services.matching.MatchRepository", return_value=mock_match_repo):
+            result = await select_topic_for_users(
+                mock_topic_repo, mock_match_repo, user1_id, user2_id
+            )
 
     assert result is not None
     assert result.id == topic.id
-    assert mock_session.execute.call_count >= 2
+    mock_topic_repo.get_active_by_difficulty.assert_called_once_with("middle")
+    mock_match_repo.get_topic_ids_used_by_users.assert_called_once_with(user1_id, user2_id)
 
 
 @pytest.mark.asyncio
@@ -67,25 +61,17 @@ async def test_select_topic_for_users_no_topics():
     user1_id = 7003
     user2_id = 7004
 
-    mock_session = AsyncMock()
+    # Mock TopicRepository - no topics available
+    mock_topic_repo = AsyncMock(spec=TopicRepository)
+    mock_topic_repo.get_active_by_difficulty.return_value = []
 
-    mock_result1 = MagicMock()
-    mock_result1.all.return_value = []
+    # Mock MatchRepository
+    mock_match_repo = AsyncMock(spec=MatchRepository)
+    mock_match_repo.get_topic_ids_used_by_users.return_value = set()
 
-    mock_result2 = MagicMock()
-    mock_result2.scalars.return_value.all.return_value = []
-    call_count = [0]
-
-    def mock_execute(query):
-        call_count[0] += 1
-        if call_count[0] == 1:
-            return mock_result1
-        else:
-            return mock_result2
-
-    mock_session.execute = AsyncMock(side_effect=mock_execute)
-
-    result = await select_topic_for_users(user1_id, user2_id, db_session=mock_session)
+    result = await select_topic_for_users(
+        mock_topic_repo, mock_match_repo, user1_id, user2_id
+    )
 
     assert result is None
 

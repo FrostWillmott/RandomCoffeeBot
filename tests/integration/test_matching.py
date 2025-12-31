@@ -10,6 +10,7 @@ from app.models.match import Match
 from app.models.registration import Registration
 from app.models.session import Session
 from app.models.user import User
+from app.repositories.match import MatchRepository
 from app.services.matching import (
     create_matches_for_session,
     get_previous_matches,
@@ -127,7 +128,8 @@ async def test_matching_duplicate_avoidance(db_session):
     }
 
     await register_users(db_session, session2.id, users)
-    past_matches = await get_previous_matches(db_session, user_ids)
+    match_repo = MatchRepository(db_session)
+    past_matches = await get_previous_matches(match_repo, user_ids)
 
     for pair in session1_pairs:
         assert pair in past_matches
@@ -161,6 +163,7 @@ async def test_get_previous_matches(db_session):
     db_session.add(match)
     await db_session.commit()
 
-    past_matches = await get_previous_matches(db_session, [u1.id, u2.id])
+    match_repo = MatchRepository(db_session)
+    past_matches = await get_previous_matches(match_repo, [u1.id, u2.id])
     expected_pair = tuple(sorted((u1.id, u2.id)))
     assert expected_pair in past_matches

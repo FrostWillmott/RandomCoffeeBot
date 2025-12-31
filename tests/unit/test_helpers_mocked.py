@@ -1,7 +1,7 @@
 """Unit tests for helpers service with a mocked database."""
 
 from datetime import UTC, datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -22,15 +22,17 @@ async def test_get_user_by_telegram_id_found():
     user = User(id=1, telegram_id=telegram_id, username="test", is_active=True)
 
     mock_session = AsyncMock()
-    mock_result = MagicMock()
-    mock_result.scalar_one_or_none.return_value = user
-    mock_session.execute = AsyncMock(return_value=mock_result)
 
-    result = await get_user_by_telegram_id(mock_session, telegram_id)
+    with patch("app.services.helpers.UserRepository") as mock_repo_class:
+        mock_repo = AsyncMock()
+        mock_repo.get_by_telegram_id.return_value = user
+        mock_repo_class.return_value = mock_repo
 
-    assert result is not None
-    assert result.telegram_id == telegram_id
-    mock_session.execute.assert_called_once()
+        result = await get_user_by_telegram_id(mock_session, telegram_id)
+
+        assert result is not None
+        assert result.telegram_id == telegram_id
+        mock_repo.get_by_telegram_id.assert_called_once_with(telegram_id)
 
 
 @pytest.mark.asyncio
@@ -39,13 +41,15 @@ async def test_get_user_by_telegram_id_not_found():
     telegram_id = 99999
 
     mock_session = AsyncMock()
-    mock_result = MagicMock()
-    mock_result.scalar_one_or_none.return_value = None
-    mock_session.execute = AsyncMock(return_value=mock_result)
 
-    result = await get_user_by_telegram_id(mock_session, telegram_id)
+    with patch("app.services.helpers.UserRepository") as mock_repo_class:
+        mock_repo = AsyncMock()
+        mock_repo.get_by_telegram_id.return_value = None
+        mock_repo_class.return_value = mock_repo
 
-    assert result is None
+        result = await get_user_by_telegram_id(mock_session, telegram_id)
+
+        assert result is None
 
 
 @pytest.mark.asyncio
@@ -63,28 +67,32 @@ async def test_get_next_open_session_found():
     )
 
     mock_session = AsyncMock()
-    mock_result = MagicMock()
-    mock_result.scalar_one_or_none.return_value = session
-    mock_session.execute = AsyncMock(return_value=mock_result)
 
-    result = await get_next_open_session(mock_session)
+    with patch("app.services.helpers.SessionRepository") as mock_repo_class:
+        mock_repo = AsyncMock()
+        mock_repo.get_next_open_session.return_value = session
+        mock_repo_class.return_value = mock_repo
 
-    assert result is not None
-    assert result.id == session.id
-    assert result.status == SessionStatus.OPEN
+        result = await get_next_open_session(mock_session)
+
+        assert result is not None
+        assert result.id == session.id
+        assert result.status == SessionStatus.OPEN
 
 
 @pytest.mark.asyncio
 async def test_get_next_open_session_not_found():
     """Test getting next open session when not found."""
     mock_session = AsyncMock()
-    mock_result = MagicMock()
-    mock_result.scalar_one_or_none.return_value = None
-    mock_session.execute = AsyncMock(return_value=mock_result)
 
-    result = await get_next_open_session(mock_session)
+    with patch("app.services.helpers.SessionRepository") as mock_repo_class:
+        mock_repo = AsyncMock()
+        mock_repo.get_next_open_session.return_value = None
+        mock_repo_class.return_value = mock_repo
 
-    assert result is None
+        result = await get_next_open_session(mock_session)
+
+        assert result is None
 
 
 @pytest.mark.asyncio
@@ -94,15 +102,17 @@ async def test_get_active_user_found():
     user = User(id=1, telegram_id=telegram_id, username="active", is_active=True)
 
     mock_session = AsyncMock()
-    mock_result = MagicMock()
-    mock_result.scalar_one_or_none.return_value = user
-    mock_session.execute = AsyncMock(return_value=mock_result)
 
-    result = await get_active_user(mock_session, telegram_id)
+    with patch("app.services.helpers.UserRepository") as mock_repo_class:
+        mock_repo = AsyncMock()
+        mock_repo.get_by_telegram_id.return_value = user
+        mock_repo_class.return_value = mock_repo
 
-    assert result is not None
-    assert result.telegram_id == telegram_id
-    assert result.is_active is True
+        result = await get_active_user(mock_session, telegram_id)
+
+        assert result is not None
+        assert result.telegram_id == telegram_id
+        assert result.is_active is True
 
 
 @pytest.mark.asyncio
@@ -111,24 +121,28 @@ async def test_get_active_user_not_found():
     telegram_id = 99999
 
     mock_session = AsyncMock()
-    mock_result = MagicMock()
-    mock_result.scalar_one_or_none.return_value = None
-    mock_session.execute = AsyncMock(return_value=mock_result)
 
-    with pytest.raises(ValueError, match=f"User {telegram_id} not found"):
-        await get_active_user(mock_session, telegram_id)
+    with patch("app.services.helpers.UserRepository") as mock_repo_class:
+        mock_repo = AsyncMock()
+        mock_repo.get_by_telegram_id.return_value = None
+        mock_repo_class.return_value = mock_repo
+
+        with pytest.raises(ValueError, match=f"User {telegram_id} not found"):
+            await get_active_user(mock_session, telegram_id)
 
 
 @pytest.mark.asyncio
 async def test_get_active_user_inactive():
     """Test getting inactive user - should raise ValueError."""
     telegram_id = 9002
-    user = User(id=2, telegram_id=telegram_id, username="inactive", is_active=False)
+    user = User(id=1, telegram_id=telegram_id, username="inactive", is_active=False)
 
     mock_session = AsyncMock()
-    mock_result = MagicMock()
-    mock_result.scalar_one_or_none.return_value = user
-    mock_session.execute = AsyncMock(return_value=mock_result)
 
-    with pytest.raises(ValueError, match=f"User {telegram_id} is inactive"):
-        await get_active_user(mock_session, telegram_id)
+    with patch("app.services.helpers.UserRepository") as mock_repo_class:
+        mock_repo = AsyncMock()
+        mock_repo.get_by_telegram_id.return_value = user
+        mock_repo_class.return_value = mock_repo
+
+        with pytest.raises(ValueError, match=f"User {telegram_id} is inactive"):
+            await get_active_user(mock_session, telegram_id)

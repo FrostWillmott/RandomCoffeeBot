@@ -54,6 +54,7 @@ ignore = [
     "D406",
     "D407",
     "E203",
+    "UP046",  # mypy doesn't support PEP 695 type parameters yet
 ]
 
 fixable = ["ALL"]

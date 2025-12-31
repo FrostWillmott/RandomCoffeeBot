@@ -39,9 +39,14 @@ class ThrottlingMiddleware(BaseMiddleware):
         user_id = event.from_user.id
         key = f"throttle:{user_id}"
 
-        if await self.redis.get(key):
-            return None
+        acquired = await self.redis.set(
+            key,
+            "1",
+            px=int(self.limit * 1000),
+            nx=True,
+        )
 
-        await self.redis.set(key, "1", px=int(self.limit * 1000))
+        if not acquired:
+            return None
 
         return await handler(event, data)

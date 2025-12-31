@@ -10,7 +10,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.bot.keyboards import get_main_menu_keyboard
 from app.bot.states.feedback import FeedbackStates
 from app.models.feedback import Feedback
-from app.models.match import Match
+from app.repositories.feedback import FeedbackRepository
+from app.repositories.match import MatchRepository
+from app.repositories.user import UserRepository
 from app.schemas.callbacks import (
     RatingCallback,
     StartFeedbackCallback,
@@ -27,7 +29,13 @@ logger = logging.getLogger(__name__)
 async def start_feedback(
     callback: CallbackQuery, session: AsyncSession, state: FSMContext
 ) -> None:
-    """Start a feedback process."""
+    """Start a feedback process.
+
+    Args:
+        callback: Callback query
+        session: Database session
+        state: FSM context
+    """
     if not callback.message:
         return
 
@@ -36,7 +44,11 @@ async def start_feedback(
         return
 
     try:
-        callback_data_str = callback.data.replace("feedback:", "start_feedback:", 1)
+        # Handle both "feedback:" and "start_feedback:" prefixes
+        if callback.data.startswith("feedback:"):
+            callback_data_str = "start_feedback:" + callback.data[9:]
+        else:
+            callback_data_str = callback.data
         callback_data = parse_callback_data(callback_data_str)
         if not isinstance(callback_data, StartFeedbackCallback):
             raise ValueError("Invalid callback type")
@@ -46,9 +58,20 @@ async def start_feedback(
         await callback.answer("Неверный ID пары")
         return
 
-    match = await session.get(Match, match_id)
+    match_repo = MatchRepository(session)
+    match = await match_repo.get_by_id(match_id)
     if not match:
         await callback.answer("Пара не найдена")
+        return
+
+    # Authorization check: verify user is a participant of this match
+    if not callback.from_user:
+        return
+
+    user_repo = UserRepository(session)
+    user = await user_repo.get_by_telegram_id(callback.from_user.id)
+    if not user or user.id not in (match.user1_id, match.user2_id):
+        await callback.answer("⛔ У вас нет доступа к этой паре", show_alert=True)
         return
 
     await state.update_data(match_id=match_id)
@@ -59,13 +82,13 @@ async def start_feedback(
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [
-                InlineKeyboardButton(text="1 ⭐️", callback_data="rate:1"),
-                InlineKeyboardButton(text="2 ⭐️", callback_data="rate:2"),
-                InlineKeyboardButton(text="3 ⭐️", callback_data="rate:3"),
+                InlineKeyboardButton(text="1 ⭐️", callback_data="rating:1"),
+                InlineKeyboardButton(text="2 ⭐️", callback_data="rating:2"),
+                InlineKeyboardButton(text="3 ⭐️", callback_data="rating:3"),
             ],
             [
-                InlineKeyboardButton(text="4 ⭐️", callback_data="rate:4"),
-                InlineKeyboardButton(text="5 ⭐️", callback_data="rate:5"),
+                InlineKeyboardButton(text="4 ⭐️", callback_data="rating:4"),
+                InlineKeyboardButton(text="5 ⭐️", callback_data="rating:5"),
             ],
         ]
     )
@@ -77,9 +100,14 @@ async def start_feedback(
     await callback.answer()
 
 
-@router.callback_query(FeedbackStates.waiting_for_rating, F.data.startswith("rate:"))
+@router.callback_query(FeedbackStates.waiting_for_rating, F.data.startswith("rating:"))
 async def process_rating(callback: CallbackQuery, state: FSMContext) -> None:
-    """Process rating."""
+    """Process rating.
+
+    Args:
+        callback: Callback query
+        state: FSM context
+    """
     if not callback.message:
         return
 
@@ -113,7 +141,13 @@ async def process_rating(callback: CallbackQuery, state: FSMContext) -> None:
 async def process_comment(
     message: Message, session: AsyncSession, state: FSMContext
 ) -> None:
-    """Process comment."""
+    """Process comment.
+
+    Args:
+        message: User message
+        session: Database session
+        state: FSM context
+    """
     data = await state.get_data()
     match_id = data.get("match_id")
     rating = data.get("rating")
@@ -134,15 +168,31 @@ async def process_comment(
         await state.clear()
         return
 
+    # Get database user ID from Telegram ID
+    user_repo = UserRepository(session)
+    user = await user_repo.get_by_telegram_id(message.from_user.id)
+    if not user:
+        await message.answer("Пользователь не найден. Пожалуйста, начните с /start.")
+        await state.clear()
+        return
+
+    # Check if feedback already exists for this match and user
+    feedback_repo = FeedbackRepository(session)
+    if await feedback_repo.exists(match_id, user.id):
+        await message.answer(
+            "Вы уже оставили отзыв для этой встречи. Спасибо! 🙏",
+            reply_markup=get_main_menu_keyboard(),
+        )
+        await state.clear()
+        return
+
     feedback = Feedback(
         match_id=match_id,
-        user_id=message.from_user.id,
+        user_id=user.id,
         rating=rating,
         comment=comment,
     )
-    session.add(feedback)
-
-    await session.commit()
+    await feedback_repo.create(feedback)
 
     await message.answer(
         "Спасибо за ваш отзыв! 🙏\nДо встречи на следующей сессии!",

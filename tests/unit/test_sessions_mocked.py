@@ -29,7 +29,6 @@ def mock_db_session():
     mock_session.add = MagicMock()
     mock_session.commit = AsyncMock()
     mock_session.refresh = AsyncMock()
-    # Simulate DB assigning an ID
     mock_session.add.side_effect = lambda obj: setattr(obj, "id", 1)
 
     with patch("app.services.sessions.async_session_maker") as mock_maker:
