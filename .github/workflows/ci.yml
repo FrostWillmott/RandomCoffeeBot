@@ -208,8 +208,8 @@ jobs:
       - name: Install security tools
         run: pip install safety pip-audit
 
-      - name: Export dependencies
-        run: uv export --format requirements-txt --output-file requirements.txt
+      - name: Export dependencies (no editable, no hashes)
+        run: uv export --format requirements-txt --no-editable --no-hashes --output-file requirements.txt
 
       - name: Run safety check
         run: safety check --file requirements.txt
