@@ -4,6 +4,7 @@ import logging
 
 from aiogram import Router
 from aiogram.types import MessageReactionUpdated, ReactionTypeEmoji
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.registration import Registration
@@ -125,7 +126,15 @@ async def handle_registration_add(
         session_id=coffee_session.id,
         user_id=user.id,
     )
-    await registration_repo.create(registration)
+    try:
+        await registration_repo.create(registration)
+    except IntegrityError:
+        # Race condition: another request already created the registration
+        logger.debug(
+            f"User {telegram_user.id} registration for session {coffee_session.id} "
+            "already exists (race condition handled)"
+        )
+        return
 
     logger.info(
         f"User {telegram_user.id} (@{telegram_user.username}) "

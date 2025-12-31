@@ -176,13 +176,22 @@ async def process_comment(
         await state.clear()
         return
 
+    # Check if feedback already exists for this match and user
+    feedback_repo = FeedbackRepository(session)
+    if await feedback_repo.exists(match_id, user.id):
+        await message.answer(
+            "Вы уже оставили отзыв для этой встречи. Спасибо! 🙏",
+            reply_markup=get_main_menu_keyboard(),
+        )
+        await state.clear()
+        return
+
     feedback = Feedback(
         match_id=match_id,
         user_id=user.id,
         rating=rating,
         comment=comment,
     )
-    feedback_repo = FeedbackRepository(session)
     await feedback_repo.create(feedback)
 
     await message.answer(
