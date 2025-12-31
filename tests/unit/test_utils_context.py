@@ -12,7 +12,7 @@ def test_get_correlation_id_creates_new():
     try:
         correlation_id.set(None)
     except LookupError:
-        pass
+        pass  # Context var may not be set yet, which is fine
 
     corr_id = get_correlation_id()
     assert corr_id is not None

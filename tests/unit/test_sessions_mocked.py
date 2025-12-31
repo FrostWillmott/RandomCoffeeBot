@@ -19,7 +19,7 @@ def mock_now():
 def mock_datetime_patch(mock_now):
     with patch("app.services.sessions.datetime") as mock_dt:
         mock_dt.now.return_value = mock_now
-        mock_dt.side_effect = lambda *args, **kw: datetime(*args, **kw)
+        mock_dt.side_effect = datetime
         yield mock_dt
 
 

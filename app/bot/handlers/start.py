@@ -60,7 +60,7 @@ async def cmd_start(message: Message, session: AsyncSession) -> None:
     try:
         await temp_msg.delete()
     except Exception:
-        pass
+        pass  # Message may already be deleted or bot lacks permissions
 
     await message.answer(
         welcome_text,
