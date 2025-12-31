@@ -130,6 +130,7 @@ async def handle_registration_add(
             f"User {telegram_user.id} registration for session {coffee_session.id} "
             "already exists (race condition handled)"
         )
+        await session.rollback()
         return
 
     logger.info(
