@@ -133,6 +133,8 @@ async def _create_matches_logic(
         logger.warning(
             f"Not enough registrations for session {session_id} (only {len(registrations)})"
         )
+        session_obj.status = SessionStatus.MATCHED
+        await session_repo.update(session_obj)
         return 0, [r.user_id for r in registrations]
 
     user_ids = [r.user_id for r in registrations]

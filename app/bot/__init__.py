@@ -13,7 +13,7 @@ from app.bot.handlers import (
     registration,
     start,
 )
-from app.bot.middlewares import DatabaseMiddleware, ThrottlingMiddleware
+from app.bot.middlewares import DatabaseMiddleware, throttling_middleware
 from app.config import get_settings
 
 
@@ -35,7 +35,7 @@ def get_dispatcher() -> Dispatcher:
     )
     dp = Dispatcher(storage=storage)
 
-    dp.message.middleware(ThrottlingMiddleware())
+    dp.message.middleware(throttling_middleware)
     dp.update.middleware(DatabaseMiddleware())
 
     dp.include_router(start.router)

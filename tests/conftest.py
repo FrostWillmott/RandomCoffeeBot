@@ -115,19 +115,20 @@ async def db_session(db_engine) -> AsyncGenerator[AsyncSession, None]:
     try:
         yield session
     finally:
+        # Cleanup in finally block - ignore errors during teardown
         try:
             await session.close()
         except Exception:
-            pass
+            pass  # Session may already be closed
         try:
             if transaction.is_active:
                 await transaction.rollback()
         except Exception:
-            pass
+            pass  # Transaction may already be rolled back
         try:
             await connection.close()
         except Exception:
-            pass
+            pass  # Connection may already be closed
 
 
 _user_counter = itertools.count(start=10000)
