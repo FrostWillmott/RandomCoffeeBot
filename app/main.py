@@ -8,6 +8,7 @@ import sys
 import aiofiles
 
 from app.bot import get_bot, get_dispatcher
+from app.bot.middlewares.throttling import throttling_middleware
 from app.config import get_settings
 from app.db.session import engine
 from app.scheduler import setup_scheduler, shutdown_scheduler, start_scheduler
@@ -76,6 +77,11 @@ async def shutdown_services(
         pass  # Expected when cancelling the task
 
     await shutdown_scheduler(scheduler)
+
+    try:
+        await throttling_middleware.close()
+    except Exception as e:
+        logger.warning(f"Error closing throttling middleware Redis client: {e}")
 
     try:
         await bot.session.close()

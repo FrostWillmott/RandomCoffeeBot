@@ -22,6 +22,7 @@ class ThrottlingMiddleware(BaseMiddleware):
         self.limit = limit
         settings = get_settings()
         self.redis = Redis.from_url(settings.redis_url)
+        self._closed = False
 
     async def __call__(
         self,
@@ -50,3 +51,16 @@ class ThrottlingMiddleware(BaseMiddleware):
             return None
 
         return await handler(event, data)
+
+    async def close(self) -> None:
+        """Close the Redis connection."""
+        if self._closed:
+            return
+        try:
+            await self.redis.close()
+            await self.redis.wait_closed()
+        finally:
+            self._closed = True
+
+
+throttling_middleware = ThrottlingMiddleware()
