@@ -117,8 +117,7 @@ async def handle_registration_add(
 
     if existing:
         logger.debug(
-            f"User {telegram_user.id} already registered for "
-            f"session {coffee_session.id}"
+            f"User {telegram_user.id} already registered for session {coffee_session.id}"
         )
         return
 
