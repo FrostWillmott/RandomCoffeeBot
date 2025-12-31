@@ -58,7 +58,6 @@ class ThrottlingMiddleware(BaseMiddleware):
             return
         try:
             await self.redis.close()
-            await self.redis.wait_closed()
         finally:
             self._closed = True
 
