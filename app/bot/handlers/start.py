@@ -1,6 +1,7 @@
 """Start a command handler."""
 
 import asyncio
+from datetime import UTC, datetime, timedelta
 
 from aiogram import Router
 from aiogram.filters import CommandStart
@@ -28,10 +29,9 @@ async def cmd_start(message: Message, session: AsyncSession) -> None:
         last_name=message.from_user.last_name,
     )
 
-    # Check if this is a new user (just created)
-    is_new_user = user.created_at and (
-        (user.created_at - user.created_at).total_seconds() < 1
-    )
+    # Check if this is a new user (created within last 5 seconds)
+    now = datetime.now(UTC)
+    is_new_user = user.created_at and (now - user.created_at) < timedelta(seconds=5)
 
     if is_new_user:
         welcome_text = (

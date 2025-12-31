@@ -64,6 +64,16 @@ async def start_feedback(
         await callback.answer("Пара не найдена")
         return
 
+    # Authorization check: verify user is a participant of this match
+    if not callback.from_user:
+        return
+
+    user_repo = UserRepository(session)
+    user = await user_repo.get_by_telegram_id(callback.from_user.id)
+    if not user or user.id not in (match.user1_id, match.user2_id):
+        await callback.answer("⛔ У вас нет доступа к этой паре", show_alert=True)
+        return
+
     await state.update_data(match_id=match_id)
     await state.set_state(FeedbackStates.waiting_for_rating)
 

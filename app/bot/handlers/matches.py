@@ -9,7 +9,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot.keyboards import get_main_menu_keyboard
 from app.models.enums import MatchStatus
+from app.models.match import Match
 from app.repositories.match import MatchRepository
+from app.repositories.user import UserRepository
 from app.schemas.callbacks import (
     ConfirmMatchCallback,
     SuggestTimeCallback,
@@ -18,6 +20,24 @@ from app.schemas.callbacks import (
 
 router = Router()
 logger = logging.getLogger(__name__)
+
+
+async def verify_match_participant(
+    session: AsyncSession, telegram_id: int, match: Match
+) -> bool:
+    """Verify that user is a participant of the match.
+
+    Args:
+        session: Database session
+        telegram_id: Telegram user ID
+        match: Match to check
+
+    Returns:
+        True if user is a participant, False otherwise
+    """
+    user_repo = UserRepository(session)
+    user = await user_repo.get_by_telegram_id(telegram_id)
+    return user is not None and user.id in (match.user1_id, match.user2_id)
 
 
 @router.callback_query(F.data.startswith("confirm_match:"))
@@ -49,12 +69,16 @@ async def confirm_match(callback: CallbackQuery, session: AsyncSession) -> None:
     match = await match_repo.get_by_id(match_id)
 
     if not match:
-        if callback.message:
-            await callback.message.edit_text(
-                "❌ Пара не найдена.",
-                reply_markup=get_main_menu_keyboard(),
-            )
+        await callback.message.edit_text(
+            "❌ Пара не найдена.",
+            reply_markup=get_main_menu_keyboard(),
+        )
         await callback.answer()
+        return
+
+    # Authorization check
+    if not await verify_match_participant(session, callback.from_user.id, match):
+        await callback.answer("⛔ У вас нет доступа к этой паре", show_alert=True)
         return
 
     if match.status == MatchStatus.CREATED:
@@ -62,30 +86,28 @@ async def confirm_match(callback: CallbackQuery, session: AsyncSession) -> None:
         match.confirmed_at = datetime.now(UTC)
         await match_repo.update(match)
 
-        if callback.message:
-            await callback.message.edit_text(
-                "✅ <b>Пара подтверждена!</b>\n\n"
-                "Отлично! Вы подтвердили пару. "
-                "Теперь свяжитесь с вашим партнёром, чтобы согласовать детали "
-                "встречи.\n\n"
-                "💡 <b>Рекомендуемая длительность встречи:</b> 30-60 минут\n"
-                "📞 <b>Варианты формата:</b> Zoom, Google Meet или звонок в "
-                "Telegram\n\n"
-                "Приятного общения!",
-                parse_mode="HTML",
-                reply_markup=get_main_menu_keyboard(),
-            )
+        await callback.message.edit_text(
+            "✅ <b>Пара подтверждена!</b>\n\n"
+            "Отлично! Вы подтвердили пару. "
+            "Теперь свяжитесь с вашим партнёром, чтобы согласовать детали "
+            "встречи.\n\n"
+            "💡 <b>Рекомендуемая длительность встречи:</b> 30-60 минут\n"
+            "📞 <b>Варианты формата:</b> Zoom, Google Meet или звонок в "
+            "Telegram\n\n"
+            "Приятного общения!",
+            parse_mode="HTML",
+            reply_markup=get_main_menu_keyboard(),
+        )
         await callback.answer("Пара подтверждена!")
     else:
-        if callback.message:
-            status_ru = {
-                "confirmed": "подтверждена",
-                "completed": "завершена",
-            }.get(match.status, match.status.lower())
-            await callback.message.edit_text(
-                f"ℹ️ Эта пара уже {status_ru}.",
-                reply_markup=get_main_menu_keyboard(),
-            )
+        status_ru = {
+            "confirmed": "подтверждена",
+            "completed": "завершена",
+        }.get(match.status, match.status.lower())
+        await callback.message.edit_text(
+            f"ℹ️ Эта пара уже {status_ru}.",
+            reply_markup=get_main_menu_keyboard(),
+        )
         await callback.answer()
 
 
