@@ -14,6 +14,7 @@ from app.models.match import Match
 from app.models.registration import Registration
 from app.models.session import Session
 from app.models.user import User
+from app.repositories.user import UserRepository
 
 router = Router()
 
@@ -120,16 +121,20 @@ def _format_status_message(user: User, registrations: Sequence, matches: Sequenc
 @router.message(Command("status"))
 @router.callback_query(F.data == "status")
 async def cmd_status(event: Message | CallbackQuery, session: AsyncSession) -> None:
-    """Handle /status command or status button."""
+    """Handle /status command or status button.
+
+    Args:
+        event: Message or callback query
+        session: Database session
+    """
     user_id = event.from_user.id if event.from_user else None
     message = event if isinstance(event, Message) else event.message
 
     if not user_id or not message:
         return
 
-    user = (
-        await session.execute(select(User).where(User.telegram_id == user_id))
-    ).scalar_one_or_none()
+    user_repo = UserRepository(session)
+    user = await user_repo.get_by_telegram_id(user_id)
 
     if not user:
         status_text = "⚠️ Вы не зарегистрированы. Используйте /start для регистрации."
@@ -149,7 +154,11 @@ async def cmd_status(event: Message | CallbackQuery, session: AsyncSession) -> N
 
 @router.callback_query()
 async def handle_unknown_callback(callback: CallbackQuery) -> None:
-    """Handle unknown/legacy callback queries from old bot versions."""
+    """Handle unknown/legacy callback queries from old bot versions.
+
+    Args:
+        callback: Callback query
+    """
     # Answer the callback to remove the loading indicator
     await callback.answer(
         "⚠️ Эта кнопка устарела. Используйте новое меню.",

@@ -5,7 +5,14 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.fsm.storage.redis import DefaultKeyBuilder, RedisStorage
 
-from app.bot.handlers import commands, feedback, matches, registration, start
+from app.bot.handlers import (
+    commands,
+    feedback,
+    matches,
+    reactions,
+    registration,
+    start,
+)
 from app.bot.middlewares import DatabaseMiddleware, ThrottlingMiddleware
 from app.config import get_settings
 
@@ -32,6 +39,7 @@ def get_dispatcher() -> Dispatcher:
     dp.update.middleware(DatabaseMiddleware())
 
     dp.include_router(start.router)
+    dp.include_router(reactions.router)
     dp.include_router(registration.router)
     dp.include_router(matches.router)
     dp.include_router(feedback.router)

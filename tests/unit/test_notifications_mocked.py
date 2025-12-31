@@ -1,106 +1,111 @@
 """Unit tests for notifications service with a mocked database."""
 
-from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from aiogram.exceptions import TelegramAPIError, TelegramForbiddenError
 
 from app.models.match import Match
-from app.models.session import Session
 from app.models.topic import Topic
 from app.models.user import User
 from app.services.notifications import (
-    _create_match_keyboard,
-    _create_match_message,
-    _format_user_info,
+    _build_matches_message,
+    _format_user_mention,
     mark_user_inactive,
 )
 
 
 @pytest.mark.asyncio
-async def test_format_user_info_full():
-    """Test formatting user info with all fields."""
+async def test_format_user_mention_with_username():
+    """Test formatting user mention with username."""
     user = User(
         telegram_id=1002,
-        username="fulluser",
+        username="testuser",
         first_name="First",
         last_name="Last",
         is_active=True,
     )
 
-    info = _format_user_info(user)
-    assert "First" in info
-    assert "Last" in info
-    assert "@fulluser" in info
+    mention = _format_user_mention(user)
+    assert mention == "@testuser"
 
 
 @pytest.mark.asyncio
-async def test_format_user_info_minimal():
-    """Test formatting user info with minimal fields."""
-    user = User(telegram_id=1003, is_active=True)
+async def test_format_user_mention_without_username():
+    """Test formatting user mention without a username (fallback to link)."""
+    user = User(
+        telegram_id=1003,
+        first_name="First",
+        is_active=True,
+    )
 
-    info = _format_user_info(user)
-    assert "User #1003" in info
-
-
-@pytest.mark.asyncio
-async def test_format_user_info_username_only():
-    """Test formatting user info with only a username."""
-    user = User(telegram_id=1004, username="usernameonly", is_active=True)
-
-    info = _format_user_info(user)
-    assert "@usernameonly" in info
+    mention = _format_user_mention(user)
+    assert "tg://user?id=1003" in mention
+    assert "First" in mention
 
 
 @pytest.mark.asyncio
-async def test_create_match_keyboard():
-    """Test creating match keyboard."""
-    keyboard = _create_match_keyboard(123)
+async def test_format_user_mention_no_name_no_username():
+    """Test formatting user mention with no name and no username."""
+    user = User(telegram_id=1004, is_active=True)
 
-    assert keyboard is not None
-    assert len(keyboard.inline_keyboard) == 2
-    assert keyboard.inline_keyboard[0][0].callback_data == "confirm_match:123"
-    assert keyboard.inline_keyboard[1][0].callback_data == "suggest_time:123"
+    mention = _format_user_mention(user)
+    assert "tg://user?id=1004" in mention
+    assert "Участник" in mention
 
 
 @pytest.mark.asyncio
-async def test_create_match_message():
-    """Test creating a match message."""
-    user1 = User(telegram_id=2001, username="user1", first_name="User", is_active=True)
-    user2 = User(telegram_id=2002, username="user2", first_name="Partner", is_active=True)
+async def test_build_matches_message_empty():
+    """Test building message with no matches."""
+    message = _build_matches_message([])
+    assert "Нет пар" in message
+
+
+@pytest.mark.asyncio
+async def test_build_matches_message_with_matches():
+    """Test building message with matches."""
+    user1 = User(telegram_id=1, username="user1", first_name="User1", is_active=True)
+    user2 = User(telegram_id=2, username="user2", first_name="User2", is_active=True)
     topic = Topic(
         id=1,
         title="Test Topic",
-        description="Test description",
+        description="Test desc",
         category="test",
         difficulty="middle",
-        questions=["Q1", "Q2"],
+        questions=[],
         resources=[],
         is_active=True,
     )
-    session = Session(
-        id=1,
-        date=datetime.now(UTC) + timedelta(days=5),
-        registration_deadline=datetime.now(UTC) + timedelta(days=4),
-        status="open",
-        created_at=datetime.now(UTC),
-    )
-    match = Match(
-        id=1,
-        user1=user1,
-        user2=user2,
-        topic=topic,
-        session=session,
-        status="created",
-        created_at=datetime.now(UTC),
-    )
+    match = MagicMock(spec=Match)
+    match.user1 = user1
+    match.user2 = user2
+    match.topic = topic
 
-    message = _create_match_message(user1, user2, match)
+    message = _build_matches_message([match])
 
-    assert "Partner" in message or "@user2" in message
+    assert "@user1" in message
+    assert "@user2" in message
     assert "Test Topic" in message
-    assert "Q1" in message or "Q2" in message
+    assert "Пары Random Coffee" in message
+
+
+@pytest.mark.asyncio
+async def test_build_matches_message_with_unmatched():
+    """Test building message with unmatched users."""
+    user1 = User(telegram_id=1, username="user1", first_name="User1", is_active=True)
+    user2 = User(telegram_id=2, username="user2", first_name="User2", is_active=True)
+    unmatched = User(telegram_id=3, username="lonely", first_name="Lonely", is_active=True)
+
+    match = MagicMock(spec=Match)
+    match.user1 = user1
+    match.user2 = user2
+    match.topic = None
+
+    message = _build_matches_message([match], [unmatched])
+
+    assert "@user1" in message
+    assert "@user2" in message
+    assert "@lonely" in message
+    assert "Без пары" in message
 
 
 @pytest.mark.asyncio
@@ -143,241 +148,115 @@ async def test_mark_user_inactive_user_not_found():
 
 
 @pytest.mark.asyncio
-async def test_send_unmatched_notification_success():
-    """Test sending unmatched notification successfully."""
-    user_id = 4001
-    telegram_id = 4001
-
-    with (
-        patch("app.services.notifications.async_session_maker") as mock_session_maker,
-        patch("app.services.notifications.Bot") as mock_bot_class,
-    ):
-        mock_session = AsyncMock()
-        mock_user = User(
-            id=user_id, telegram_id=telegram_id, username="test", is_active=True
-        )
-        mock_session.get = AsyncMock(return_value=mock_user)
-        mock_session_maker.return_value.__aenter__.return_value = mock_session
-        mock_session_maker.return_value.__aexit__.return_value = None
-
-        mock_bot = AsyncMock()
-        mock_bot.send_message = AsyncMock(return_value=MagicMock())
-        mock_bot_class.return_value = mock_bot
-
-        from app.services.notifications import send_unmatched_notification
-
-        result = await send_unmatched_notification(mock_bot, user_id)
-
-        assert result is True
-        mock_bot.send_message.assert_called_once()
-
-
-@pytest.mark.asyncio
-async def test_send_unmatched_notification_forbidden():
-    """Test handling TelegramForbiddenError."""
-    user_id = 4002
-    telegram_id = 4002
-
-    with (
-        patch("app.services.notifications.async_session_maker") as mock_session_maker,
-        patch("app.services.notifications.mark_user_inactive") as mock_mark_inactive,
-    ):
-        mock_session = AsyncMock()
-        mock_user = User(
-            id=user_id, telegram_id=telegram_id, username="blocked", is_active=True
-        )
-        mock_session.get = AsyncMock(return_value=mock_user)
-        mock_session_maker.return_value.__aenter__.return_value = mock_session
-        mock_session_maker.return_value.__aexit__.return_value = None
-
-        mock_bot = AsyncMock()
-        mock_bot.send_message = AsyncMock(
-            side_effect=TelegramForbiddenError(
-                method="sendMessage", message="Forbidden: bot was blocked by the user"
-            )
-        )
-
-        from app.services.notifications import send_unmatched_notification
-
-        result = await send_unmatched_notification(mock_bot, user_id)
-
-        assert result is False
-        mock_mark_inactive.assert_called_once_with(user_id)
-
-
-@pytest.mark.asyncio
-async def test_send_unmatched_notification_user_not_found():
-    """Test sending unmatched notification to a non-existent user."""
-    user_id = 99999
-
-    with patch("app.services.notifications.async_session_maker") as mock_session_maker:
-        mock_session = AsyncMock()
-        mock_session.get = AsyncMock(return_value=None)
-        mock_session_maker.return_value.__aenter__.return_value = mock_session
-        mock_session_maker.return_value.__aexit__.return_value = None
-
-        mock_bot = AsyncMock()
-
-        from app.services.notifications import send_unmatched_notification
-
-        result = await send_unmatched_notification(mock_bot, user_id)
-
-        assert result is False
-        mock_bot.send_message.assert_not_called()
-
-
-@pytest.mark.asyncio
-async def test_send_unmatched_notification_chat_not_found():
-    """Test handling chat didn't found error."""
-    user_id = 4003
-    telegram_id = 4003
-
-    with (
-        patch("app.services.notifications.async_session_maker") as mock_session_maker,
-        patch("app.services.notifications.mark_user_inactive") as mock_mark_inactive,
-    ):
-        mock_session = AsyncMock()
-        mock_user = User(
-            id=user_id, telegram_id=telegram_id, username="notfound", is_active=True
-        )
-        mock_session.get = AsyncMock(return_value=mock_user)
-        mock_session_maker.return_value.__aenter__.return_value = mock_session
-        mock_session_maker.return_value.__aexit__.return_value = None
-
-        mock_bot = AsyncMock()
-        mock_bot.send_message = AsyncMock(
-            side_effect=TelegramAPIError(
-                method="sendMessage", message="Bad Request: chat not found"
-            )
-        )
-
-        from app.services.notifications import send_unmatched_notification
-
-        result = await send_unmatched_notification(mock_bot, user_id)
-
-        assert result is False
-        mock_mark_inactive.assert_called_once_with(user_id)
-
-
-@pytest.mark.asyncio
-async def test_send_match_notification_success():
-    """Test sending match notification successfully."""
-    match_id = 5001
-
-    user1 = User(
-        id=1, telegram_id=5001, username="user1", first_name="User1", is_active=True
-    )
-    user2 = User(
-        id=2, telegram_id=5002, username="user2", first_name="User2", is_active=True
-    )
-    topic = Topic(
-        id=1,
-        title="Topic",
-        description="Desc",
-        category="test",
-        difficulty="middle",
-        questions=["Q1"],
-        resources=[],
-        is_active=True,
-    )
-    session = Session(
-        id=1,
-        date=datetime.now(UTC),
-        registration_deadline=datetime.now(UTC),
-        status="open",
-        created_at=datetime.now(UTC),
-    )
-    match = Match(
-        id=match_id,
-        user1=user1,
-        user2=user2,
-        topic=topic,
-        session=session,
-        status="created",
-        created_at=datetime.now(UTC),
-    )
-
-    with patch("app.services.notifications.async_session_maker") as mock_session_maker:
-        mock_session = AsyncMock()
-        mock_result = MagicMock()
-        mock_result.scalar_one_or_none = MagicMock(return_value=match)
-        mock_session.execute = AsyncMock(return_value=mock_result)
-        mock_session_maker.return_value.__aenter__.return_value = mock_session
-        mock_session_maker.return_value.__aexit__.return_value = None
-
-        mock_bot = AsyncMock()
-        mock_bot.send_message = AsyncMock(return_value=MagicMock())
-
-        from app.services.notifications import send_match_notification
-
-        result = await send_match_notification(mock_bot, match_id)
-
-        assert result is True
-        assert mock_bot.send_message.call_count == 2
-
-
-@pytest.mark.asyncio
-async def test_send_match_notification_match_not_found():
-    """Test sending match notification when match not found."""
-    match_id = 99999
-
-    with patch("app.services.notifications.async_session_maker") as mock_session_maker:
-        mock_session = AsyncMock()
-        mock_result = MagicMock()
-        mock_result.scalar_one_or_none = MagicMock(return_value=None)
-        mock_session.execute = AsyncMock(return_value=mock_result)
-        mock_session_maker.return_value.__aenter__.return_value = mock_session
-        mock_session_maker.return_value.__aexit__.return_value = None
-
-        mock_bot = AsyncMock()
-
-        from app.services.notifications import send_match_notification
-
-        result = await send_match_notification(mock_bot, match_id)
-
-        assert result is False
-        mock_bot.send_message.assert_not_called()
-
-
-@pytest.mark.asyncio
-async def test_notify_all_matches_for_session():
-    """Test notifying all matches for a session."""
+async def test_notify_all_matches_for_session_success():
+    """Test posting all matches to group successfully."""
     session_id = 6001
 
-    match1 = Match(
-        id=1,
-        user1_id=1,
-        user2_id=2,
-        session_id=session_id,
-        status="created",
-        created_at=datetime.now(UTC),
-    )
-    match2 = Match(
-        id=2,
-        user1_id=3,
-        user2_id=4,
-        session_id=session_id,
-        status="created",
-        created_at=datetime.now(UTC),
-    )
+    user1 = User(telegram_id=1, username="user1", first_name="User1", is_active=True)
+    user2 = User(telegram_id=2, username="user2", first_name="User2", is_active=True)
+    topic = MagicMock(spec=Topic)
+    topic.title = "Test Topic"
 
-    with (
-        patch("app.services.notifications.async_session_maker") as mock_session_maker,
-        patch("app.services.notifications.send_match_notification") as mock_send_match,
-    ):
+    match = MagicMock(spec=Match)
+    match.user1 = user1
+    match.user2 = user2
+    match.topic = topic
+
+    with patch("app.services.notifications.async_session_maker") as mock_session_maker:
         mock_session = AsyncMock()
-        mock_result = MagicMock()
-        mock_result.scalars.return_value.all.return_value = [match1, match2]
-        mock_session.execute = AsyncMock(return_value=mock_result)
+
+        mock_matches_result = MagicMock()
+        mock_matches_result.scalars.return_value.all.return_value = [match]
+        mock_session.execute = AsyncMock(return_value=mock_matches_result)
+
         mock_session_maker.return_value.__aenter__.return_value = mock_session
         mock_session_maker.return_value.__aexit__.return_value = None
 
         mock_bot = AsyncMock()
-        mock_send_match.return_value = True
+        mock_bot.send_message = AsyncMock(return_value=MagicMock())
 
         from app.services.notifications import notify_all_matches_for_session
 
         result = await notify_all_matches_for_session(mock_bot, session_id)
 
-        assert result == 2
-        assert mock_send_match.call_count == 2
+        assert result is True
+        mock_bot.send_message.assert_called_once()
+        call_args = mock_bot.send_message.call_args
+        assert "@user1" in call_args.kwargs["text"]
+        assert "@user2" in call_args.kwargs["text"]
+
+
+@pytest.mark.asyncio
+async def test_notify_all_matches_for_session_no_matches():
+    """Test notification when no matches found."""
+    session_id = 6002
+
+    with patch("app.services.notifications.async_session_maker") as mock_session_maker:
+        mock_session = AsyncMock()
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = []
+        mock_session.execute = AsyncMock(return_value=mock_result)
+        mock_session_maker.return_value.__aenter__.return_value = mock_session
+        mock_session_maker.return_value.__aexit__.return_value = None
+
+        mock_bot = AsyncMock()
+
+        from app.services.notifications import notify_all_matches_for_session
+
+        result = await notify_all_matches_for_session(mock_bot, session_id)
+
+        assert result is False
+        mock_bot.send_message.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_notify_all_matches_with_unmatched_users():
+    """Test notification includes unmatched users."""
+    session_id = 6003
+
+    user1 = User(id=1, telegram_id=1, username="user1", first_name="User1", is_active=True)
+    user2 = User(id=2, telegram_id=2, username="user2", first_name="User2", is_active=True)
+    unmatched = User(
+        id=3, telegram_id=3, username="lonely", first_name="Lonely", is_active=True
+    )
+
+    topic = MagicMock(spec=Topic)
+    topic.title = "Test Topic"
+
+    match = MagicMock(spec=Match)
+    match.user1 = user1
+    match.user2 = user2
+    match.topic = topic
+
+    with patch("app.services.notifications.async_session_maker") as mock_session_maker:
+        with patch("app.services.notifications.MatchRepository") as mock_match_repo_class:
+            with patch("app.services.notifications.UserRepository") as mock_user_repo_class:
+                mock_session = AsyncMock()
+
+                # Mock MatchRepository
+                mock_match_repo = AsyncMock()
+                mock_match_repo.get_by_session_id_with_relations.return_value = [match]
+                mock_match_repo_class.return_value = mock_match_repo
+
+                # Mock UserRepository
+                mock_user_repo = AsyncMock()
+                mock_user_repo.get_by_id.return_value = unmatched
+                mock_user_repo_class.return_value = mock_user_repo
+
+                mock_session_maker.return_value.__aenter__.return_value = mock_session
+                mock_session_maker.return_value.__aexit__.return_value = None
+
+                mock_bot = AsyncMock()
+                mock_bot.send_message = AsyncMock(return_value=MagicMock())
+
+                from app.services.notifications import notify_all_matches_for_session
+
+                result = await notify_all_matches_for_session(
+                    mock_bot, session_id, unmatched_user_ids=[3]
+                )
+
+                assert result is True
+                call_args = mock_bot.send_message.call_args
+                message_text = call_args.kwargs["text"]
+                assert "@lonely" in message_text
+                assert "Без пары" in message_text

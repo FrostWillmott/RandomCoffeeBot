@@ -28,15 +28,22 @@ async def test_post_session_announcement_success(bot):
 
     with (
         patch("app.services.announcements.async_session_maker") as mock_session_maker,
-        patch("app.services.announcements.settings") as mock_settings,
+        patch("app.services.announcements.SessionRepository") as mock_repo_class,
+        patch("app.services.announcements.get_settings") as mock_get_settings,
     ):
+        mock_settings = MagicMock()
         mock_settings.channel_id = "@test_channel"
+        mock_get_settings.return_value = mock_settings
 
         mock_db_session = AsyncMock()
         mock_db_session.add = MagicMock()
         mock_db_session.commit = AsyncMock()
         mock_session_maker.return_value.__aenter__.return_value = mock_db_session
         mock_session_maker.return_value.__aexit__.return_value = None
+
+        mock_repo = AsyncMock()
+        mock_repo.update.return_value = session
+        mock_repo_class.return_value = mock_repo
 
         result = await post_session_announcement(bot, session)
 
@@ -62,8 +69,10 @@ async def test_post_session_announcement_telegram_error(bot):
         )
     )
 
-    with patch("app.services.announcements.settings") as mock_settings:
+    with patch("app.services.announcements.get_settings") as mock_get_settings:
+        mock_settings = MagicMock()
         mock_settings.channel_id = "@test_channel"
+        mock_get_settings.return_value = mock_settings
 
         result = await post_session_announcement(bot, session)
 
@@ -84,8 +93,10 @@ async def test_post_session_announcement_general_error(bot):
 
     bot.send_message = AsyncMock(side_effect=Exception("Unexpected error"))
 
-    with patch("app.services.announcements.settings") as mock_settings:
+    with patch("app.services.announcements.get_settings") as mock_get_settings:
+        mock_settings = MagicMock()
         mock_settings.channel_id = "@test_channel"
+        mock_get_settings.return_value = mock_settings
 
         result = await post_session_announcement(bot, session)
 

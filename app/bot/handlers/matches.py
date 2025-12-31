@@ -5,12 +5,11 @@ from datetime import UTC, datetime
 
 from aiogram import F, Router
 from aiogram.types import CallbackQuery
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot.keyboards import get_main_menu_keyboard
 from app.models.enums import MatchStatus
-from app.models.match import Match
+from app.repositories.match import MatchRepository
 from app.schemas.callbacks import (
     ConfirmMatchCallback,
     SuggestTimeCallback,
@@ -23,7 +22,12 @@ logger = logging.getLogger(__name__)
 
 @router.callback_query(F.data.startswith("confirm_match:"))
 async def confirm_match(callback: CallbackQuery, session: AsyncSession) -> None:
-    """Handle match confirmation."""
+    """Handle match confirmation.
+
+    Args:
+        callback: Callback query
+        session: Database session
+    """
     if not callback.message or not callback.from_user:
         return
 
@@ -41,8 +45,8 @@ async def confirm_match(callback: CallbackQuery, session: AsyncSession) -> None:
         await callback.answer("Неверный ID пары")
         return
 
-    result = await session.execute(select(Match).where(Match.id == match_id))
-    match = result.scalar_one_or_none()
+    match_repo = MatchRepository(session)
+    match = await match_repo.get_by_id(match_id)
 
     if not match:
         if callback.message:
@@ -56,8 +60,7 @@ async def confirm_match(callback: CallbackQuery, session: AsyncSession) -> None:
     if match.status == MatchStatus.CREATED:
         match.status = MatchStatus.CONFIRMED
         match.confirmed_at = datetime.now(UTC)
-        session.add(match)
-        await session.commit()
+        await match_repo.update(match)
 
         if callback.message:
             await callback.message.edit_text(
@@ -76,8 +79,8 @@ async def confirm_match(callback: CallbackQuery, session: AsyncSession) -> None:
     else:
         if callback.message:
             status_ru = {
-                "CONFIRMED": "подтверждена",
-                "COMPLETED": "завершена",
+                "confirmed": "подтверждена",
+                "completed": "завершена",
             }.get(match.status, match.status.lower())
             await callback.message.edit_text(
                 f"ℹ️ Эта пара уже {status_ru}.",
@@ -88,7 +91,11 @@ async def confirm_match(callback: CallbackQuery, session: AsyncSession) -> None:
 
 @router.callback_query(F.data.startswith("suggest_time:"))
 async def suggest_time(callback: CallbackQuery) -> None:
-    """Handle time suggestion (placeholder for now)."""
+    """Handle time suggestion (placeholder for now).
+
+    Args:
+        callback: Callback query
+    """
     if not callback.message:
         return
 
