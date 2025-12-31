@@ -146,23 +146,20 @@ class TestHandleRegistrationAdd:
         mock_session = AsyncMock()
         mock_reaction = MagicMock()
         mock_reaction.chat = MagicMock(id=-100123)
+        mock_reaction.bot = AsyncMock()
         mock_coffee_session = MagicMock(spec=Session)
         mock_telegram_user = MagicMock()
         mock_telegram_user.username = None
         mock_telegram_user.id = 12345
         mock_telegram_user.first_name = "Test"
 
-        with patch("app.bot.get_bot") as mock_get_bot:
-            mock_bot = AsyncMock()
-            mock_get_bot.return_value = mock_bot
+        await handle_registration_add(
+            mock_session, mock_reaction, mock_coffee_session, mock_telegram_user
+        )
 
-            await handle_registration_add(
-                mock_session, mock_reaction, mock_coffee_session, mock_telegram_user
-            )
-
-            mock_bot.send_message.assert_called_once()
-            call_args = mock_bot.send_message.call_args
-            assert "username" in call_args.kwargs["text"].lower()
+        mock_reaction.bot.send_message.assert_called_once()
+        call_args = mock_reaction.bot.send_message.call_args
+        assert "username" in call_args.kwargs["text"].lower()
 
     @pytest.mark.asyncio
     async def test_skip_already_registered(self):

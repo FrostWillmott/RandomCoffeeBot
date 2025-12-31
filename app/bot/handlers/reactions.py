@@ -83,17 +83,13 @@ async def handle_registration_add(
         coffee_session: Coffee session
         telegram_user: Telegram user who reacted
     """
-    from aiogram import Bot
-
-    from app.bot import get_bot
-
     if not telegram_user.username:
-        bot: Bot = await get_bot()
         user_mention = (
             f'<a href="tg://user?id={telegram_user.id}">'
             f"{telegram_user.first_name or 'Участник'}</a>"
         )
-        await bot.send_message(
+        # Use bot from reaction context to avoid creating new HTTP session
+        await reaction.bot.send_message(
             chat_id=reaction.chat.id,
             text=(
                 f"{user_mention}, для участия в Random Coffee "
