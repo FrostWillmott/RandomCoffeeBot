@@ -47,7 +47,7 @@ def setup_scheduler(bot: Bot) -> AsyncIOScheduler:
 
     scheduler.add_job(
         create_and_announce_session,
-        CronTrigger(day_of_week="mon", hour=10, minute=0),
+        CronTrigger(day_of_week="mon", hour=10, minute=0, timezone="UTC"),
         args=[bot],
         id="create_weekly_session",
         replace_existing=True,
@@ -55,14 +55,14 @@ def setup_scheduler(bot: Bot) -> AsyncIOScheduler:
 
     scheduler.add_job(
         close_registration_for_expired_sessions,
-        CronTrigger(minute=0),
+        CronTrigger(minute=0, timezone="UTC"),
         id="close_registrations",
         replace_existing=True,
     )
 
     scheduler.add_job(
         run_matching_for_closed_sessions,
-        CronTrigger(minute=15),
+        CronTrigger(minute=15, timezone="UTC"),
         args=[bot],
         id="run_matching",
         replace_existing=True,
