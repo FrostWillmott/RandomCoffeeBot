@@ -28,7 +28,6 @@ async def get_next_open_session(session: AsyncSession) -> Session | None:
 async def get_active_user(session: AsyncSession, telegram_id: int) -> User:
     """Get an active user or raise ValueError if not found/inactive."""
     user_repo = UserRepository(session)
-    # First check if user exists
     user = await user_repo.get_by_telegram_id(telegram_id)
     if not user:
         raise ValueError(f"User {telegram_id} not found")

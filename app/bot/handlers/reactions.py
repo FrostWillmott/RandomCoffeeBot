@@ -88,7 +88,6 @@ async def handle_registration_add(
             f'<a href="tg://user?id={telegram_user.id}">'
             f"{telegram_user.first_name or 'Участник'}</a>"
         )
-        # Use bot from reaction context to avoid creating new HTTP session
         await reaction.bot.send_message(
             chat_id=reaction.chat.id,
             text=(
@@ -125,7 +124,6 @@ async def handle_registration_add(
     try:
         await registration_repo.create(registration)
     except IntegrityError:
-        # Race condition: another request already created the registration
         logger.debug(
             f"User {telegram_user.id} registration for session {coffee_session.id} "
             "already exists (race condition handled)"

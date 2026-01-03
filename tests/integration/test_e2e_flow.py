@@ -99,7 +99,6 @@ async def test_multi_session_no_duplicate_pairs(
     session1_matches = result.scalars().all()
     session1_pairs = {tuple(sorted((m.user1_id, m.user2_id))) for m in session1_matches}
 
-    # Session 2
     session2 = await session_factory(days_ahead=12)
     for user in users:
         db_session.add(Registration(user_id=user.id, session_id=session2.id))

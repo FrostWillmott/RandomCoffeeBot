@@ -20,7 +20,6 @@ async def cmd_start(message: Message, session: AsyncSession) -> None:
     if not message.from_user:
         return
 
-    # Get or create user via service
     user = await get_or_create_user(
         session=session,
         telegram_id=message.from_user.id,
@@ -29,7 +28,6 @@ async def cmd_start(message: Message, session: AsyncSession) -> None:
         last_name=message.from_user.last_name,
     )
 
-    # Check if this is a new user (created within last 5 seconds)
     now = datetime.now(UTC)
     is_new_user = user.created_at and (now - user.created_at) < timedelta(seconds=5)
 
@@ -60,7 +58,7 @@ async def cmd_start(message: Message, session: AsyncSession) -> None:
     try:
         await temp_msg.delete()
     except Exception:
-        pass  # Message may already be deleted or bot lacks permissions
+        pass
 
     await message.answer(
         welcome_text,

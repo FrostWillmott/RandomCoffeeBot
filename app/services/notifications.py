@@ -1,4 +1,4 @@
-"""Notification service for posting match results to group."""
+"""Notification service for posting match results to a group."""
 
 import logging
 from typing import Any
@@ -42,7 +42,7 @@ async def _mark_user_inactive_logic(session: AsyncSession, user_id: int) -> bool
     """Core logic for marking user inactive.
 
     Returns:
-        True if user was found and marked inactive, False otherwise
+        True if the user was found and marked inactive, False otherwise
     """
     user_repo = UserRepository(session)
     success = await user_repo.mark_inactive(user_id)
@@ -54,10 +54,9 @@ async def _mark_user_inactive_logic(session: AsyncSession, user_id: int) -> bool
 
 
 def _format_user_mention(user: User) -> str:
-    """Format user mention for group message."""
+    """Format user mention for a group message."""
     if user.username:
         return f"@{user.username}"
-    # Fallback to link if no username (shouldn't happen with new flow)
     name = user.first_name or "Участник"
     return f'<a href="tg://user?id={user.telegram_id}">{name}</a>'
 
@@ -76,7 +75,7 @@ async def _send_message_with_retry(bot: Bot, **kwargs: Any) -> None:
 def _build_matches_message(
     matches: list[Match], unmatched_users: list[User] | None = None
 ) -> str:
-    """Build a message with all matches for posting to group."""
+    """Build a message with all matches for posting to a group."""
     if not matches:
         return "☕ Нет пар для этой сессии."
 
@@ -114,7 +113,7 @@ async def notify_all_matches_for_session(
         unmatched_user_ids: List of user IDs who weren't matched
 
     Returns:
-        True if message was sent successfully
+        True if a message was sent successfully
     """
     settings = get_settings()
     async with async_session_maker() as session:
@@ -122,10 +121,8 @@ async def notify_all_matches_for_session(
             match_repo = MatchRepository(session)
             user_repo = UserRepository(session)
 
-            # Load all matches with related data
             matches = await match_repo.get_by_session_id_with_relations(session_id)
 
-            # Load unmatched users if any
             unmatched_users: list[User] | None = None
             if unmatched_user_ids:
                 unmatched_users = []
@@ -138,7 +135,6 @@ async def notify_all_matches_for_session(
                 logger.warning(f"No matches found for session {session_id}")
                 return False
 
-            # Build and send message
             message_text = _build_matches_message(matches, unmatched_users)
 
             await _send_message_with_retry(

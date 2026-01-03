@@ -38,7 +38,7 @@ async def create_weekly_session(
 
 
 async def _create_weekly_session_logic(db_session: AsyncSession) -> Session:
-    """Core logic for creating weekly session."""
+    """Core logic for creating a weekly session."""
     session_repo = SessionRepository(db_session)
 
     now = datetime.now(UTC)

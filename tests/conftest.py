@@ -1,5 +1,6 @@
 """Test configuration and fixtures."""
 
+import contextlib
 import os
 
 TEST_DATABASE_NAME = os.getenv("TEST_DATABASE_NAME", "randomcoffee_test")
@@ -98,7 +99,7 @@ async def db_engine():
 async def db_session(db_engine) -> AsyncGenerator[AsyncSession, None]:
     """Create a fresh database session for a test.
 
-    Each test runs in an isolated transaction that is automatically
+    Each test runs in an isolated transaction which is automatically
     rolled back after the test completes. This ensures test isolation
     without needing to clean up data manually.
     """
@@ -115,20 +116,13 @@ async def db_session(db_engine) -> AsyncGenerator[AsyncSession, None]:
     try:
         yield session
     finally:
-        # Cleanup in finally block - ignore errors during teardown
-        try:
-            await session.close()
-        except Exception:
-            pass  # Session may already be closed
-        try:
+        with contextlib.suppress(Exception):
             if transaction.is_active:
                 await transaction.rollback()
-        except Exception:
-            pass  # Transaction may already be rolled back
-        try:
+        with contextlib.suppress(Exception):
+            await session.close()
+        with contextlib.suppress(Exception):
             await connection.close()
-        except Exception:
-            pass  # Connection may already be closed
 
 
 _user_counter = itertools.count(start=10000)

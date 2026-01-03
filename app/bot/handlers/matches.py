@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 async def verify_match_participant(
     session: AsyncSession, telegram_id: int, match: Match
 ) -> bool:
-    """Verify that user is a participant of the match.
+    """Verify that the user is a participant of the match.
 
     Args:
         session: Database session
@@ -33,7 +33,7 @@ async def verify_match_participant(
         match: Match to check
 
     Returns:
-        True if user is a participant, False otherwise
+        True if the user is a participant, False otherwise
     """
     user_repo = UserRepository(session)
     user = await user_repo.get_by_telegram_id(telegram_id)

@@ -64,7 +64,7 @@ async def start_feedback(
         await callback.answer("Пара не найдена")
         return
 
-    # Authorization check: verify user is a participant of this match
+    # Authorization check: verify the user is a participant of this match
     if not callback.from_user:
         return
 

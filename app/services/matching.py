@@ -49,18 +49,14 @@ async def select_topic_for_users(
         user2_id: Second user ID
 
     Returns:
-        Selected topic or None if no topics available
+        Selected topic or None if no topics are available
     """
-    # Get topics already used by these users
     used_topic_ids = await match_repo.get_topic_ids_used_by_users(user1_id, user2_id)
 
-    # Get all active topics for middle difficulty
     all_topics_list = await topic_repo.get_active_by_difficulty("middle")
 
-    # Filter out used topics
     available_topics = [t for t in all_topics_list if t.id not in used_topic_ids]
 
-    # If all topics were used, use all topics
     if not available_topics:
         available_topics = list(all_topics_list)
 
@@ -68,12 +64,10 @@ async def select_topic_for_users(
         logger.error("No topics available for matching!")
         return None
 
-    # Sort by usage count and add randomness
     available_topics.sort(key=lambda t: (t.times_used, random.random()))
 
     selected_topic = available_topics[0]
 
-    # Increment usage count
     await topic_repo.increment_usage(selected_topic.id)
 
     return selected_topic
