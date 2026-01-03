@@ -55,10 +55,9 @@ async def _mark_user_inactive_logic(session: AsyncSession, user_id: int) -> bool
 
 def _format_user_mention(user: User) -> str:
     """Format user mention for a group message."""
-    if user.username:
-        return f"@{user.username}"
-    name = user.first_name or "Участник"
-    return f'<a href="tg://user?id={user.telegram_id}">{name}</a>'
+    from app.utils.user_formatting import format_user_mention
+
+    return format_user_mention(user)
 
 
 @retry_telegram_api(max_attempts=3, initial_wait=1.0, max_wait=30.0)
