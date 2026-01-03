@@ -29,7 +29,6 @@ class UserRepositoryProtocol(Protocol):
         username: str | None = None,
         first_name: str | None = None,
         last_name: str | None = None,
-        level: str = "middle",
     ) -> User:
         """Get existing user or create new one."""
         ...

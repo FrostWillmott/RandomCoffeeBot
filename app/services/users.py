@@ -16,7 +16,6 @@ async def get_or_create_user(
     username: str | None = None,
     first_name: str | None = None,
     last_name: str | None = None,
-    level: str = "middle",
 ) -> User:
     """Get existing user or create new one.
 
@@ -26,7 +25,6 @@ async def get_or_create_user(
         username: Telegram username
         first_name: User's first name
         last_name: User's last name
-        level: User level (default: middle)
 
     Returns:
         User instance
@@ -37,5 +35,4 @@ async def get_or_create_user(
         username=username,
         first_name=first_name,
         last_name=last_name,
-        level=level,
     )

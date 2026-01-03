@@ -9,6 +9,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 from app.models.enums import MatchStatus
+from app.models.feedback import Feedback
 from app.models.session import Session
 from app.models.topic import Topic
 from app.models.user import User

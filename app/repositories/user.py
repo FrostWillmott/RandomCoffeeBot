@@ -38,7 +38,6 @@ class UserRepository(BaseRepository[User]):
         username: str | None = None,
         first_name: str | None = None,
         last_name: str | None = None,
-        level: str = "middle",
     ) -> User:
         """Get existing user or create new one.
 
@@ -47,7 +46,6 @@ class UserRepository(BaseRepository[User]):
             username: Telegram username
             first_name: User's first name
             last_name: User's last name
-            level: User level (default: middle)
 
         Returns:
             User instance
@@ -69,7 +67,6 @@ class UserRepository(BaseRepository[User]):
                 username=username,
                 first_name=first_name,
                 last_name=last_name,
-                level=level,
             )
             self.session.add(user)
             await self.session.flush()

@@ -23,14 +23,12 @@ class User(Base):
     first_name: Mapped[str | None] = mapped_column(String(255))
     last_name: Mapped[str | None] = mapped_column(String(255))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    level: Mapped[str] = mapped_column(String(20), default="middle", nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(UTC),
         nullable=False,
     )
 
-    # Relationships
     registrations: Mapped[list[Registration]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )

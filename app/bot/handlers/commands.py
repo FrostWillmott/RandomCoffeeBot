@@ -90,10 +90,7 @@ async def _get_user_status_data(session: AsyncSession, user: User):
 
 def _format_status_message(user: User, registrations: Sequence, matches: Sequence) -> str:
     """Construct the status text message."""
-    text = (
-        f"ℹ️ <b>Ваш статус</b>\n\n👤 Имя: {user.first_name or 'Не указано'}\n🎯"
-        f" Уровень: {user.level}\n\n"
-    )
+    text = f"ℹ️ <b>Ваш статус</b>\n\n👤 Имя: {user.first_name or 'Не указано'}\n\n"
 
     if registrations:
         text += f"📝 <b>Активные регистрации:</b> {len(registrations)}\n"
