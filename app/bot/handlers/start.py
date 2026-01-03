@@ -13,6 +13,11 @@ from app.services.users import get_or_create_user
 
 router = Router()
 
+# Time window to consider a user as "new" (in seconds)
+NEW_USER_TIME_WINDOW_SECONDS = 5
+# Delay before deleting temporary message (in seconds)
+TEMP_MESSAGE_DELETE_DELAY = 0.2
+
 
 @router.message(CommandStart())
 async def cmd_start(message: Message, session: AsyncSession) -> None:
@@ -29,7 +34,9 @@ async def cmd_start(message: Message, session: AsyncSession) -> None:
     )
 
     now = datetime.now(UTC)
-    is_new_user = user.created_at and (now - user.created_at) < timedelta(seconds=5)
+    is_new_user = user.created_at and (now - user.created_at) < timedelta(
+        seconds=NEW_USER_TIME_WINDOW_SECONDS
+    )
 
     if is_new_user:
         welcome_text = (
@@ -54,7 +61,7 @@ async def cmd_start(message: Message, session: AsyncSession) -> None:
         reply_markup=ReplyKeyboardRemove(),
     )
 
-    await asyncio.sleep(0.2)
+    await asyncio.sleep(TEMP_MESSAGE_DELETE_DELAY)
     try:
         await temp_msg.delete()
     except Exception:
