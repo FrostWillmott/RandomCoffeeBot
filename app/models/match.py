@@ -36,6 +36,11 @@ class Match(Base):
         nullable=False,
         index=True,
     )
+    user3_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
     topic_id: Mapped[int | None] = mapped_column(
         ForeignKey("topics.id", ondelete="SET NULL"), nullable=True
     )
@@ -59,6 +64,9 @@ class Match(Base):
     user2: Mapped[User] = relationship(
         foreign_keys=[user2_id], back_populates="matches_as_user2"
     )
+    user3: Mapped[User | None] = relationship(
+        foreign_keys=[user3_id], back_populates="matches_as_user3"
+    )
     topic: Mapped[Topic | None] = relationship(back_populates="matches")
     feedbacks: Mapped[list[Feedback]] = relationship(
         back_populates="match", cascade="all, delete-orphan"
@@ -66,4 +74,9 @@ class Match(Base):
 
     def __repr__(self) -> str:
         """String representation."""
+        if self.user3_id:
+            return (
+                f"<Match user1={self.user1_id} user2={self.user2_id} "
+                f"user3={self.user3_id} status={self.status}>"
+            )
         return f"<Match user1={self.user1_id} user2={self.user2_id} status={self.status}>"

@@ -139,6 +139,61 @@ async def _create_matches_logic(
 
     matches_to_create = []
 
+    if len(pool) % 2 == 1 and len(pool) >= 3:
+        u1 = pool.pop()
+        u2 = pool.pop()
+        u3 = pool.pop()
+
+        best_combination = None
+        best_score = -1
+
+        for perm in [
+            (u1, u2, u3),
+            (u1, u3, u2),
+            (u2, u1, u3),
+            (u2, u3, u1),
+            (u3, u1, u2),
+            (u3, u2, u1),
+        ]:
+            p1, p2, p3 = perm
+            pair12 = tuple(sorted((p1.user_id, p2.user_id)))
+            pair13 = tuple(sorted((p1.user_id, p3.user_id)))
+            pair23 = tuple(sorted((p2.user_id, p3.user_id)))
+
+            score = 0
+            if pair12 in past_matches:
+                score += 1
+            if pair13 in past_matches:
+                score += 1
+            if pair23 in past_matches:
+                score += 1
+
+            if score < best_score or best_score == -1:
+                best_score = score
+                best_combination = (p1, p2, p3)
+
+        if best_combination:
+            u1, u2, u3 = best_combination
+            if best_score > 0:
+                logger.warning(
+                    f"Creating group of 3 with some previous matches: "
+                    f"{u1.user_id}, {u2.user_id}, {u3.user_id}"
+                )
+
+            topic = await select_topic_for_users(
+                topic_repo, match_repo, u1.user_id, u2.user_id
+            )
+
+            match = Match(
+                session_id=session_id,
+                user1_id=u1.user_id,
+                user2_id=u2.user_id,
+                user3_id=u3.user_id,
+                topic_id=topic.id if topic else None,
+                status=MatchStatus.CREATED,
+                created_at=datetime.now(UTC),
+            )
+            matches_to_create.append(match)
     while len(pool) >= 2:
         u1 = pool.pop()
 
@@ -172,6 +227,7 @@ async def _create_matches_logic(
                 session_id=session_id,
                 user1_id=u1.user_id,
                 user2_id=partner.user_id,
+                user3_id=None,
                 topic_id=topic.id if topic else None,
                 status=MatchStatus.CREATED,
                 created_at=datetime.now(UTC),
@@ -188,6 +244,8 @@ async def _create_matches_logic(
     for m in matches_to_create:
         actual_matched.add(m.user1_id)
         actual_matched.add(m.user2_id)
+        if m.user3_id:
+            actual_matched.add(m.user3_id)
 
     unmatched_ids = list(all_users - actual_matched)
 

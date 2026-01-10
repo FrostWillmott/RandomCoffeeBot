@@ -76,7 +76,11 @@ async def _get_user_status_data(session: AsyncSession, user: User):
         .join(Session)
         .where(
             and_(
-                or_(Match.user1_id == user.id, Match.user2_id == user.id),
+                or_(
+                    Match.user1_id == user.id,
+                    Match.user2_id == user.id,
+                    Match.user3_id == user.id,
+                ),
                 Match.status.in_([MatchStatus.CREATED, MatchStatus.CONFIRMED]),
             )
         )

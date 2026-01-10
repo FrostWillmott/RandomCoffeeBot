@@ -5,6 +5,7 @@ from datetime import UTC, datetime, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.constants import REGISTRATION_DURATION_DAYS
 from app.db.session import async_session_maker
 from app.models.enums import SessionStatus
 from app.models.session import Session
@@ -50,7 +51,7 @@ async def _create_weekly_session_logic(db_session: AsyncSession) -> Session:
         hour=10, minute=0, second=0, microsecond=0
     )
 
-    registration_deadline = session_date - timedelta(days=1)
+    registration_deadline = session_date - timedelta(days=REGISTRATION_DURATION_DAYS)
 
     existing_session = await session_repo.get_by_date(session_date)
 

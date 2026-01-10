@@ -70,7 +70,11 @@ async def start_feedback(
 
     user_repo = UserRepository(session)
     user = await user_repo.get_by_telegram_id(callback.from_user.id)
-    if not user or user.id not in (match.user1_id, match.user2_id):
+    if not user or user.id not in (
+        match.user1_id,
+        match.user2_id,
+        match.user3_id if match.user3_id else None,
+    ):
         await callback.answer("⛔ У вас нет доступа к этой паре", show_alert=True)
         return
 

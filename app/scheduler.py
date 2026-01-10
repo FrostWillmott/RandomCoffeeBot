@@ -8,6 +8,13 @@ from apscheduler.schedulers.asyncio import (
 )
 from apscheduler.triggers.cron import CronTrigger
 
+from app.constants import (
+    MATCHING_CHECK_MINUTE,
+    REGISTRATION_CLOSE_CHECK_MINUTE,
+    SESSION_CREATION_DAY,
+    SESSION_CREATION_HOUR,
+    SESSION_CREATION_MINUTE,
+)
 from app.services.announcements import post_session_announcement
 from app.services.matching import (
     close_registration_for_expired_sessions,
@@ -47,7 +54,12 @@ def setup_scheduler(bot: Bot) -> AsyncIOScheduler:
 
     scheduler.add_job(
         create_and_announce_session,
-        CronTrigger(day_of_week="mon", hour=10, minute=0, timezone="UTC"),
+        CronTrigger(
+            day_of_week=SESSION_CREATION_DAY,
+            hour=SESSION_CREATION_HOUR,
+            minute=SESSION_CREATION_MINUTE,
+            timezone="UTC",
+        ),
         args=[bot],
         id="create_weekly_session",
         replace_existing=True,
@@ -55,23 +67,28 @@ def setup_scheduler(bot: Bot) -> AsyncIOScheduler:
 
     scheduler.add_job(
         close_registration_for_expired_sessions,
-        CronTrigger(minute=0, timezone="UTC"),
+        CronTrigger(minute=REGISTRATION_CLOSE_CHECK_MINUTE, timezone="UTC"),
         id="close_registrations",
         replace_existing=True,
     )
 
     scheduler.add_job(
         run_matching_for_closed_sessions,
-        CronTrigger(minute=15, timezone="UTC"),
+        CronTrigger(minute=MATCHING_CHECK_MINUTE, timezone="UTC"),
         args=[bot],
         id="run_matching",
         replace_existing=True,
     )
 
     logger.info("Scheduler configured with jobs:")
-    logger.info("  - create_weekly_session: Every Monday at 10:00 UTC")
-    logger.info("  - close_registrations: Every hour at :00")
-    logger.info("  - run_matching: Every hour at :15")
+    logger.info(
+        f"  - create_weekly_session: Every {SESSION_CREATION_DAY} "
+        f"at {SESSION_CREATION_HOUR:02d}:{SESSION_CREATION_MINUTE:02d} UTC"
+    )
+    logger.info(
+        f"  - close_registrations: Every hour at :{REGISTRATION_CLOSE_CHECK_MINUTE:02d}"
+    )
+    logger.info(f"  - run_matching: Every hour at :{MATCHING_CHECK_MINUTE:02d}")
 
     return scheduler
 

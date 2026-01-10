@@ -7,6 +7,7 @@ from aiogram.types import MessageReactionUpdated, ReactionTypeEmoji
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.constants import REGISTRATION_EMOJI
 from app.models.registration import Registration
 from app.repositories.registration import RegistrationRepository
 from app.repositories.session import SessionRepository
@@ -16,8 +17,6 @@ from app.utils.user_formatting import format_user_mention, get_username_required
 
 router = Router()
 logger = logging.getLogger(__name__)
-
-REGISTRATION_EMOJI = "👍"
 
 
 def has_emoji(reactions: list, emoji: str) -> bool:

@@ -37,7 +37,11 @@ async def verify_match_participant(
     """
     user_repo = UserRepository(session)
     user = await user_repo.get_by_telegram_id(telegram_id)
-    return user is not None and user.id in (match.user1_id, match.user2_id)
+    return user is not None and user.id in (
+        match.user1_id,
+        match.user2_id,
+        match.user3_id if match.user3_id else None,
+    )
 
 
 @router.callback_query(F.data.startswith("confirm_match:"))

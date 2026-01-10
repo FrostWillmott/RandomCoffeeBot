@@ -47,6 +47,7 @@ class MatchRepository(BaseRepository[Match]):
             .options(
                 selectinload(Match.user1),
                 selectinload(Match.user2),
+                selectinload(Match.user3),
                 selectinload(Match.topic),
             )
             .where(Match.session_id == session_id)
@@ -102,7 +103,13 @@ class MatchRepository(BaseRepository[Match]):
             List of matches
         """
         result = await self.session.execute(
-            select(Match).where(or_(Match.user1_id == user_id, Match.user2_id == user_id))
+            select(Match).where(
+                or_(
+                    Match.user1_id == user_id,
+                    Match.user2_id == user_id,
+                    Match.user3_id == user_id,
+                )
+            )
         )
         return list(result.scalars().all())
 
@@ -121,7 +128,8 @@ class MatchRepository(BaseRepository[Match]):
                 and_(
                     Match.topic_id.isnot(None),
                     (Match.user1_id.in_([user1_id, user2_id]))
-                    | (Match.user2_id.in_([user1_id, user2_id])),
+                    | (Match.user2_id.in_([user1_id, user2_id]))
+                    | (Match.user3_id.in_([user1_id, user2_id])),
                 )
             )
         )

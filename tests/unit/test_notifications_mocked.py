@@ -78,6 +78,8 @@ async def test_build_matches_message_with_matches():
     match = MagicMock(spec=Match)
     match.user1 = user1
     match.user2 = user2
+    match.user3_id = None
+    match.user3 = None
     match.topic = topic
 
     message = _build_matches_message([match])
@@ -98,6 +100,8 @@ async def test_build_matches_message_with_unmatched():
     match = MagicMock(spec=Match)
     match.user1 = user1
     match.user2 = user2
+    match.user3_id = None
+    match.user3 = None
     match.topic = None
 
     message = _build_matches_message([match], [unmatched])
@@ -156,34 +160,46 @@ async def test_notify_all_matches_for_session_success():
     user2 = User(telegram_id=2, username="user2", first_name="User2", is_active=True)
     topic = MagicMock(spec=Topic)
     topic.title = "Test Topic"
+    topic.description = None
 
     match = MagicMock(spec=Match)
     match.user1 = user1
     match.user2 = user2
+    match.user3_id = None
+    match.user3 = None
     match.topic = topic
 
     with patch("app.services.notifications.async_session_maker") as mock_session_maker:
-        mock_session = AsyncMock()
+        with patch("app.services.notifications.MatchRepository") as mock_match_repo_class:
+            with patch("app.services.notifications.UserRepository") as mock_user_repo_class:
+                mock_session = AsyncMock()
 
-        mock_matches_result = MagicMock()
-        mock_matches_result.scalars.return_value.all.return_value = [match]
-        mock_session.execute = AsyncMock(return_value=mock_matches_result)
+                # Mock MatchRepository
+                mock_match_repo = AsyncMock()
+                mock_match_repo.get_by_session_id_with_relations.return_value = [match]
+                mock_match_repo_class.return_value = mock_match_repo
 
-        mock_session_maker.return_value.__aenter__.return_value = mock_session
-        mock_session_maker.return_value.__aexit__.return_value = None
+                # Mock UserRepository (not used in this test, but needed for initialization)
+                mock_user_repo = AsyncMock()
+                mock_user_repo_class.return_value = mock_user_repo
 
-        mock_bot = AsyncMock()
-        mock_bot.send_message = AsyncMock(return_value=MagicMock())
+                mock_session_maker.return_value.__aenter__.return_value = mock_session
+                mock_session_maker.return_value.__aexit__.return_value = None
 
-        from app.services.notifications import notify_all_matches_for_session
+                mock_bot = AsyncMock()
+                mock_bot.send_message = AsyncMock(return_value=MagicMock())
 
-        result = await notify_all_matches_for_session(mock_bot, session_id)
+                from app.services.notifications import notify_all_matches_for_session
 
-        assert result is True
-        mock_bot.send_message.assert_called_once()
-        call_args = mock_bot.send_message.call_args
-        assert "@user1" in call_args.kwargs["text"]
-        assert "@user2" in call_args.kwargs["text"]
+                result = await notify_all_matches_for_session(mock_bot, session_id)
+
+                assert result is True
+                # Should be called 3 times: 1 for group + 2 for personal notifications
+                assert mock_bot.send_message.call_count == 3
+                # Check group message (first call)
+                group_call = mock_bot.send_message.call_args_list[0]
+                assert "@user1" in group_call.kwargs["text"]
+                assert "@user2" in group_call.kwargs["text"]
 
 
 @pytest.mark.asyncio
@@ -226,6 +242,8 @@ async def test_notify_all_matches_with_unmatched_users():
     match = MagicMock(spec=Match)
     match.user1 = user1
     match.user2 = user2
+    match.user3_id = None
+    match.user3 = None
     match.topic = topic
 
     with patch("app.services.notifications.async_session_maker") as mock_session_maker:
@@ -256,7 +274,10 @@ async def test_notify_all_matches_with_unmatched_users():
                 )
 
                 assert result is True
-                call_args = mock_bot.send_message.call_args
-                message_text = call_args.kwargs["text"]
+                # Should be called 3 times: 1 for group + 2 for personal notifications
+                assert mock_bot.send_message.call_count == 3
+                # Check group message (first call) - should contain unmatched user
+                group_call = mock_bot.send_message.call_args_list[0]
+                message_text = group_call.kwargs["text"]
                 assert "@lonely" in message_text
                 assert "Без пары" in message_text

@@ -51,7 +51,7 @@ class TestGetOrCreateUser:
     @pytest.mark.asyncio
     async def test_get_existing_user(self):
         """Test it getting existing user."""
-        mock_session = AsyncMock()
+        mock_session = MagicMock()
         existing_user = User(
             id=1,
             telegram_id=12345,
@@ -62,6 +62,7 @@ class TestGetOrCreateUser:
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = existing_user
         mock_session.execute = AsyncMock(return_value=mock_result)
+        mock_session.flush = AsyncMock()
 
         user = await get_or_create_user(mock_session, 12345, "existing", "Existing", None)
 
@@ -71,11 +72,12 @@ class TestGetOrCreateUser:
     @pytest.mark.asyncio
     async def test_create_new_user(self):
         """Test creating new user."""
-        mock_session = AsyncMock()
+        mock_session = MagicMock()
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = None
         mock_session.execute = AsyncMock(return_value=mock_result)
         mock_session.flush = AsyncMock()
+        mock_session.refresh = AsyncMock()
 
         user = await get_or_create_user(mock_session, 12345, "newuser", "New", "User")
 
@@ -89,7 +91,7 @@ class TestGetOrCreateUser:
     @pytest.mark.asyncio
     async def test_update_user_info(self):
         """Test updating user info when changed."""
-        mock_session = AsyncMock()
+        mock_session = MagicMock()
         existing_user = User(
             id=1,
             telegram_id=12345,
@@ -100,6 +102,7 @@ class TestGetOrCreateUser:
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = existing_user
         mock_session.execute = AsyncMock(return_value=mock_result)
+        mock_session.flush = AsyncMock()
 
         user = await get_or_create_user(mock_session, 12345, "new_username", "New", "Last")
 
@@ -116,7 +119,8 @@ class TestHandleReaction:
         """Test skipping reaction without user info."""
         mock_reaction = MagicMock()
         mock_reaction.user = None
-        mock_session = AsyncMock()
+        mock_session = MagicMock()
+        mock_session.execute = AsyncMock()
 
         await handle_reaction(mock_reaction, mock_session)
 
@@ -129,7 +133,7 @@ class TestHandleReaction:
         mock_reaction.user = MagicMock(id=12345, username="test")
         mock_reaction.message_id = 999
 
-        mock_session = AsyncMock()
+        mock_session = MagicMock()
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = None
         mock_session.execute = AsyncMock(return_value=mock_result)
@@ -143,7 +147,7 @@ class TestHandleRegistrationAdd:
     @pytest.mark.asyncio
     async def test_reject_user_without_username(self):
         """Test rejecting user without a username."""
-        mock_session = AsyncMock()
+        mock_session = MagicMock()
         mock_reaction = MagicMock()
         mock_reaction.chat = MagicMock(id=-100123)
         mock_reaction.bot = AsyncMock()
@@ -152,6 +156,7 @@ class TestHandleRegistrationAdd:
         mock_telegram_user.username = None
         mock_telegram_user.id = 12345
         mock_telegram_user.first_name = "Test"
+        mock_session.execute = AsyncMock()
 
         await handle_registration_add(
             mock_session, mock_reaction, mock_coffee_session, mock_telegram_user
@@ -164,7 +169,7 @@ class TestHandleRegistrationAdd:
     @pytest.mark.asyncio
     async def test_skip_already_registered(self):
         """Test skipping registration for already registered user."""
-        mock_session = AsyncMock()
+        mock_session = MagicMock()
         mock_reaction = MagicMock()
         mock_coffee_session = MagicMock(spec=Session)
         mock_coffee_session.id = 1
@@ -183,6 +188,7 @@ class TestHandleRegistrationAdd:
                 id=1, user_id=1, session_id=1
             )
             mock_session.execute = AsyncMock(return_value=mock_result)
+            mock_session.flush = AsyncMock()
 
             await handle_registration_add(
                 mock_session, mock_reaction, mock_coffee_session, mock_telegram_user
@@ -193,7 +199,7 @@ class TestHandleRegistrationAdd:
     @pytest.mark.asyncio
     async def test_create_new_registration(self):
         """Test creating new registration."""
-        mock_session = AsyncMock()
+        mock_session = MagicMock()
         mock_reaction = MagicMock()
         mock_coffee_session = MagicMock(spec=Session)
         mock_coffee_session.id = 1
@@ -210,6 +216,8 @@ class TestHandleRegistrationAdd:
             mock_result = MagicMock()
             mock_result.scalar_one_or_none.return_value = None
             mock_session.execute = AsyncMock(return_value=mock_result)
+            mock_session.flush = AsyncMock()
+            mock_session.refresh = AsyncMock()
 
             await handle_registration_add(
                 mock_session, mock_reaction, mock_coffee_session, mock_telegram_user
@@ -228,7 +236,7 @@ class TestHandleRegistrationRemove:
     @pytest.mark.asyncio
     async def test_remove_registration(self):
         """Test removing registration when the user removes reaction."""
-        mock_session = AsyncMock()
+        mock_session = MagicMock()
         mock_reaction = MagicMock()
         mock_coffee_session = MagicMock(spec=Session)
         mock_coffee_session.id = 1
@@ -245,6 +253,7 @@ class TestHandleRegistrationRemove:
 
         mock_session.execute = AsyncMock(side_effect=[mock_user_result, mock_reg_result])
         mock_session.delete = AsyncMock()
+        mock_session.flush = AsyncMock()
 
         await handle_registration_remove(
             mock_session, mock_reaction, mock_coffee_session, mock_telegram_user
@@ -255,7 +264,7 @@ class TestHandleRegistrationRemove:
     @pytest.mark.asyncio
     async def test_remove_registration_user_not_found(self):
         """Test removing registration when user not found."""
-        mock_session = AsyncMock()
+        mock_session = MagicMock()
         mock_reaction = MagicMock()
         mock_coffee_session = MagicMock(spec=Session)
         mock_telegram_user = MagicMock()
@@ -264,6 +273,7 @@ class TestHandleRegistrationRemove:
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = None
         mock_session.execute = AsyncMock(return_value=mock_result)
+        mock_session.delete = AsyncMock()
 
         await handle_registration_remove(
             mock_session, mock_reaction, mock_coffee_session, mock_telegram_user
