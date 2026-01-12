@@ -5,6 +5,7 @@ from typing import Any
 
 from aiogram import Bot
 from aiogram.exceptions import TelegramAPIError
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
@@ -95,6 +96,12 @@ async def post_session_announcement(
         return True
 
     except TelegramAPIError as e:
+        logger.exception(
+            f"Failed to post announcement for session {session.id}",
+            exc_info=e,
+        )
+        return False
+    except (SQLAlchemyError, Exception) as e:
         logger.exception(
             f"Failed to post announcement for session {session.id}",
             exc_info=e,

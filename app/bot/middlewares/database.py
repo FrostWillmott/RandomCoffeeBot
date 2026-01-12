@@ -29,3 +29,6 @@ class DatabaseMiddleware(BaseMiddleware):
             except SQLAlchemyError:
                 await session.rollback()
                 raise
+            except Exception:
+                await session.rollback()
+                raise
