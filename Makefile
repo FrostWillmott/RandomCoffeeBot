@@ -102,10 +102,12 @@ db-reset:
 	@echo "Database reset complete"
 
 db-seed:
-	docker compose exec bot python scripts/seed_topics.py
+	docker compose exec bot sh -c "PYTHONPATH=/app python scripts/seed_topics.py"
 
 db-shell:
-	docker compose exec db psql -U postgres -d randomcoffee
+	@POSTGRES_USER=$$(docker compose exec -T db printenv POSTGRES_USER 2>/dev/null || echo "postgres"); \
+	POSTGRES_DB=$$(docker compose exec -T db printenv POSTGRES_DB 2>/dev/null || echo "randomcoffee"); \
+	docker compose exec db psql -U $$POSTGRES_USER -d $$POSTGRES_DB
 
 # Production
 prod:

@@ -4,9 +4,9 @@ services:
     container_name: randomcoffee-db-test
     restart: "no"  # Don't restart automatically for tests
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: randomcoffee_test
+      POSTGRES_USER: ${TEST_POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${TEST_POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${TEST_POSTGRES_DB:-randomcoffee_test}
       PGDATA: /var/lib/postgresql/data/pgdata
     ports:
       - "5434:5432"  # Different port to avoid conflicts with production DB (5432)
@@ -16,7 +16,7 @@ services:
     networks:
       - randomcoffee-test-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d randomcoffee_test"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-postgres} -d $${POSTGRES_DB:-randomcoffee_test}"]
       interval: 5s
       timeout: 5s
       retries: 5
