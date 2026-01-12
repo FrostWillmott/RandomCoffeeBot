@@ -167,7 +167,7 @@ async def _send_personal_notification(bot: Bot, user: User, match: Match) -> boo
         )
         logger.debug(f"Sent personal notification to user {user.id} for match {match.id}")
         return True
-    except (TelegramAPIError, SQLAlchemyError) as e:
+    except Exception as e:
         logger.warning(
             f"Failed to send personal notification to user {user.id}: {e}",
             exc_info=e,
