@@ -103,26 +103,24 @@ async def db_session(db_engine) -> AsyncGenerator[AsyncSession, None]:
     rolled back after the test completes. This ensures test isolation
     without needing to clean up data manually.
     """
-    connection = await db_engine.connect()
-    transaction = await connection.begin()
+    async with db_engine.connect() as connection:
+        transaction = await connection.begin()
 
-    session = AsyncSession(
-        bind=connection,
-        expire_on_commit=False,
-        autoflush=False,
-        autocommit=False,
-    )
+        session = AsyncSession(
+            bind=connection,
+            expire_on_commit=False,
+            autoflush=False,
+            autocommit=False,
+        )
 
-    try:
-        yield session
-    finally:
-        with contextlib.suppress(Exception):
-            if transaction.is_active:
-                await transaction.rollback()
-        with contextlib.suppress(Exception):
-            await session.close()
-        with contextlib.suppress(Exception):
-            await connection.close()
+        try:
+            yield session
+        finally:
+            with contextlib.suppress(Exception):
+                if transaction.is_active:
+                    await transaction.rollback()
+            with contextlib.suppress(Exception):
+                await session.close()
 
 
 _user_counter = itertools.count(start=10000)

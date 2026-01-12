@@ -174,7 +174,6 @@ async def test_notify_all_matches_for_session_success():
             with patch("app.services.notifications.UserRepository") as mock_user_repo_class:
                 mock_session = AsyncMock()
 
-                # Mock MatchRepository
                 mock_match_repo = AsyncMock()
                 mock_match_repo.get_by_session_id_with_relations.return_value = [match]
                 mock_match_repo_class.return_value = mock_match_repo
@@ -194,9 +193,7 @@ async def test_notify_all_matches_for_session_success():
                 result = await notify_all_matches_for_session(mock_bot, session_id)
 
                 assert result is True
-                # Should be called 3 times: 1 for group + 2 for personal notifications
                 assert mock_bot.send_message.call_count == 3
-                # Check group message (first call)
                 group_call = mock_bot.send_message.call_args_list[0]
                 assert "@user1" in group_call.kwargs["text"]
                 assert "@user2" in group_call.kwargs["text"]
@@ -251,12 +248,10 @@ async def test_notify_all_matches_with_unmatched_users():
             with patch("app.services.notifications.UserRepository") as mock_user_repo_class:
                 mock_session = AsyncMock()
 
-                # Mock MatchRepository
                 mock_match_repo = AsyncMock()
                 mock_match_repo.get_by_session_id_with_relations.return_value = [match]
                 mock_match_repo_class.return_value = mock_match_repo
 
-                # Mock UserRepository
                 mock_user_repo = AsyncMock()
                 mock_user_repo.get_by_id.return_value = unmatched
                 mock_user_repo_class.return_value = mock_user_repo
@@ -274,9 +269,7 @@ async def test_notify_all_matches_with_unmatched_users():
                 )
 
                 assert result is True
-                # Should be called 3 times: 1 for group + 2 for personal notifications
                 assert mock_bot.send_message.call_count == 3
-                # Check group message (first call) - should contain unmatched user
                 group_call = mock_bot.send_message.call_args_list[0]
                 message_text = group_call.kwargs["text"]
                 assert "@lonely" in message_text

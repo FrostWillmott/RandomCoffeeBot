@@ -41,7 +41,7 @@ async def create_and_announce_session(bot: Bot) -> None:
         else:
             logger.warning("No new session created")
 
-    except Exception as e:  # Catch all unexpected errors for logging in background task
+    except Exception as e:  # Catch all unexpected errors for logging in a background task
         logger.exception(
             "Error in create_and_announce_session",
             exc_info=e,
