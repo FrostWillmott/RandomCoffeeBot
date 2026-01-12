@@ -6,7 +6,7 @@
 
 ### Изоляция тестов
 
-1. **Отдельный контейнер:** `randomcoffee-db-test` на порту 5433
+1. **Отдельный контейнер:** `randomcoffee-db-test` на порту 5434
 2. **Отдельная БД:** `randomcoffee_test` (изолирована от продакшн)
 3. **Транзакционная изоляция:** Каждый тест запускается в отдельной транзакции, которая автоматически откатывается после завершения
 4. **Автоматическая очистка:** Данные не накапливаются между тестами
@@ -81,12 +81,25 @@ uv run pytest tests/ --cov=app --cov-report=html
 
 ```
 tests/
-├── conftest.py              # Конфигурация и фикстуры
-├── unit/                    # Unit-тесты
-│   ├── test_helpers.py
-│   └── test_matching_helpers.py
-└── integration/             # Интеграционные тесты
-    └── test_matching.py
+├── conftest.py                    # Конфигурация и фикстуры
+├── unit/                           # Unit-тесты (~82 теста)
+│   ├── test_announcements_mocked.py
+│   ├── test_config.py
+│   ├── test_db_session.py
+│   ├── test_helpers_mocked.py
+│   ├── test_matching_functions.py
+│   ├── test_notifications_mocked.py
+│   ├── test_reactions_handler.py
+│   ├── test_scheduler.py
+│   ├── test_schemas_callbacks.py
+│   ├── test_sessions_mocked.py
+│   ├── test_utils_context.py
+│   └── test_utils_retry.py
+└── integration/                    # Интеграционные тесты (~18 тестов)
+    ├── test_e2e_flow.py
+    ├── test_helpers.py
+    ├── test_matching.py
+    └── test_sessions.py
 ```
 
 ### Важные моменты
@@ -125,4 +138,4 @@ psql -h localhost -p 5434 -U postgres -d randomcoffee_test
 **Тесты не изолированы:**
 - Убедитесь, что используется фикстура `db_session`
 - Проверьте, что транзакции откатываются (см. `conftest.py`)
-- Убедитесь, что используется правильный порт (5433, а не 5432)
+- Убедитесь, что используется правильный порт (5434, а не 5432)
