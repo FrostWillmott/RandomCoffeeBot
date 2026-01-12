@@ -115,7 +115,7 @@ class MatchRepositoryProtocol(Protocol):
         """Get all previous match pairs for given users."""
         ...
 
-    async def get_topic_ids_used_by_users(self, user1_id: int, user2_id: int) -> set[int]:
+    async def get_topic_ids_used_by_users(self, *user_ids: int) -> set[int]:
         """Get all topic IDs used in matches involving these users."""
         ...
 
