@@ -202,6 +202,34 @@ uv run python -m scripts.test_run close_registrations
 
 #### 3.5.3 Запуск матчинга
 
+**Важно:** Матчинг работает только для сессий со статусом `CLOSED` и истекшим дедлайном регистрации. Если сессия еще открыта, матчинг не найдет сессий для обработки.
+
+**Подготовка сессии к матчингу:**
+
+Перед запуском матчинга нужно убедиться, что сессия закрыта. Есть два способа:
+
+**Способ 1: Автоматическое закрытие (рекомендуется для тестирования)**
+```bash
+# Установить дедлайн на прошедшую дату
+docker compose exec -T db psql -U randomcoffee -d randomcoffee -c "UPDATE sessions SET registration_deadline = NOW() - INTERVAL '1 day' WHERE id = SESSION_ID;"
+
+# Закрыть регистрации (автоматически закроет сессию)
+docker compose exec bot python -m scripts.test_run close_registrations
+```
+
+**Способ 2: Ручное закрытие**
+```bash
+# ВАЖНО: При ручном закрытии также нужно установить прошедший дедлайн,
+# иначе матчинг не найдет сессию (требуется: status = 'closed' AND registration_deadline < NOW())
+
+# Установить прошедший дедлайн
+docker compose exec -T db psql -U randomcoffee -d randomcoffee -c "UPDATE sessions SET registration_deadline = NOW() - INTERVAL '1 day' WHERE id = SESSION_ID;"
+
+# Закрыть сессию вручную
+docker compose exec -T db psql -U randomcoffee -d randomcoffee -c "UPDATE sessions SET status = 'closed' WHERE id = SESSION_ID;"
+```
+
+**Запуск матчинга:**
 ```bash
 # В Docker:
 docker compose exec bot python -m scripts.test_run run_matching
@@ -212,7 +240,7 @@ uv run python -m scripts.test_run run_matching
 
 **Ожидаемый результат:**
 - Для закрытых сессий должны быть созданы матчи
-- Участники должны получить уведомления о матчах
+- Участники должны получить уведомления о матчах в канале и личные сообщения
 - В базе данных должны быть созданы записи в таблице `matches`
 
 **Проверка в базе данных:**
@@ -220,7 +248,19 @@ uv run python -m scripts.test_run run_matching
 make db-shell
 SELECT * FROM matches ORDER BY created_at DESC LIMIT 5;
 SELECT * FROM registrations WHERE session_id = SESSION_ID;
+SELECT id, status, registration_deadline FROM sessions WHERE id = SESSION_ID;
 ```
+
+**Если матчинг не находит сессий:**
+- Убедитесь, что сессия имеет статус `CLOSED`
+- **КРИТИЧНО:** Проверьте, что `registration_deadline < NOW()` - матчинг требует ОБА условия:
+  - `status = 'closed'` И
+  - `registration_deadline < current_time`
+- Если дедлайн в будущем, установите прошедшую дату:
+  ```bash
+  docker compose exec -T db psql -U randomcoffee -d randomcoffee -c "UPDATE sessions SET registration_deadline = NOW() - INTERVAL '1 day' WHERE id = SESSION_ID;"
+  ```
+- Проверьте наличие регистраций на сессию (минимум 2 пользователя для пары, 3 для триплета)
 
 #### 3.5.4 Запуск всех задач
 
@@ -252,9 +292,27 @@ uv run python -m scripts.test_run all
    SELECT * FROM registrations WHERE user_id = YOUR_USER_ID;
    ```
 
-4. **Закройте регистрации (если нужно):**
+4. **Подготовьте сессию к матчингу:**
+
+   **Вариант A: Автоматическое закрытие (рекомендуется)**
    ```bash
+   # Установить дедлайн на прошедшую дату
+   docker compose exec -T db psql -U randomcoffee -d randomcoffee -c "UPDATE sessions SET registration_deadline = NOW() - INTERVAL '1 day' WHERE id = SESSION_ID;"
+
+   # Закрыть регистрации (автоматически закроет сессию)
    docker compose exec bot python -m scripts.test_run close_registrations
+   ```
+
+   **Вариант B: Ручное закрытие**
+   ```bash
+   # ВАЖНО: При ручном закрытии также нужно установить прошедший дедлайн,
+   # иначе матчинг не найдет сессию
+
+   # Установить прошедший дедлайн
+   docker compose exec -T db psql -U randomcoffee -d randomcoffee -c "UPDATE sessions SET registration_deadline = NOW() - INTERVAL '1 day' WHERE id = SESSION_ID;"
+
+   # Закрыть сессию вручную
+   docker compose exec -T db psql -U randomcoffee -d randomcoffee -c "UPDATE sessions SET status = 'closed' WHERE id = SESSION_ID;"
    ```
 
 5. **Запустите матчинг:**
@@ -263,8 +321,18 @@ uv run python -m scripts.test_run all
    ```
 
 6. **Проверьте результат:**
-   - Вы должны получить уведомление о матче
+   - В канале должно появиться сообщение со списком всех матчей
+   - Вы должны получить личное уведомление о матче
    - В базе данных должен быть создан матч с темой для обсуждения
+   ```bash
+   make db-shell
+   SELECT m.id, u1.username as user1, u2.username as user2, t.title as topic
+   FROM matches m
+   JOIN users u1 ON m.user1_id = u1.id
+   JOIN users u2 ON m.user2_id = u2.id
+   LEFT JOIN topics t ON m.topic_id = t.id
+   WHERE m.session_id = SESSION_ID;
+   ```
 
 ## Раздел 4: Проверка работоспособности
 
@@ -435,6 +503,42 @@ SELECT COUNT(*) FROM topics WHERE is_active = true;
 
 3. Проверьте настройки планировщика в `app/scheduler.py` и `app/constants.py`
 
+### 5.7 Матчинг не находит сессий для обработки
+
+**Признаки:**
+- Команда `run_matching` завершается без ошибок, но сообщает "0 sessions"
+- В логах: "Closed registration for 0 sessions" или "Found 0 closed sessions ready for matching"
+
+**Возможные причины:**
+1. Сессия еще открыта (статус `open` вместо `closed`)
+2. Дедлайн регистрации еще не истек
+3. Нет регистраций на сессию
+
+**Решение:**
+1. Проверьте статус сессии:
+   ```bash
+   make db-shell
+   SELECT id, status, registration_deadline, NOW() as current_time FROM sessions WHERE id = SESSION_ID;
+   ```
+
+2. Если сессия открыта, закройте ее:
+   ```bash
+   # Установить прошедший дедлайн и закрыть автоматически
+   docker compose exec -T db psql -U randomcoffee -d randomcoffee -c "UPDATE sessions SET registration_deadline = NOW() - INTERVAL '1 day' WHERE id = SESSION_ID;"
+   docker compose exec bot python -m scripts.test_run close_registrations
+
+   # Или закрыть вручную (ВАЖНО: также установить прошедший дедлайн!)
+   docker compose exec -T db psql -U randomcoffee -d randomcoffee -c "UPDATE sessions SET registration_deadline = NOW() - INTERVAL '1 day' WHERE id = SESSION_ID;"
+   docker compose exec -T db psql -U randomcoffee -d randomcoffee -c "UPDATE sessions SET status = 'closed' WHERE id = SESSION_ID;"
+   ```
+
+3. Проверьте наличие регистраций:
+   ```bash
+   make db-shell
+   SELECT COUNT(*) FROM registrations WHERE session_id = SESSION_ID;
+   ```
+   Должно быть минимум 2 регистрации для создания пары.
+
 ### 5.6 Уведомления не отправляются
 
 **Возможные причины:**
@@ -466,6 +570,7 @@ SELECT COUNT(*) FROM topics WHERE is_active = true;
 - [ ] Создание сессии работает (`scripts/test_run create_session`)
 - [ ] Анонс публикуется в канале
 - [ ] Регистрация через реакцию работает
+- [ ] Сессия закрыта перед запуском матчинга (статус `closed`, дедлайн истек)
 - [ ] Матчинг создает пары (`scripts/test_run run_matching`)
 - [ ] Уведомления о матчах отправляются
 - [ ] Нет ошибок в логах
