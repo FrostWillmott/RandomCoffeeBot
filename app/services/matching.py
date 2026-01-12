@@ -289,14 +289,17 @@ async def run_matching_for_closed_sessions(bot: Bot) -> None:
                     f" Unmatched: {len(unmatched_ids)}"
                 )
 
+                # Commit transaction before sending notifications so that
+                # notify_all_matches_for_session can see the created matches
+                # (it uses a new database session with its own transaction)
+                await session.commit()
+
                 if matches_created > 0:
                     logger.info(f"Posting matches to group for session {sess.id}...")
                     success = await notify_all_matches_for_session(
                         bot, sess.id, unmatched_ids
                     )
                     logger.info(f"Posted matches for session {sess.id}: {success}")
-
-            await session.commit()
 
         except SQLAlchemyError as e:
             logger.exception("Error in run_matching_for_closed_sessions", exc_info=e)

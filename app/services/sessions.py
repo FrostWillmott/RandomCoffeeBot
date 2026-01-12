@@ -54,11 +54,23 @@ async def _create_weekly_session_logic(db_session: AsyncSession) -> Session:
 
     registration_deadline = session_date - timedelta(days=REGISTRATION_DURATION_DAYS)
 
+    # Close any old OPEN sessions (from previous weeks) before creating a new one
+    old_open_sessions = await session_repo.get_sessions_by_status(SessionStatus.OPEN)
+    for old_session in old_open_sessions:
+        if old_session.date < session_date:
+            old_session.status = SessionStatus.CLOSED
+            await session_repo.update(old_session)
+            logger.info(
+                f"Closed old session {old_session.id} (date: {old_session.date}) "
+                "before creating new session"
+            )
+
     existing_session = await session_repo.get_by_date(session_date)
 
     if existing_session:
         logger.info(
-            f"Session for {session_date} already exists with id {existing_session.id}"
+            f"Session for {session_date} already exists with id {existing_session.id} "
+            f"(status: {existing_session.status})"
         )
         return existing_session
 
