@@ -11,7 +11,7 @@ class FeedbackRepository(BaseRepository[Feedback]):
     """Repository for Feedback entity."""
 
     def __init__(self, session: AsyncSession):
-        """Initialize feedback repository.
+        """Initialize a feedback repository.
 
         Args:
             session: Database session

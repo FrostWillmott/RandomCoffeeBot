@@ -74,7 +74,7 @@ async def shutdown_services(
     try:
         await heartbeat_task
     except asyncio.CancelledError:
-        pass  # Expected when cancelling the task
+        pass
 
     await shutdown_scheduler(scheduler)
 

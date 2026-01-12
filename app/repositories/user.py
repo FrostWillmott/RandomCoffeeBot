@@ -11,7 +11,7 @@ class UserRepository(BaseRepository[User]):
     """Repository for User entity."""
 
     def __init__(self, session: AsyncSession):
-        """Initialize user repository.
+        """Initialize the user repository.
 
         Args:
             session: Database session
@@ -53,7 +53,6 @@ class UserRepository(BaseRepository[User]):
         user = await self.get_by_telegram_id(telegram_id)
 
         if user:
-            # Update user info if changed
             if user.username != username:
                 user.username = username
             if user.first_name != first_name:
@@ -75,13 +74,13 @@ class UserRepository(BaseRepository[User]):
         return user
 
     async def mark_inactive(self, user_id: int) -> bool:
-        """Mark user as inactive.
+        """Mark the user as inactive.
 
         Args:
             user_id: User ID
 
         Returns:
-            True if user was found and marked inactive, False otherwise
+            True if a user was found and marked inactive, False otherwise
         """
         user = await self.get_by_id(user_id)
         if not user:
@@ -92,7 +91,7 @@ class UserRepository(BaseRepository[User]):
         return True
 
     async def get_active_by_telegram_id(self, telegram_id: int) -> User | None:
-        """Get active user by Telegram ID.
+        """Get an active user by Telegram ID.
 
         Args:
             telegram_id: Telegram user ID

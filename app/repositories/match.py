@@ -82,7 +82,7 @@ class MatchRepository(BaseRepository[Match]):
         return existing_pairs
 
     async def get_matches_by_topic(self, topic_id: int) -> list[Match]:
-        """Get all matches with specific topic.
+        """Get all matches with a specific topic.
 
         Args:
             topic_id: Topic ID

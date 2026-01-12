@@ -80,7 +80,6 @@ async def confirm_match(callback: CallbackQuery, session: AsyncSession) -> None:
         await callback.answer()
         return
 
-    # Authorization check
     if not await verify_match_participant(session, callback.from_user.id, match):
         await callback.answer("⛔ У вас нет доступа к этой паре", show_alert=True)
         return

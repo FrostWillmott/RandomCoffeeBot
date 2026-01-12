@@ -25,7 +25,7 @@ async def _send_announcement_with_retry(bot: Bot, **kwargs: Any) -> Any:
         **kwargs: Arguments for bot.send_message
 
     Returns:
-        Sent message
+        Sent a message
     """
     return await bot.send_message(**kwargs)
 
@@ -41,7 +41,7 @@ async def post_session_announcement(
         db_session: Optional database session
 
     Returns:
-        True if announcement was posted successfully
+        True if an announcement was posted successfully
     """
     settings = get_settings()
     try:

@@ -13,9 +13,7 @@ from app.services.users import get_or_create_user
 
 router = Router()
 
-# Time window to consider a user as "new" (in seconds)
 NEW_USER_TIME_WINDOW_SECONDS = 5
-# Delay before deleting temporary message (in seconds)
 TEMP_MESSAGE_DELETE_DELAY = 0.2
 
 

@@ -44,7 +44,6 @@ async def start_feedback(
         return
 
     try:
-        # Handle both "feedback:" and "start_feedback:" prefixes
         if callback.data.startswith("feedback:"):
             callback_data_str = "start_feedback:" + callback.data[9:]
         else:
@@ -64,7 +63,6 @@ async def start_feedback(
         await callback.answer("Пара не найдена")
         return
 
-    # Authorization check: verify the user is a participant of this match
     if not callback.from_user:
         return
 
@@ -172,7 +170,6 @@ async def process_comment(
         await state.clear()
         return
 
-    # Get database user ID from Telegram ID
     user_repo = UserRepository(session)
     user = await user_repo.get_by_telegram_id(message.from_user.id)
     if not user:
@@ -180,7 +177,6 @@ async def process_comment(
         await state.clear()
         return
 
-    # Check if feedback already exists for this match and user
     feedback_repo = FeedbackRepository(session)
     if await feedback_repo.exists(match_id, user.id):
         await message.answer(

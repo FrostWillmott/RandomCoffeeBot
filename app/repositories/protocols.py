@@ -34,7 +34,7 @@ class UserRepositoryProtocol(Protocol):
         ...
 
     async def create(self, entity: User) -> User:
-        """Create new user."""
+        """Create a new user."""
         ...
 
     async def update(self, entity: User) -> User:
@@ -42,11 +42,11 @@ class UserRepositoryProtocol(Protocol):
         ...
 
     async def mark_inactive(self, user_id: int) -> bool:
-        """Mark user as inactive."""
+        """Mark the user as inactive."""
         ...
 
     async def get_active_by_telegram_id(self, telegram_id: int) -> User | None:
-        """Get active user by Telegram ID."""
+        """Get an active user by Telegram ID."""
         ...
 
 
@@ -54,7 +54,7 @@ class SessionRepositoryProtocol(Protocol):
     """Protocol for Session repository."""
 
     async def get_by_id(self, id: int) -> Session | None:
-        """Get session by ID."""
+        """Get a session by ID."""
         ...
 
     async def get_by_date(self, date: datetime) -> Session | None:
@@ -66,7 +66,7 @@ class SessionRepositoryProtocol(Protocol):
         ...
 
     async def get_sessions_by_status(self, status: SessionStatus) -> list[Session]:
-        """Get all sessions with specific status."""
+        """Get all sessions with a specific status."""
         ...
 
     async def get_expired_open_sessions(self, current_time: datetime) -> list[Session]:
@@ -84,7 +84,7 @@ class SessionRepositoryProtocol(Protocol):
         ...
 
     async def create(self, entity: Session) -> Session:
-        """Create new session."""
+        """Create a new session."""
         ...
 
     async def update(self, entity: Session) -> Session:
@@ -118,7 +118,7 @@ class MatchRepositoryProtocol(Protocol):
         ...
 
     async def create(self, entity: Match) -> Match:
-        """Create new match."""
+        """Create a new match."""
         ...
 
     async def update(self, entity: Match) -> Match:
@@ -152,7 +152,7 @@ class RegistrationRepositoryProtocol(Protocol):
         ...
 
     async def create(self, entity: Registration) -> Registration:
-        """Create new registration."""
+        """Create a new registration."""
         ...
 
     async def delete(self, entity: Registration) -> None:
@@ -206,7 +206,7 @@ class TopicRepositoryProtocol(Protocol):
     async def get_least_used_active_topics(
         self, difficulty: str, limit: int = 10
     ) -> list[Topic]:
-        """Get least used active topics by difficulty."""
+        """Get least used active topics with difficulty."""
         ...
 
     async def increment_usage(self, topic_id: int) -> Topic | None:
@@ -214,7 +214,7 @@ class TopicRepositoryProtocol(Protocol):
         ...
 
     async def create(self, entity: Topic) -> Topic:
-        """Create new topic."""
+        """Create a new topic."""
         ...
 
     async def update(self, entity: Topic) -> Topic:

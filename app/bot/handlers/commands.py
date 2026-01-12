@@ -160,13 +160,11 @@ async def handle_unknown_callback(callback: CallbackQuery) -> None:
     Args:
         callback: Callback query
     """
-    # Answer the callback to remove the loading indicator
     await callback.answer(
         "⚠️ Эта кнопка устарела. Используйте новое меню.",
         show_alert=False,
     )
 
-    # Send a fresh message with the current menu
     if callback.message:
         await callback.message.answer(
             "🔄 <b>Бот обновлён!</b>\n\n"
