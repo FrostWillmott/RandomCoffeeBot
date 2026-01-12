@@ -116,4 +116,4 @@ We thank the following security researchers for responsibly disclosing vulnerabi
 
 ---
 
-Last updated: 2025-01-29
+Last updated: 2026-01-12
