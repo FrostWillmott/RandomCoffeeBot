@@ -35,7 +35,7 @@ services:
     networks:
       - randomcoffee-network
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres -d randomcoffee" ]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-randomcoffee}" ]
       interval: 10s
       timeout: 5s
       retries: 5
