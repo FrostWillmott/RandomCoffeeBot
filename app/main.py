@@ -10,10 +10,9 @@ import aiofiles
 from app.bot import get_bot, get_dispatcher
 from app.bot.middlewares.throttling import throttling_middleware
 from app.config import get_settings
+from app.constants import LOG_FORMAT
 from app.db.session import engine
 from app.scheduler import setup_scheduler, shutdown_scheduler, start_scheduler
-
-LOG_FORMAT = "%(asctime)s %(name)s %(levelname)s %(message)s %(pathname)s %(lineno)d"
 
 
 def setup_logging(level_name: str, fmt_type: str) -> None:
@@ -80,13 +79,13 @@ async def shutdown_services(
 
     try:
         await throttling_middleware.close()
-    except Exception as e:
+    except Exception as e:  # Catch all unexpected errors for logging
         logger.warning(f"Error closing throttling middleware Redis client: {e}")
 
     try:
         await bot.session.close()
         await engine.dispose()
-    except Exception as e:
+    except Exception as e:  # Catch all unexpected errors for logging
         logger.warning(f"Error during resource cleanup: {e}")
 
     logger.info("Bot stopped")
@@ -123,7 +122,7 @@ async def main():
         else:
             logger.info("Shutdown signal received.")
 
-    except Exception as e:
+    except Exception as e:  # Catch all unexpected errors for logging
         logger.exception("Unexpected error in main loop")
         polling_error = e
     finally:
@@ -145,7 +144,7 @@ async def run_heartbeat():
         try:
             async with aiofiles.open(settings.healthcheck_heartbeat_file, "w") as f:
                 await f.write("ok")
-        except Exception as e:
+        except Exception as e:  # Catch all unexpected errors for logging
             logger.exception("Heartbeat error", exc_info=e)
         await asyncio.sleep(15)
 

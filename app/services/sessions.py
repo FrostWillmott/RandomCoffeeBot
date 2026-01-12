@@ -3,6 +3,7 @@
 import logging
 from datetime import UTC, datetime, timedelta
 
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.constants import REGISTRATION_DURATION_DAYS
@@ -31,7 +32,7 @@ async def create_weekly_session(
                 result = await _create_weekly_session_logic(session)
                 await session.commit()
                 return result
-            except Exception:
+            except SQLAlchemyError:
                 await session.rollback()
                 raise
     else:

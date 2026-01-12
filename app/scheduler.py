@@ -41,7 +41,7 @@ async def create_and_announce_session(bot: Bot) -> None:
         else:
             logger.warning("No new session created")
 
-    except Exception as e:
+    except Exception as e:  # Catch all unexpected errors for logging in background task
         logger.exception(
             "Error in create_and_announce_session",
             exc_info=e,
@@ -98,7 +98,7 @@ async def start_scheduler(scheduler: AsyncIOScheduler):
     try:
         scheduler.start()
         logger.info("Scheduler started")
-    except Exception as e:
+    except Exception as e:  # Catch all unexpected errors for logging
         logger.exception(
             "Failed to start scheduler",
             exc_info=e,
@@ -112,7 +112,7 @@ async def shutdown_scheduler(scheduler: AsyncIOScheduler):
         if scheduler.running:
             scheduler.shutdown(wait=True)
             logger.info("Scheduler stopped")
-    except Exception as e:
+    except Exception as e:  # Catch all unexpected errors for logging
         logger.exception(
             "Error stopping scheduler",
             exc_info=e,

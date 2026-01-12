@@ -526,7 +526,7 @@ async def seed_topics() -> None:
         result = await session.execute(select(func.count()).select_from(Topic))
         count = result.scalar()
 
-        if count > 0:
+        if count is not None and count > 0:
             print(f"Темы уже загружены ({count} тем существует)")
             return
 

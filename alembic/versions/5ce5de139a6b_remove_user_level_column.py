@@ -1,7 +1,7 @@
 """Remove user level column.
 
 Revision ID: 5ce5de139a6b
-Revises: c7f3d89a7b1c
+Revises: 593b418977d7
 Create Date: 2026-01-03 14:47:00.375757
 """
 
@@ -13,7 +13,7 @@ from alembic import op  # type: ignore[attr-defined]
 
 # revision identifiers, used by Alembic.
 revision: str = "5ce5de139a6b"
-down_revision: str | None = "c7f3d89a7b1c"
+down_revision: str | None = "593b418977d7"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

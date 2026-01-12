@@ -4,8 +4,10 @@ import asyncio
 from datetime import UTC, datetime, timedelta
 
 from aiogram import Router
+from aiogram.exceptions import TelegramAPIError
 from aiogram.filters import CommandStart
 from aiogram.types import Message, ReplyKeyboardRemove
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot.keyboards import get_main_menu_keyboard
@@ -62,7 +64,7 @@ async def cmd_start(message: Message, session: AsyncSession) -> None:
     await asyncio.sleep(TEMP_MESSAGE_DELETE_DELAY)
     try:
         await temp_msg.delete()
-    except Exception:
+    except (TelegramAPIError, SQLAlchemyError):
         pass
 
     await message.answer(

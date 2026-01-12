@@ -11,7 +11,7 @@ class TopicRepository(BaseRepository[Topic]):
     """Repository for Topic entity."""
 
     def __init__(self, session: AsyncSession):
-        """Initialize topic repository.
+        """Initialize the topic repository.
 
         Args:
             session: Database session
@@ -61,7 +61,7 @@ class TopicRepository(BaseRepository[Topic]):
     async def get_least_used_active_topics(
         self, difficulty: str, limit: int = 10
     ) -> list[Topic]:
-        """Get least used active topics by difficulty.
+        """Get least used active topics with difficulty.
 
         Args:
             difficulty: Difficulty level

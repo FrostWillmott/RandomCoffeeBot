@@ -24,14 +24,13 @@ from typing import Literal
 
 from app.bot import get_bot
 from app.config import get_settings
+from app.constants import LOG_FORMAT
 from app.db.session import engine
 from app.scheduler import create_and_announce_session
 from app.services.matching import (
     close_registration_for_expired_sessions,
     run_matching_for_closed_sessions,
 )
-
-LOG_FORMAT = "%(asctime)s %(name)s %(levelname)s %(message)s %(pathname)s %(lineno)d"
 
 
 def setup_logging(level_name: str, fmt_type: str) -> None:
@@ -63,7 +62,7 @@ async def run_create_session(bot) -> None:
     try:
         await create_and_announce_session(bot)
         logger.info("✓ create_and_announce_session completed successfully")
-    except Exception as e:
+    except Exception as e:  # Catch all unexpected errors for logging in test script
         logger.exception("✗ create_and_announce_session failed", exc_info=e)
         raise
 
@@ -77,7 +76,7 @@ async def run_close_registrations() -> None:
     try:
         await close_registration_for_expired_sessions()
         logger.info("✓ close_registration_for_expired_sessions completed successfully")
-    except Exception as e:
+    except Exception as e:  # Catch all unexpected errors for logging in test script
         logger.exception("✗ close_registration_for_expired_sessions failed", exc_info=e)
         raise
 
@@ -91,7 +90,7 @@ async def run_matching(bot) -> None:
     try:
         await run_matching_for_closed_sessions(bot)
         logger.info("✓ run_matching_for_closed_sessions completed successfully")
-    except Exception as e:
+    except Exception as e:  # Catch all unexpected errors for logging in test script
         logger.exception("✗ run_matching_for_closed_sessions failed", exc_info=e)
         raise
 
@@ -114,7 +113,7 @@ async def run_all(bot) -> None:
             logger.info(f"\n>>> Starting task: {task_name}")
             await task_func()
             logger.info(f"<<< Completed task: {task_name}\n")
-        except Exception:
+        except Exception:  # Catch all unexpected errors for logging in test script
             logger.error(f"Task {task_name} failed, stopping execution")
             raise
 
@@ -146,7 +145,7 @@ async def main_async(
         logger.info("All tasks completed successfully!")
         logger.info("=" * 60)
 
-    except Exception as e:
+    except Exception as e:  # Catch all unexpected errors for logging in test script
         logger.exception("Script execution failed", exc_info=e)
         sys.exit(1)
     finally:
@@ -154,12 +153,12 @@ async def main_async(
         if bot:
             try:
                 await bot.session.close()
-            except Exception as e:
+            except Exception as e:  # Catch all unexpected errors for logging in test script
                 logger.warning(f"Error closing bot session: {e}")
 
         try:
             await engine.dispose()
-        except Exception as e:
+        except Exception as e:  # Catch all unexpected errors for logging in test script
             logger.warning(f"Error disposing database engine: {e}")
 
 

@@ -14,7 +14,7 @@ class SessionRepository(BaseRepository[Session]):
     """Repository for Session entity."""
 
     def __init__(self, session: AsyncSession):
-        """Initialize session repository.
+        """Initialize a session repository.
 
         Args:
             session: Database session
@@ -54,7 +54,7 @@ class SessionRepository(BaseRepository[Session]):
         return result.scalars().first()  # type: ignore[no-any-return]
 
     async def get_sessions_by_status(self, status: SessionStatus) -> list[Session]:
-        """Get all sessions with specific status.
+        """Get all sessions with a specific status.
 
         Args:
             status: Session status

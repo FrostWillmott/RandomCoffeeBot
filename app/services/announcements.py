@@ -100,9 +100,3 @@ async def post_session_announcement(
             exc_info=e,
         )
         return False
-    except Exception as e:
-        logger.exception(
-            "Unexpected error posting announcement",
-            exc_info=e,
-        )
-        return False

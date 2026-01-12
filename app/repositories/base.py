@@ -23,16 +23,16 @@ class BaseRepository(Generic[ModelType]):
         self.model = model
         self.session = session
 
-    async def get_by_id(self, id: int) -> ModelType | None:
+    async def get_by_id(self, entity_id: int) -> ModelType | None:
         """Get entity by ID.
 
         Args:
-            id: Entity ID
+            entity_id: Entity ID
 
         Returns:
             Entity or None if not found
         """
-        result = await self.session.get(self.model, id)
+        result = await self.session.get(self.model, entity_id)
         return result  # type: ignore[no-any-return]
 
     async def get_all(self) -> list[ModelType]:

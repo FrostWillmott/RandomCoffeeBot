@@ -5,6 +5,7 @@ import random
 from datetime import UTC, datetime
 
 from aiogram import Bot
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import async_session_maker
@@ -91,7 +92,7 @@ async def create_matches_for_session(
                 result = await _create_matches_logic(session, session_id)
                 await session.commit()
                 return result
-            except Exception:
+            except SQLAlchemyError:
                 await session.rollback()
                 raise
     else:
@@ -295,7 +296,7 @@ async def run_matching_for_closed_sessions(bot: Bot) -> None:
 
             await session.commit()
 
-        except Exception as e:
+        except SQLAlchemyError as e:
             logger.exception("Error in run_matching_for_closed_sessions", exc_info=e)
             await session.rollback()
             raise
@@ -321,7 +322,7 @@ async def close_registration_for_expired_sessions() -> None:
             await session.commit()
             logger.info(f"Closed registration for {len(sessions_to_close)} sessions")
 
-        except Exception as e:
+        except SQLAlchemyError as e:
             logger.exception("Error closing registrations", exc_info=e)
             await session.rollback()
             raise

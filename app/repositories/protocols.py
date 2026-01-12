@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 class UserRepositoryProtocol(Protocol):
     """Protocol for User repository."""
 
-    async def get_by_id(self, id: int) -> "User | None":
+    async def get_by_id(self, entity_id: int) -> "User | None":
         """Get user by ID."""
         ...
 
@@ -55,7 +55,7 @@ class UserRepositoryProtocol(Protocol):
 class SessionRepositoryProtocol(Protocol):
     """Protocol for Session repository."""
 
-    async def get_by_id(self, id: int) -> "Session | None":
+    async def get_by_id(self, entity_id: int) -> "Session | None":
         """Get a session by ID."""
         ...
 
@@ -97,7 +97,7 @@ class SessionRepositoryProtocol(Protocol):
 class MatchRepositoryProtocol(Protocol):
     """Protocol for Match repository."""
 
-    async def get_by_id(self, id: int) -> "Match | None":
+    async def get_by_id(self, entity_id: int) -> "Match | None":
         """Get match by ID."""
         ...
 
@@ -131,7 +131,7 @@ class MatchRepositoryProtocol(Protocol):
 class RegistrationRepositoryProtocol(Protocol):
     """Protocol for Registration repository."""
 
-    async def get_by_id(self, id: int) -> "Registration | None":
+    async def get_by_id(self, entity_id: int) -> "Registration | None":
         """Get registration by ID."""
         ...
 
@@ -165,7 +165,7 @@ class RegistrationRepositoryProtocol(Protocol):
 class FeedbackRepositoryProtocol(Protocol):
     """Protocol for Feedback repository."""
 
-    async def get_by_id(self, id: int) -> "Feedback | None":
+    async def get_by_id(self, entity_id: int) -> "Feedback | None":
         """Get feedback by ID."""
         ...
 
@@ -193,7 +193,7 @@ class FeedbackRepositoryProtocol(Protocol):
 class TopicRepositoryProtocol(Protocol):
     """Protocol for Topic repository."""
 
-    async def get_by_id(self, id: int) -> "Topic | None":
+    async def get_by_id(self, entity_id: int) -> "Topic | None":
         """Get topic by ID."""
         ...
 

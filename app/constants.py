@@ -1,5 +1,7 @@
 """Application constants for configuration."""
 
+LOG_FORMAT = "%(asctime)s %(name)s %(levelname)s %(message)s %(pathname)s %(lineno)d"
+
 SESSION_CREATION_DAY = "monday"
 SESSION_CREATION_HOUR = 10
 SESSION_CREATION_MINUTE = 0

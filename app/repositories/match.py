@@ -12,7 +12,7 @@ class MatchRepository(BaseRepository[Match]):
     """Repository for Match entity."""
 
     def __init__(self, session: AsyncSession):
-        """Initialize match repository.
+        """Initialize a match repository.
 
         Args:
             session: Database session

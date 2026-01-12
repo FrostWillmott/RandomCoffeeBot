@@ -5,6 +5,7 @@ from typing import Any
 
 from aiogram import Bot
 from aiogram.exceptions import TelegramAPIError
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
@@ -32,7 +33,7 @@ async def mark_user_inactive(user_id: int, session: AsyncSession | None = None) 
                 success = await _mark_user_inactive_logic(db_session, user_id)
                 if success:
                     await db_session.commit()
-            except Exception as e:
+            except (TelegramAPIError, SQLAlchemyError) as e:
                 logger.exception(f"Error marking user {user_id} inactive", exc_info=e)
                 await db_session.rollback()
     else:
@@ -166,15 +167,9 @@ async def _send_personal_notification(bot: Bot, user: User, match: Match) -> boo
         )
         logger.debug(f"Sent personal notification to user {user.id} for match {match.id}")
         return True
-    except TelegramAPIError as e:
+    except (TelegramAPIError, SQLAlchemyError) as e:
         logger.warning(
             f"Failed to send personal notification to user {user.id}: {e}",
-            exc_info=e,
-        )
-        return False
-    except Exception as e:
-        logger.exception(
-            f"Error sending personal notification to user {user.id}",
             exc_info=e,
         )
         return False
@@ -257,12 +252,6 @@ async def notify_all_matches_for_session(
         except TelegramAPIError as e:
             logger.exception(
                 f"Failed to post matches for session {session_id}",
-                exc_info=e,
-            )
-            return False
-        except Exception as e:
-            logger.exception(
-                f"Error posting matches for session {session_id}",
                 exc_info=e,
             )
             return False
