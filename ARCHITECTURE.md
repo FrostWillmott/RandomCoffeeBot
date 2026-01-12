@@ -332,21 +332,21 @@ LOG_FORMAT=text
 # Каждый понедельник в 10:00 UTC
 scheduler.add_job(
     create_and_announce_session,
-    CronTrigger(day_of_week="mon", hour=10, minute=0),
+    CronTrigger(day_of_week="mon", hour=10, minute=0, timezone="UTC"),
     id="create_weekly_session"
 )
 
 # Каждый час в :00
 scheduler.add_job(
     close_registration_for_expired_sessions,
-    CronTrigger(minute=0),
+    CronTrigger(minute=0, timezone="UTC"),
     id="close_registrations"
 )
 
 # Каждый час в :15
 scheduler.add_job(
     run_matching_for_closed_sessions,
-    CronTrigger(minute=15),
+    CronTrigger(minute=15, timezone="UTC"),
     id="run_matching"
 )
 ```

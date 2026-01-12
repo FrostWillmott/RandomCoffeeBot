@@ -13,6 +13,9 @@ Telegram bot for organizing random coffee meetings between participants.
 - Automated code quality checks with Ruff
 - Type checking with mypy
 - Pre-commit hooks for code consistency
+- Comprehensive test suite (unit and integration tests)
+- Support for pair and triplet matching
+- Topic-based conversation starters
 
 ## Requirements
 
@@ -89,8 +92,9 @@ docker-compose up
 ### With Makefile
 ```bash
 make run          # Run locally
-make docker-up    # Run with Docker
-make docker-down  # Stop Docker services
+make dev          # Start development environment with Docker
+make down         # Stop Docker services
+make test         # Run tests (auto-manages test DB)
 ```
 
 ## Development
@@ -117,6 +121,22 @@ Pre-commit hooks run automatically on `git commit`. To run on all files:
 pre-commit run --all-files
 ```
 
+### Testing
+
+The project includes comprehensive test coverage (81%+):
+
+```bash
+make test              # Run all tests (auto-manages test DB)
+make test-coverage     # Run tests with coverage report
+make test-watch        # Run tests in watch mode
+```
+
+Tests are organized into:
+- **Unit tests** (`tests/unit/`) - Fast tests with mocks
+- **Integration tests** (`tests/integration/`) - Tests with real database
+
+See [tests/README.md](tests/README.md) for more details.
+
 
 ## Project Structure
 
@@ -125,20 +145,32 @@ RandomCoffeeBot/
 ├── app/
 │   ├── __init__.py
 │   ├── main.py          # Application entry point
-│   ├── bot.py           # Bot initialization
 │   ├── config.py        # Configuration management
+│   ├── constants.py     # Application constants
 │   ├── scheduler.py     # Background task scheduler
+│   ├── bot/             # Bot components
+│   │   ├── __init__.py  # Bot initialization
+│   │   ├── handlers/    # Message and callback handlers
+│   │   ├── keyboards/   # Inline keyboards
+│   │   ├── middlewares/ # Middleware (database, throttling)
+│   │   └── states/      # FSM states
 │   ├── db/              # Database configuration
 │   │   ├── session.py   # Database session management
 │   │   └── base.py      # SQLAlchemy base class
 │   ├── models/          # SQLAlchemy models
+│   ├── repositories/    # Data access layer
 │   ├── schemas/         # Pydantic schemas
-│   └── services/        # Business logic
+│   ├── services/        # Business logic
+│   └── utils/           # Utility functions
 ├── alembic/             # Database migrations
 ├── docker/              # Docker configuration
-├── deploy/              # Deployment configs
+├── tests/               # Test suite
+│   ├── unit/            # Unit tests
+│   └── integration/     # Integration tests
+├── scripts/             # Utility scripts
 ├── docker-compose.yml   # Docker Compose for development
 ├── docker-compose.prod.yml  # Docker Compose for production
+├── docker-compose.test.yml  # Docker Compose for tests
 ├── Makefile             # Common commands
 ├── pyproject.toml       # Project metadata and dependencies
 ├── ruff.toml            # Ruff linter configuration
