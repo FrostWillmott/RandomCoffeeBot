@@ -82,7 +82,7 @@ async def test_post_session_announcement_telegram_error(bot):
 
 @pytest.mark.asyncio
 async def test_post_session_announcement_general_error(bot):
-    """Test handling general exception when posting an announcement."""
+    """Test handling TelegramAPIError subclass when posting an announcement."""
     session = Session(
         id=3,
         date=datetime.now(UTC) + timedelta(days=5),
@@ -91,7 +91,9 @@ async def test_post_session_announcement_general_error(bot):
         created_at=datetime.now(UTC),
     )
 
-    bot.send_message = AsyncMock(side_effect=Exception("Unexpected error"))
+    bot.send_message = AsyncMock(
+        side_effect=TelegramAPIError(method="sendMessage", message="Network error")
+    )
 
     with patch("app.services.announcements.get_settings") as mock_get_settings:
         mock_settings = MagicMock()

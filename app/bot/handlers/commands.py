@@ -76,7 +76,11 @@ async def _get_user_status_data(session: AsyncSession, user: User):
         .join(Session)
         .where(
             and_(
-                or_(Match.user1_id == user.id, Match.user2_id == user.id),
+                or_(
+                    Match.user1_id == user.id,
+                    Match.user2_id == user.id,
+                    Match.user3_id == user.id,
+                ),
                 Match.status.in_([MatchStatus.CREATED, MatchStatus.CONFIRMED]),
             )
         )
@@ -90,10 +94,7 @@ async def _get_user_status_data(session: AsyncSession, user: User):
 
 def _format_status_message(user: User, registrations: Sequence, matches: Sequence) -> str:
     """Construct the status text message."""
-    text = (
-        f"ℹ️ <b>Ваш статус</b>\n\n👤 Имя: {user.first_name or 'Не указано'}\n🎯"
-        f" Уровень: {user.level}\n\n"
-    )
+    text = f"ℹ️ <b>Ваш статус</b>\n\n👤 Имя: {user.first_name or 'Не указано'}\n\n"
 
     if registrations:
         text += f"📝 <b>Активные регистрации:</b> {len(registrations)}\n"
@@ -159,13 +160,11 @@ async def handle_unknown_callback(callback: CallbackQuery) -> None:
     Args:
         callback: Callback query
     """
-    # Answer the callback to remove the loading indicator
     await callback.answer(
         "⚠️ Эта кнопка устарела. Используйте новое меню.",
         show_alert=False,
     )
 
-    # Send a fresh message with the current menu
     if callback.message:
         await callback.message.answer(
             "🔄 <b>Бот обновлён!</b>\n\n"

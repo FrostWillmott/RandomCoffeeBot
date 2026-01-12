@@ -3,11 +3,12 @@
 import contextlib
 import os
 
+# Test database configuration (mock credentials for test environment only)
 TEST_DATABASE_NAME = os.getenv("TEST_DATABASE_NAME", "randomcoffee_test")
 TEST_DATABASE_HOST = os.getenv("TEST_DATABASE_HOST", "localhost")
 TEST_DATABASE_PORT = os.getenv("TEST_DATABASE_PORT", "5434")
-TEST_DATABASE_USER = os.getenv("TEST_DATABASE_USER", "postgres")
-TEST_DATABASE_PASSWORD = os.getenv("TEST_DATABASE_PASSWORD", "postgres")
+TEST_DATABASE_USER = os.getenv("TEST_DATABASE_USER", "postgres")  # nosec
+TEST_DATABASE_PASSWORD = os.getenv("TEST_DATABASE_PASSWORD", "postgres")  # nosec
 
 TEST_DATABASE_URL = os.getenv(
     "TEST_DATABASE_URL",
@@ -16,10 +17,11 @@ TEST_DATABASE_URL = os.getenv(
 )
 
 # Set environment variables BEFORE importing app modules
+# Mock credentials for testing only (not real secrets)
 os.environ["DATABASE_URL"] = TEST_DATABASE_URL
 os.environ["DEBUG"] = "true"
-os.environ["SECRET_KEY"] = "test-secret-key-for-testing-only"
-os.environ["TELEGRAM_BOT_TOKEN"] = "test:token"
+os.environ["SECRET_KEY"] = "test-secret-key-for-testing-only"  # nosec
+os.environ["TELEGRAM_BOT_TOKEN"] = "test:token"  # nosec
 os.environ["CHANNEL_ID"] = "@test_channel"
 os.environ["REDIS_URL"] = "redis://localhost:6379/0"
 
@@ -103,26 +105,24 @@ async def db_session(db_engine) -> AsyncGenerator[AsyncSession, None]:
     rolled back after the test completes. This ensures test isolation
     without needing to clean up data manually.
     """
-    connection = await db_engine.connect()
-    transaction = await connection.begin()
+    async with db_engine.connect() as connection:
+        transaction = await connection.begin()
 
-    session = AsyncSession(
-        bind=connection,
-        expire_on_commit=False,
-        autoflush=False,
-        autocommit=False,
-    )
+        session = AsyncSession(
+            bind=connection,
+            expire_on_commit=False,
+            autoflush=False,
+            autocommit=False,
+        )
 
-    try:
-        yield session
-    finally:
-        with contextlib.suppress(Exception):
-            if transaction.is_active:
-                await transaction.rollback()
-        with contextlib.suppress(Exception):
-            await session.close()
-        with contextlib.suppress(Exception):
-            await connection.close()
+        try:
+            yield session
+        finally:
+            with contextlib.suppress(Exception):
+                if transaction.is_active:
+                    await transaction.rollback()
+            with contextlib.suppress(Exception):
+                await session.close()
 
 
 _user_counter = itertools.count(start=10000)

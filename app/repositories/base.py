@@ -1,4 +1,4 @@
-"""Base repository with common CRUD operations."""
+"""Base the repository with common CRUD operations."""
 
 from typing import Generic, TypeVar
 
@@ -11,7 +11,7 @@ ModelType = TypeVar("ModelType", bound=Base)
 
 
 class BaseRepository(Generic[ModelType]):
-    """Base repository with generic CRUD operations."""
+    """Base the repository with generic CRUD operations."""
 
     def __init__(self, model: type[ModelType], session: AsyncSession):
         """Initialize repository with model and session.
@@ -23,16 +23,16 @@ class BaseRepository(Generic[ModelType]):
         self.model = model
         self.session = session
 
-    async def get_by_id(self, id: int) -> ModelType | None:
+    async def get_by_id(self, entity_id: int) -> ModelType | None:
         """Get entity by ID.
 
         Args:
-            id: Entity ID
+            entity_id: Entity ID
 
         Returns:
             Entity or None if not found
         """
-        result = await self.session.get(self.model, id)
+        result = await self.session.get(self.model, entity_id)
         return result  # type: ignore[no-any-return]
 
     async def get_all(self) -> list[ModelType]:
@@ -45,7 +45,7 @@ class BaseRepository(Generic[ModelType]):
         return list(result.scalars().all())
 
     async def create(self, entity: ModelType) -> ModelType:
-        """Create new entity.
+        """Create a new entity.
 
         Args:
             entity: Entity to create

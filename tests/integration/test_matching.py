@@ -9,6 +9,7 @@ from app.models.enums import MatchStatus, SessionStatus
 from app.models.match import Match
 from app.models.registration import Registration
 from app.models.session import Session
+from app.models.topic import Topic
 from app.models.user import User
 from app.repositories.match import MatchRepository
 from app.services.matching import (
@@ -21,8 +22,8 @@ async def create_user(db_session, telegram_id: int, username: str) -> User:
     """Helper to create a user."""
     user = User(
         telegram_id=telegram_id,
-        username=username,
-        first_name=f"User {username}",
+        username=username,  # nosec - test data
+        first_name=f"User {username}",  # nosec - test data
         is_active=True,
     )
     db_session.add(user)
@@ -52,9 +53,27 @@ async def register_users(db_session, session_id: int, users: list[User]):
     await db_session.commit()
 
 
+async def create_topic(db_session) -> Topic:
+    """Helper to create a topic."""
+    topic = Topic(
+        title="Test Topic",
+        description="Test description",
+        category="test",
+        difficulty="middle",
+        questions=["Q1", "Q2"],
+        resources=[],
+        is_active=True,
+    )
+    db_session.add(topic)
+    await db_session.commit()
+    await db_session.refresh(topic)
+    return topic
+
+
 @pytest.mark.asyncio
 async def test_matching_even_participants(db_session):
     """Test matching with an even number of participants."""
+    await create_topic(db_session)
     test_date = datetime.now(UTC) + timedelta(days=5)
     test_session = await create_session(db_session, test_date)
 
@@ -73,7 +92,11 @@ async def test_matching_even_participants(db_session):
 
 @pytest.mark.asyncio
 async def test_matching_odd_participants(db_session):
-    """Test matching with an odd number of participants."""
+    """Test matching with an odd number of participants.
+
+    With 3 users, a triple match should be created (all 3 users matched).
+    """
+    await create_topic(db_session)
     test_date = datetime.now(UTC) + timedelta(days=5)
     test_session = await create_session(db_session, test_date)
 
@@ -85,7 +108,7 @@ async def test_matching_odd_participants(db_session):
     )
 
     assert matches_count == 1
-    assert len(unmatched_ids) == 1
+    assert len(unmatched_ids) == 0
     await db_session.refresh(test_session)
     assert test_session.status == SessionStatus.MATCHED
 
@@ -111,7 +134,7 @@ async def test_matching_insufficient_participants(db_session):
 @pytest.mark.asyncio
 async def test_matching_duplicate_avoidance(db_session):
     """Test that matching avoids creating duplicate pairs."""
-    # ... setup topics ...
+    await create_topic(db_session)
     test_date = datetime.now(UTC) + timedelta(days=5)
     session1 = await create_session(db_session, test_date)
     session2 = await create_session(db_session, test_date + timedelta(days=7))

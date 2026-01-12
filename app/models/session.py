@@ -3,12 +3,17 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import BigInteger, DateTime, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 from app.models.enums import SessionStatus
+
+if TYPE_CHECKING:
+    from app.models.match import Match
+    from app.models.registration import Registration
 
 
 class Session(Base):

@@ -5,6 +5,7 @@ import random
 from datetime import UTC, datetime
 
 from aiogram import Bot
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import async_session_maker
@@ -37,21 +38,23 @@ async def get_previous_matches(
 async def select_topic_for_users(
     topic_repo: TopicRepository,
     match_repo: MatchRepository,
-    user1_id: int,
-    user2_id: int,
+    *user_ids: int,
 ) -> Topic | None:
-    """Select a topic that neither user has discussed recently.
+    """Select a topic that none of the users have discussed recently.
 
     Args:
         topic_repo: Topic repository
         match_repo: Match repository
-        user1_id: First user ID
-        user2_id: Second user ID
+        *user_ids: Variable number of user IDs (2 for pairs, 3 for triplets)
 
     Returns:
         Selected topic or None if no topics are available
     """
-    used_topic_ids = await match_repo.get_topic_ids_used_by_users(user1_id, user2_id)
+    if not user_ids:
+        logger.error("No user IDs provided for topic selection")
+        return None
+
+    used_topic_ids = await match_repo.get_topic_ids_used_by_users(*user_ids)
 
     all_topics_list = await topic_repo.get_active_by_difficulty("middle")
 
@@ -91,7 +94,7 @@ async def create_matches_for_session(
                 result = await _create_matches_logic(session, session_id)
                 await session.commit()
                 return result
-            except Exception:
+            except SQLAlchemyError:
                 await session.rollback()
                 raise
     else:
@@ -139,6 +142,61 @@ async def _create_matches_logic(
 
     matches_to_create = []
 
+    if len(pool) % 2 == 1 and len(pool) >= 3:
+        u1 = pool.pop()
+        u2 = pool.pop()
+        u3 = pool.pop()
+
+        best_combination = None
+        best_score = -1
+
+        for perm in [
+            (u1, u2, u3),
+            (u1, u3, u2),
+            (u2, u1, u3),
+            (u2, u3, u1),
+            (u3, u1, u2),
+            (u3, u2, u1),
+        ]:
+            p1, p2, p3 = perm
+            pair12 = tuple(sorted((p1.user_id, p2.user_id)))
+            pair13 = tuple(sorted((p1.user_id, p3.user_id)))
+            pair23 = tuple(sorted((p2.user_id, p3.user_id)))
+
+            score = 0
+            if pair12 in past_matches:
+                score += 1
+            if pair13 in past_matches:
+                score += 1
+            if pair23 in past_matches:
+                score += 1
+
+            if score < best_score or best_score == -1:
+                best_score = score
+                best_combination = (p1, p2, p3)
+
+        if best_combination:
+            u1, u2, u3 = best_combination
+            if best_score > 0:
+                logger.warning(
+                    f"Creating group of 3 with some previous matches: "
+                    f"{u1.user_id}, {u2.user_id}, {u3.user_id}"
+                )
+
+            topic = await select_topic_for_users(
+                topic_repo, match_repo, u1.user_id, u2.user_id, u3.user_id
+            )
+
+            match = Match(
+                session_id=session_id,
+                user1_id=u1.user_id,
+                user2_id=u2.user_id,
+                user3_id=u3.user_id,
+                topic_id=topic.id if topic else None,
+                status=MatchStatus.CREATED,
+                created_at=datetime.now(UTC),
+            )
+            matches_to_create.append(match)
     while len(pool) >= 2:
         u1 = pool.pop()
 
@@ -172,6 +230,7 @@ async def _create_matches_logic(
                 session_id=session_id,
                 user1_id=u1.user_id,
                 user2_id=partner.user_id,
+                user3_id=None,
                 topic_id=topic.id if topic else None,
                 status=MatchStatus.CREATED,
                 created_at=datetime.now(UTC),
@@ -188,6 +247,8 @@ async def _create_matches_logic(
     for m in matches_to_create:
         actual_matched.add(m.user1_id)
         actual_matched.add(m.user2_id)
+        if m.user3_id:
+            actual_matched.add(m.user3_id)
 
     unmatched_ids = list(all_users - actual_matched)
 
@@ -237,7 +298,7 @@ async def run_matching_for_closed_sessions(bot: Bot) -> None:
 
             await session.commit()
 
-        except Exception as e:
+        except SQLAlchemyError as e:
             logger.exception("Error in run_matching_for_closed_sessions", exc_info=e)
             await session.rollback()
             raise
@@ -263,7 +324,7 @@ async def close_registration_for_expired_sessions() -> None:
             await session.commit()
             logger.info(f"Closed registration for {len(sessions_to_close)} sessions")
 
-        except Exception as e:
+        except SQLAlchemyError as e:
             logger.exception("Error closing registrations", exc_info=e)
             await session.rollback()
             raise

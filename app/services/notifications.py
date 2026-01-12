@@ -5,9 +5,11 @@ from typing import Any
 
 from aiogram import Bot
 from aiogram.exceptions import TelegramAPIError
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
+from app.constants import SEND_PERSONAL_NOTIFICATIONS
 from app.db.session import async_session_maker
 from app.models.match import Match
 from app.models.user import User
@@ -31,7 +33,7 @@ async def mark_user_inactive(user_id: int, session: AsyncSession | None = None) 
                 success = await _mark_user_inactive_logic(db_session, user_id)
                 if success:
                     await db_session.commit()
-            except Exception as e:
+            except (TelegramAPIError, SQLAlchemyError) as e:
                 logger.exception(f"Error marking user {user_id} inactive", exc_info=e)
                 await db_session.rollback()
     else:
@@ -55,10 +57,9 @@ async def _mark_user_inactive_logic(session: AsyncSession, user_id: int) -> bool
 
 def _format_user_mention(user: User) -> str:
     """Format user mention for a group message."""
-    if user.username:
-        return f"@{user.username}"
-    name = user.first_name or "Участник"
-    return f'<a href="tg://user?id={user.telegram_id}">{name}</a>'
+    from app.utils.user_formatting import format_user_mention
+
+    return format_user_mention(user)
 
 
 @retry_telegram_api(max_attempts=3, initial_wait=1.0, max_wait=30.0)
@@ -85,7 +86,12 @@ def _build_matches_message(
         user1_mention = _format_user_mention(match.user1)
         user2_mention = _format_user_mention(match.user2)
 
-        pair_line = f"👥 {user1_mention} + {user2_mention}"
+        if match.user3:
+            user3_mention = _format_user_mention(match.user3)
+            pair_line = f"👥 {user1_mention} + {user2_mention} + {user3_mention}"
+        else:
+            pair_line = f"👥 {user1_mention} + {user2_mention}"
+
         if match.topic:
             pair_line += f'\n   📚 Тема: "<i>{match.topic.title}</i>"'
         lines.append(pair_line)
@@ -100,6 +106,73 @@ def _build_matches_message(
     lines.append("💬 Свяжитесь с партнёром и договоритесь о встрече!")
 
     return "\n".join(lines)
+
+
+def _build_personal_notification_message(match: Match, user: User) -> str:
+    """Build a personal notification message for a user about their match.
+
+    Args:
+        match: Match object with relations loaded
+        user: User who will receive the notification
+
+    Returns:
+        Formatted message text
+    """
+    if match.user3_id and match.user3:
+        partners = []
+        if match.user1.id != user.id:
+            partners.append(_format_user_mention(match.user1))
+        if match.user2.id != user.id:
+            partners.append(_format_user_mention(match.user2))
+        if match.user3.id != user.id:
+            partners.append(_format_user_mention(match.user3))
+
+        partners_text = " и ".join(partners)
+        message = "☕ <b>Random Coffee: Ваша группа сформирована!</b>\n\n"
+        message += f"👥 Вы в группе с {partners_text}\n"
+    else:
+        partner = match.user1 if match.user2.id == user.id else match.user2
+        partner_mention = _format_user_mention(partner)
+        message = "☕ <b>Random Coffee: Ваша пара сформирована!</b>\n\n"
+        message += f"👥 Ваш партнёр: {partner_mention}\n"
+
+    if match.topic:
+        message += f'\n📚 Тема для обсуждения: "<i>{match.topic.title}</i>"'
+        if match.topic.description:
+            message += f"\n\n{match.topic.description}"
+
+    message += "\n\n💬 Свяжитесь с партнёром и договоритесь о встрече!"
+
+    return message
+
+
+async def _send_personal_notification(bot: Bot, user: User, match: Match) -> bool:
+    """Send a personal notification to a user about their match.
+
+    Args:
+        bot: Bot instance
+        user: User to notify
+        match: Match object with relations loaded
+
+    Returns:
+        True if notification was sent successfully
+    """
+    try:
+        message_text = _build_personal_notification_message(match, user)
+        await _send_message_with_retry(
+            bot,
+            chat_id=user.telegram_id,
+            text=message_text,
+            parse_mode="HTML",
+        )
+        logger.debug(f"Sent personal notification to user {user.id} for match {match.id}")
+        return True
+    except Exception as e:
+        logger.warning(
+            f"Failed to send personal notification to user {user.id}: {e}",
+            exc_info=e,
+        )
+        return False
 
 
 async def notify_all_matches_for_session(
@@ -145,6 +218,35 @@ async def notify_all_matches_for_session(
             )
 
             logger.info(f"Posted {len(matches)} matches to group for session {session_id}")
+
+            if SEND_PERSONAL_NOTIFICATIONS:
+                personal_sent = 0
+                personal_failed = 0
+
+                for match in matches:
+                    if match.user1:
+                        if await _send_personal_notification(bot, match.user1, match):
+                            personal_sent += 1
+                        else:
+                            personal_failed += 1
+
+                    if match.user2:
+                        if await _send_personal_notification(bot, match.user2, match):
+                            personal_sent += 1
+                        else:
+                            personal_failed += 1
+
+                    if match.user3:
+                        if await _send_personal_notification(bot, match.user3, match):
+                            personal_sent += 1
+                        else:
+                            personal_failed += 1
+
+                logger.info(
+                    f"Sent {personal_sent} personal notifications for session {session_id}"
+                    f" ({personal_failed} failed)"
+                )
+
             return True
 
         except TelegramAPIError as e:
@@ -155,7 +257,7 @@ async def notify_all_matches_for_session(
             return False
         except Exception as e:
             logger.exception(
-                f"Error posting matches for session {session_id}",
+                f"Failed to post matches for session {session_id}",
                 exc_info=e,
             )
             return False

@@ -34,12 +34,10 @@ async def test_select_topic_for_users_with_session():
         times_used=0,
     )
 
-    # Mock TopicRepository
     mock_topic_repo = AsyncMock(spec=TopicRepository)
     mock_topic_repo.get_active_by_difficulty.return_value = [topic]
     mock_topic_repo.increment_usage.return_value = topic
 
-    # Mock MatchRepository
     mock_match_repo = AsyncMock(spec=MatchRepository)
     mock_match_repo.get_topic_ids_used_by_users.return_value = set()
 
@@ -61,11 +59,9 @@ async def test_select_topic_for_users_no_topics():
     user1_id = 7003
     user2_id = 7004
 
-    # Mock TopicRepository - no topics available
     mock_topic_repo = AsyncMock(spec=TopicRepository)
     mock_topic_repo.get_active_by_difficulty.return_value = []
 
-    # Mock MatchRepository
     mock_match_repo = AsyncMock(spec=MatchRepository)
     mock_match_repo.get_topic_ids_used_by_users.return_value = set()
 

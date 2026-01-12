@@ -12,7 +12,7 @@ class MatchRepository(BaseRepository[Match]):
     """Repository for Match entity."""
 
     def __init__(self, session: AsyncSession):
-        """Initialize match repository.
+        """Initialize a match repository.
 
         Args:
             session: Database session
@@ -47,6 +47,7 @@ class MatchRepository(BaseRepository[Match]):
             .options(
                 selectinload(Match.user1),
                 selectinload(Match.user2),
+                selectinload(Match.user3),
                 selectinload(Match.topic),
             )
             .where(Match.session_id == session_id)
@@ -62,26 +63,36 @@ class MatchRepository(BaseRepository[Match]):
             user_ids: List of user IDs
 
         Returns:
-            Set of sorted user ID pairs
+            Set of sorted user ID pairs (includes all pairs from triplets)
         """
         if not user_ids:
             return set()
 
         result = await self.session.execute(
-            select(Match.user1_id, Match.user2_id).where(
-                or_(Match.user1_id.in_(user_ids), Match.user2_id.in_(user_ids))
+            select(Match.user1_id, Match.user2_id, Match.user3_id).where(
+                or_(
+                    Match.user1_id.in_(user_ids),
+                    Match.user2_id.in_(user_ids),
+                    Match.user3_id.in_(user_ids),
+                )
             )
         )
 
         existing_pairs = set()
         for row in result.all():
-            if row[0] is not None and row[1] is not None:
-                existing_pairs.add(tuple(sorted((row[0], row[1]))))
+            user1_id, user2_id, user3_id = row
+            if user1_id is not None and user2_id is not None:
+                existing_pairs.add(tuple(sorted((user1_id, user2_id))))
+            if user3_id is not None:
+                if user1_id is not None:
+                    existing_pairs.add(tuple(sorted((user1_id, user3_id))))
+                if user2_id is not None:
+                    existing_pairs.add(tuple(sorted((user2_id, user3_id))))
 
         return existing_pairs
 
     async def get_matches_by_topic(self, topic_id: int) -> list[Match]:
-        """Get all matches with specific topic.
+        """Get all matches with a specific topic.
 
         Args:
             topic_id: Topic ID
@@ -102,26 +113,35 @@ class MatchRepository(BaseRepository[Match]):
             List of matches
         """
         result = await self.session.execute(
-            select(Match).where(or_(Match.user1_id == user_id, Match.user2_id == user_id))
+            select(Match).where(
+                or_(
+                    Match.user1_id == user_id,
+                    Match.user2_id == user_id,
+                    Match.user3_id == user_id,
+                )
+            )
         )
         return list(result.scalars().all())
 
-    async def get_topic_ids_used_by_users(self, user1_id: int, user2_id: int) -> set[int]:
+    async def get_topic_ids_used_by_users(self, *user_ids: int) -> set[int]:
         """Get all topic IDs used in matches involving these users.
 
         Args:
-            user1_id: First user ID
-            user2_id: Second user ID
+            *user_ids: Variable number of user IDs
 
         Returns:
             Set of topic IDs
         """
+        if not user_ids:
+            return set()
+
         result = await self.session.execute(
             select(Match.topic_id).where(
                 and_(
                     Match.topic_id.isnot(None),
-                    (Match.user1_id.in_([user1_id, user2_id]))
-                    | (Match.user2_id.in_([user1_id, user2_id])),
+                    (Match.user1_id.in_(user_ids))
+                    | (Match.user2_id.in_(user_ids))
+                    | (Match.user3_id.in_(user_ids)),
                 )
             )
         )

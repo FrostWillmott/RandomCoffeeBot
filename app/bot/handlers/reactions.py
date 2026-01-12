@@ -7,16 +7,16 @@ from aiogram.types import MessageReactionUpdated, ReactionTypeEmoji
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.constants import REGISTRATION_EMOJI
 from app.models.registration import Registration
 from app.repositories.registration import RegistrationRepository
 from app.repositories.session import SessionRepository
 from app.repositories.user import UserRepository
 from app.services.users import get_or_create_user
+from app.utils.user_formatting import format_user_mention, get_username_required_message
 
 router = Router()
 logger = logging.getLogger(__name__)
-
-REGISTRATION_EMOJI = "👍"
 
 
 def has_emoji(reactions: list, emoji: str) -> bool:
@@ -84,17 +84,10 @@ async def handle_registration_add(
         telegram_user: Telegram user who reacted
     """
     if not telegram_user.username:
-        user_mention = (
-            f'<a href="tg://user?id={telegram_user.id}">'
-            f"{telegram_user.first_name or 'Участник'}</a>"
-        )
+        user_mention = format_user_mention(telegram_user)
         await reaction.bot.send_message(
             chat_id=reaction.chat.id,
-            text=(
-                f"{user_mention}, для участия в Random Coffee "
-                f"необходимо установить @username в настройках Telegram.\n\n"
-                f"После установки поставьте 👍 ещё раз."
-            ),
+            text=get_username_required_message(user_mention),
             parse_mode="HTML",
         )
         logger.info(f"User {telegram_user.id} tried to register without username")

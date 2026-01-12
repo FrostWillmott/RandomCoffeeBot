@@ -12,29 +12,7 @@ from app.bot.middlewares.throttling import throttling_middleware
 from app.config import get_settings
 from app.db.session import engine
 from app.scheduler import setup_scheduler, shutdown_scheduler, start_scheduler
-
-LOG_FORMAT = "%(asctime)s %(name)s %(levelname)s %(message)s %(pathname)s %(lineno)d"
-
-
-def setup_logging(level_name: str, fmt_type: str) -> None:
-    """Configure global logging settings."""
-    log_level = getattr(logging, level_name.upper(), logging.INFO)
-
-    if fmt_type == "json":
-        from pythonjsonlogger.json import JsonFormatter
-
-        log_handler = logging.StreamHandler(sys.stdout)
-        log_handler.setFormatter(JsonFormatter(LOG_FORMAT))
-        root_logger = logging.getLogger()
-        root_logger.setLevel(log_level)
-        root_logger.addHandler(log_handler)
-    else:
-        logging.basicConfig(
-            level=log_level,
-            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-            stream=sys.stdout,
-        )
-
+from app.utils.logging import setup_logging
 
 settings = get_settings()
 setup_logging(settings.log_level, settings.log_format)
@@ -46,7 +24,7 @@ shutdown_event = asyncio.Event()
 def setup_signal_handlers() -> None:
     """Set up signal handlers for graceful shutdown."""
 
-    def signal_handler(signum: int, frame) -> None:
+    def signal_handler(signum: int, _frame) -> None:
         logger.info(f"Received signal {signum}, initiating graceful shutdown...")
         shutdown_event.set()
 
@@ -74,19 +52,19 @@ async def shutdown_services(
     try:
         await heartbeat_task
     except asyncio.CancelledError:
-        pass  # Expected when cancelling the task
+        pass
 
     await shutdown_scheduler(scheduler)
 
     try:
         await throttling_middleware.close()
-    except Exception as e:
+    except Exception as e:  # Catch all unexpected errors for logging
         logger.warning(f"Error closing throttling middleware Redis client: {e}")
 
     try:
         await bot.session.close()
         await engine.dispose()
-    except Exception as e:
+    except Exception as e:  # Catch all unexpected errors for logging
         logger.warning(f"Error during resource cleanup: {e}")
 
     logger.info("Bot stopped")
@@ -123,7 +101,7 @@ async def main():
         else:
             logger.info("Shutdown signal received.")
 
-    except Exception as e:
+    except Exception as e:  # Catch all unexpected errors for logging
         logger.exception("Unexpected error in main loop")
         polling_error = e
     finally:
@@ -140,12 +118,14 @@ async def run_heartbeat():
     """Update heartbeat file periodically."""
     from app.config import get_settings
 
-    settings = get_settings()
+    heartbeat_settings = get_settings()
     while True:
         try:
-            async with aiofiles.open(settings.healthcheck_heartbeat_file, "w") as f:
+            async with aiofiles.open(
+                heartbeat_settings.healthcheck_heartbeat_file, "w"
+            ) as f:
                 await f.write("ok")
-        except Exception as e:
+        except Exception as e:  # Catch all unexpected errors for logging
             logger.exception("Heartbeat error", exc_info=e)
         await asyncio.sleep(15)
 

@@ -5,6 +5,7 @@ from typing import Any
 
 from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.db.session import async_session_maker
 
@@ -25,6 +26,9 @@ class DatabaseMiddleware(BaseMiddleware):
                 result = await handler(event, data)
                 await session.commit()
                 return result
+            except SQLAlchemyError:
+                await session.rollback()
+                raise
             except Exception:
                 await session.rollback()
                 raise

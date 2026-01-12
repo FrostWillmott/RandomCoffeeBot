@@ -1,0 +1,18 @@
+"""Application constants for configuration."""
+
+LOG_FORMAT = "%(asctime)s %(name)s %(levelname)s %(message)s %(pathname)s %(lineno)d"
+
+SESSION_CREATION_DAY = "mon"
+SESSION_CREATION_HOUR = 10
+SESSION_CREATION_MINUTE = 0
+
+REGISTRATION_DURATION_DAYS = 1
+
+MATCHING_DELAY_HOURS = 1
+MATCHING_CHECK_MINUTE = 15
+
+REGISTRATION_CLOSE_CHECK_MINUTE = 0
+
+SEND_PERSONAL_NOTIFICATIONS = True
+
+REGISTRATION_EMOJI = "👍"

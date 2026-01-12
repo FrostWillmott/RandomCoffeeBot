@@ -99,7 +99,7 @@ async def test_get_next_open_session_not_found():
 async def test_get_active_user_found():
     """Test getting active user when found."""
     telegram_id = 9001
-    user = User(id=1, telegram_id=telegram_id, username="active", is_active=True)
+    user = User(id=1, telegram_id=telegram_id, username="active", is_active=True)  # nosec
 
     mock_session = AsyncMock()
 
@@ -135,7 +135,7 @@ async def test_get_active_user_not_found():
 async def test_get_active_user_inactive():
     """Test getting inactive user - should raise ValueError."""
     telegram_id = 9002
-    user = User(id=1, telegram_id=telegram_id, username="inactive", is_active=False)
+    user = User(id=1, telegram_id=telegram_id, username="inactive", is_active=False)  # nosec
 
     mock_session = AsyncMock()
 

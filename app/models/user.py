@@ -3,11 +3,17 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import BigInteger, Boolean, DateTime, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+
+if TYPE_CHECKING:
+    from app.models.feedback import Feedback
+    from app.models.match import Match
+    from app.models.registration import Registration
 
 
 class User(Base):
@@ -23,14 +29,12 @@ class User(Base):
     first_name: Mapped[str | None] = mapped_column(String(255))
     last_name: Mapped[str | None] = mapped_column(String(255))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    level: Mapped[str] = mapped_column(String(20), default="middle", nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(UTC),
         nullable=False,
     )
 
-    # Relationships
     registrations: Mapped[list[Registration]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
@@ -42,6 +46,11 @@ class User(Base):
     matches_as_user2: Mapped[list[Match]] = relationship(
         foreign_keys="Match.user2_id",
         back_populates="user2",
+        cascade="all, delete-orphan",
+    )
+    matches_as_user3: Mapped[list[Match]] = relationship(
+        foreign_keys="Match.user3_id",
+        back_populates="user3",
         cascade="all, delete-orphan",
     )
     feedbacks: Mapped[list[Feedback]] = relationship(

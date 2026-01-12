@@ -19,7 +19,7 @@ def check_health() -> bool:
 
         mtime = os.path.getmtime(heartbeat_file)
         return (time.time() - mtime) < 30
-    except Exception:
+    except Exception:  # Health check must catch all errors to return proper exit code
         return False
 
 
