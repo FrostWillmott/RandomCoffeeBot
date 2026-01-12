@@ -255,7 +255,7 @@ async def notify_all_matches_for_session(
                 exc_info=e,
             )
             return False
-        except (SQLAlchemyError, Exception) as e:
+        except Exception as e:
             logger.exception(
                 f"Failed to post matches for session {session_id}",
                 exc_info=e,
