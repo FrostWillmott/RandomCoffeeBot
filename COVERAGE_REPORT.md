@@ -1,77 +1,78 @@
 # Отчет о покрытии кода тестами
 
-**Дата проверки:** 2025-01-27
+**Дата проверки:** 2026-01-12
 
 ## Текущее состояние
 
 ### Общее покрытие проекта
-- **24.2%** (236/976 строк)
+- **73%** (733/1009 строк)
 
 ### Покрытие критичных модулей
-- **Services + Models: 40.2%** (198/493 строк)
-  - Models: **95.7%** (133/139 строк) ✅
-  - Services: **18.4%** (65/354 строк) ❌
+- **Models: 100%** ✅
+  - Все модели полностью покрыты тестами
+- **Services: ~76%** ✅
+  - `helpers.py`: 100%
+  - `sessions.py`: 86%
+  - `announcements.py`: 92%
+  - `notifications.py`: 76%
+  - `matching.py`: 28% (требует улучшения)
 
 ### Детализация по модулям
 
-#### Models (отлично покрыты)
+#### Models (полностью покрыты)
 - `app/models/enums.py`: 100%
-- `app/models/user.py`: 95.2%
-- `app/models/session.py`: 94.4%
-- `app/models/registration.py`: 94.4%
-- `app/models/match.py`: 96.4%
-- `app/models/topic.py`: 95.5%
-- `app/models/feedback.py`: 94.7%
+- `app/models/user.py`: 100%
+- `app/models/session.py`: 100%
+- `app/models/registration.py`: 100%
+- `app/models/match.py`: 100%
+- `app/models/topic.py`: 100%
+- `app/models/feedback.py`: 100%
 
-#### Services (требуют улучшения)
-- `app/services/helpers.py`: 52.4%
-- `app/services/sessions.py`: 64.5%
-- `app/services/announcements.py`: 34.6%
-- `app/services/matching.py`: 14.5% ❌
-- `app/services/notifications.py`: 0.0% ❌
+#### Services
+- `app/services/helpers.py`: 100% ✅
+- `app/services/sessions.py`: 86% ✅
+- `app/services/announcements.py`: 92% ✅
+- `app/services/notifications.py`: 76% ✅
+- `app/services/matching.py`: 28% ⚠️ (требует улучшения)
+
+#### Repositories
+- `app/repositories/base.py`: 93%
+- `app/repositories/user.py`: 94%
+- `app/repositories/session.py`: 73%
+- `app/repositories/registration.py`: 65%
+- `app/repositories/feedback.py`: 53%
+- `app/repositories/match.py`: 50%
+- `app/repositories/topic.py`: 42%
 
 ## Цель: 70% покрытия
 
 ### Текущее состояние
-- **Общее покрытие:** 24.2% ❌
-- **Критичные модули:** 40.2% ❌
+- **Общее покрытие:** 73% ✅
+- **Models:** 100% ✅
+- **Services:** ~76% ✅
 
-### Проблемы
-1. **Тесты не работают** из-за проблем с asyncio event loop
-2. **Services плохо покрыты** (особенно notifications и matching)
-3. **Handlers, main, scheduler** не покрыты (но это менее критично)
+### Достижения
+1. ✅ Все модели полностью покрыты тестами
+2. ✅ Тесты работают корректно (79 тестов проходят)
+3. ✅ Большинство сервисов покрыты на 70%+
+4. ✅ Инфраструктура тестирования настроена
 
-### Рекомендации
+### Рекомендации для дальнейшего улучшения
 
-1. **Исправить тесты:**
-   - Решить проблему с asyncio event loop
-   - Убедиться, что тестовая БД правильно настроена
+1. **Улучшить покрытие matching.py:**
+   - Добавить больше тестов для алгоритма матчинга
+   - Покрыть edge cases (нечетное количество, все пары уже встречались)
 
-2. **Добавить тесты для services:**
-   - `notifications.py` (0% → нужно добавить тесты)
-   - `matching.py` (14.5% → нужно добавить больше тестов)
-   - `sessions.py` (64.5% → можно улучшить)
-   - `announcements.py` (34.6% → можно улучшить)
+2. **Улучшить покрытие repositories:**
+   - Добавить тесты для методов репозиториев
+   - Покрыть error cases
 
-3. **Исключить некритичные модули:**
-   - Использовать `.coveragerc` для исключения `app/bot/*`, `app/main.py`, `app/scheduler.py`
-   - Сфокусироваться на покрытии бизнес-логики (services, models)
-
-4. **Целевое покрытие:**
-   - Services: минимум 70%
-   - Models: уже 95.7% ✅
-   - Общее (без handlers/main/scheduler): минимум 70%
-
-## Следующие шаги
-
-1. ✅ Создан `.coveragerc` для исключения некритичных модулей
-2. ⏳ Исправить тесты (проблемы с asyncio)
-3. ⏳ Добавить тесты для `notifications.py`
-4. ⏳ Добавить тесты для `matching.py`
-5. ⏳ Улучшить тесты для `sessions.py` и `announcements.py`
+3. **Интеграционные тесты:**
+   - Расширить покрытие интеграционными тестами
+   - Покрыть полные сценарии использования
 
 ## Примечания
 
-- Models уже хорошо покрыты (95.7%)
-- Основная проблема - services (18.4%)
-- После исправления тестов и добавления новых тестов покрытие должно достичь 70%
+- Все модели полностью покрыты тестами ✅
+- Services покрыты на 76%, что превышает цель в 70% ✅
+- Основная область для улучшения - `matching.py` (28%)

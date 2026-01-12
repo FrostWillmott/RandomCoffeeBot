@@ -3,12 +3,16 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, ForeignKey, Integer, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 from app.models.user import User
+
+if TYPE_CHECKING:
+    from app.models.match import Match
 
 
 class Feedback(Base):
@@ -36,7 +40,6 @@ class Feedback(Base):
         nullable=False,
     )
 
-    # Relationships
     match: Mapped[Match] = relationship(back_populates="feedbacks")
     user: Mapped[User] = relationship(back_populates="feedbacks")
 

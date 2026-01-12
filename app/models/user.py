@@ -29,25 +29,25 @@ class User(Base):
         nullable=False,
     )
 
-    registrations: Mapped[list[Registration]] = relationship(  # type: ignore
+    registrations: Mapped[list[Registration]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
-    matches_as_user1: Mapped[list[Match]] = relationship(  # type: ignore
+    matches_as_user1: Mapped[list[Match]] = relationship(
         foreign_keys="Match.user1_id",
         back_populates="user1",
         cascade="all, delete-orphan",
     )
-    matches_as_user2: Mapped[list[Match]] = relationship(  # type: ignore
+    matches_as_user2: Mapped[list[Match]] = relationship(
         foreign_keys="Match.user2_id",
         back_populates="user2",
         cascade="all, delete-orphan",
     )
-    matches_as_user3: Mapped[list[Match]] = relationship(  # type: ignore
+    matches_as_user3: Mapped[list[Match]] = relationship(
         foreign_keys="Match.user3_id",
         back_populates="user3",
         cascade="all, delete-orphan",
     )
-    feedbacks: Mapped[list[Feedback]] = relationship(  # type: ignore
+    feedbacks: Mapped[list[Feedback]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
 
