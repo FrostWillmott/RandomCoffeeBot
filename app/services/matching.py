@@ -38,21 +38,23 @@ async def get_previous_matches(
 async def select_topic_for_users(
     topic_repo: TopicRepository,
     match_repo: MatchRepository,
-    user1_id: int,
-    user2_id: int,
+    *user_ids: int,
 ) -> Topic | None:
-    """Select a topic that neither user has discussed recently.
+    """Select a topic that none of the users have discussed recently.
 
     Args:
         topic_repo: Topic repository
         match_repo: Match repository
-        user1_id: First user ID
-        user2_id: Second user ID
+        *user_ids: Variable number of user IDs (2 for pairs, 3 for triplets)
 
     Returns:
         Selected topic or None if no topics are available
     """
-    used_topic_ids = await match_repo.get_topic_ids_used_by_users(user1_id, user2_id)
+    if not user_ids:
+        logger.error("No user IDs provided for topic selection")
+        return None
+
+    used_topic_ids = await match_repo.get_topic_ids_used_by_users(*user_ids)
 
     all_topics_list = await topic_repo.get_active_by_difficulty("middle")
 
@@ -182,7 +184,7 @@ async def _create_matches_logic(
                 )
 
             topic = await select_topic_for_users(
-                topic_repo, match_repo, u1.user_id, u2.user_id
+                topic_repo, match_repo, u1.user_id, u2.user_id, u3.user_id
             )
 
             match = Match(

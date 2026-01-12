@@ -123,23 +123,25 @@ class MatchRepository(BaseRepository[Match]):
         )
         return list(result.scalars().all())
 
-    async def get_topic_ids_used_by_users(self, user1_id: int, user2_id: int) -> set[int]:
+    async def get_topic_ids_used_by_users(self, *user_ids: int) -> set[int]:
         """Get all topic IDs used in matches involving these users.
 
         Args:
-            user1_id: First user ID
-            user2_id: Second user ID
+            *user_ids: Variable number of user IDs
 
         Returns:
             Set of topic IDs
         """
+        if not user_ids:
+            return set()
+
         result = await self.session.execute(
             select(Match.topic_id).where(
                 and_(
                     Match.topic_id.isnot(None),
-                    (Match.user1_id.in_([user1_id, user2_id]))
-                    | (Match.user2_id.in_([user1_id, user2_id]))
-                    | (Match.user3_id.in_([user1_id, user2_id])),
+                    (Match.user1_id.in_(user_ids))
+                    | (Match.user2_id.in_(user_ids))
+                    | (Match.user3_id.in_(user_ids)),
                 )
             )
         )
