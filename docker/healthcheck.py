@@ -10,7 +10,6 @@ import time
 def check_health() -> bool:
     """Check if the application is healthy."""
     try:
-        # Check if heartbeat file exists and was modified recently
         heartbeat_file = os.environ.get(
             "HEALTHCHECK_HEARTBEAT_FILE",
             os.path.join(tempfile.gettempdir(), "healthy"),
@@ -19,9 +18,8 @@ def check_health() -> bool:
             return False
 
         mtime = os.path.getmtime(heartbeat_file)
-        # Healthy if modified within last 30 seconds
         return (time.time() - mtime) < 30
-    except Exception:
+    except Exception:  # Health check must catch all errors to return proper exit code
         return False
 
 

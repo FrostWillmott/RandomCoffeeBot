@@ -27,7 +27,7 @@ Telegram bot for organizing random coffee meetings between participants.
 
 1. Clone the repository:
 ```bash
-git clone https://gitlab.com/FrostWillmott/RandomCoffeeBot.git
+git clone https://github.com/FrostWillmott/RandomCoffeeBot.git
 cd RandomCoffeeBot
 ```
 

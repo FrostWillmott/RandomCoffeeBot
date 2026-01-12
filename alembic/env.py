@@ -10,6 +10,14 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from alembic import context  # type: ignore[attr-defined]
 from app.config import get_settings
 from app.db.base import Base
+from app.models import (  # noqa: F401
+    Feedback,
+    Match,
+    Registration,
+    Session,
+    Topic,
+    User,
+)
 
 config = context.config
 

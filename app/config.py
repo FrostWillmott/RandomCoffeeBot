@@ -16,13 +16,12 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # Application
     debug: bool = False
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
-    # Secret key for cryptographic operations
-    # SECURITY: Must be set to a random value in production
-    # Generate with:
-    # python -c "import secrets; print(secrets.token_urlsafe(64))"
+    log_format: Literal["text", "json"] = Field(
+        default="json",
+        description="Log format: text for development, json for production",
+    )
     secret_key: str = Field(default="dev-secret-key-change-in-production")
 
     @model_validator(mode="after")
@@ -33,30 +32,20 @@ class Settings(BaseSettings):
                 not self.secret_key
                 or self.secret_key == "dev-secret-key-change-in-production"
             ):
-                raise ValueError(
-                    "SECRET_KEY must be set in production (DEBUG=false)"
-                )
-            if (
-                not self.telegram_bot_token
-                or not self.telegram_bot_token.strip()
-            ):
-                raise ValueError(
-                    "TELEGRAM_BOT_TOKEN must be set in production"
-                )
+                raise ValueError("SECRET_KEY must be set in production (DEBUG=false)")
+            if not self.telegram_bot_token or not self.telegram_bot_token.strip():
+                raise ValueError("TELEGRAM_BOT_TOKEN must be set in production")
         return self
 
-    # Telegram
     telegram_bot_token: str = ""
     channel_id: str = ""
 
-    # Database
     database_url: str = Field(
         default="postgresql+asyncpg://postgres:postgres@localhost:5432/randomcoffee"
     )
 
-    # Health check
-    # NOTE: Uses /tmp for ephemeral health status
-    # (intentionally non-persistent)
+    redis_url: str = Field(default="redis://localhost:6379/0")
+
     healthcheck_heartbeat_file: str = Field(default="/tmp/healthy")
 
 

@@ -2,6 +2,7 @@
 
 from collections.abc import AsyncGenerator
 
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
@@ -29,7 +30,7 @@ async_session_maker = async_sessionmaker(
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
-    """Get async database session with auto-commit on success.
+    """Get an async database session with auto-commit on success.
 
     Yields a session that automatically commits on successful completion
     or rolls back on exception.
@@ -37,6 +38,9 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async with async_session_maker() as session:
         try:
             yield session
+        except SQLAlchemyError:
+            await session.rollback()
+            raise
         except Exception:
             await session.rollback()
             raise
