@@ -19,7 +19,7 @@ def format_user_mention(user: User | TelegramUser) -> str:
         return f"@{username}"
 
     first_name = getattr(user, "first_name", None)
-    user_id = getattr(user, "id", None) or getattr(user, "telegram_id", None)
+    user_id = getattr(user, "telegram_id", None) or getattr(user, "id", None)
     name = first_name or "Участник"
 
     if user_id:

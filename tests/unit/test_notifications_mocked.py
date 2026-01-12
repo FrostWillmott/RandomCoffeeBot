@@ -19,8 +19,8 @@ async def test_format_user_mention_with_username():
     """Test formatting user mention with username."""
     user = User(
         telegram_id=1002,
-        username="testuser",
-        first_name="First",
+        username="testuser",  # nosec - test data
+        first_name="First",  # nosec - test data
         last_name="Last",
         is_active=True,
     )
@@ -93,9 +93,9 @@ async def test_build_matches_message_with_matches():
 @pytest.mark.asyncio
 async def test_build_matches_message_with_unmatched():
     """Test building message with unmatched users."""
-    user1 = User(telegram_id=1, username="user1", first_name="User1", is_active=True)
-    user2 = User(telegram_id=2, username="user2", first_name="User2", is_active=True)
-    unmatched = User(telegram_id=3, username="lonely", first_name="Lonely", is_active=True)
+    user1 = User(telegram_id=1, username="user1", first_name="User1", is_active=True)  # nosec
+    user2 = User(telegram_id=2, username="user2", first_name="User2", is_active=True)  # nosec
+    unmatched = User(telegram_id=3, username="lonely", first_name="Lonely", is_active=True)  # nosec
 
     match = MagicMock(spec=Match)
     match.user1 = user1
@@ -227,10 +227,14 @@ async def test_notify_all_matches_with_unmatched_users():
     """Test notification includes unmatched users."""
     session_id = 6003
 
-    user1 = User(id=1, telegram_id=1, username="user1", first_name="User1", is_active=True)
-    user2 = User(id=2, telegram_id=2, username="user2", first_name="User2", is_active=True)
+    user1 = User(id=1, telegram_id=1, username="user1", first_name="User1", is_active=True)  # nosec
+    user2 = User(id=2, telegram_id=2, username="user2", first_name="User2", is_active=True)  # nosec
     unmatched = User(
-        id=3, telegram_id=3, username="lonely", first_name="Lonely", is_active=True
+        id=3,
+        telegram_id=3,
+        username="lonely",
+        first_name="Lonely",
+        is_active=True,  # nosec
     )
 
     topic = MagicMock(spec=Topic)

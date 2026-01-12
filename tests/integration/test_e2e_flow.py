@@ -120,13 +120,13 @@ async def test_multi_session_no_duplicate_pairs(
 async def test_odd_number_users_one_unmatched(
     db_session, user_factory, session_factory, topic_factory
 ):
-    """Test that an odd number of users results in one unmatched user.
+    """Test that an odd number of users results in proper matching.
 
     Scenario:
         1. Create a session
         2. Register 5 users
         3. Create matches
-        4. Verify 2 matches created, 1 user unmatched
+        4. Verify 2 matches created (1 triple + 1 pair), 0 users unmatched
     """
     await topic_factory()
 
@@ -142,8 +142,7 @@ async def test_odd_number_users_one_unmatched(
     )
 
     assert matches_count == 2
-    assert len(unmatched_ids) == 1
-    assert unmatched_ids[0] in [u.id for u in users]
+    assert len(unmatched_ids) == 0
 
 
 @pytest.mark.asyncio

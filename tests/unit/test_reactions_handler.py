@@ -55,8 +55,8 @@ class TestGetOrCreateUser:
         existing_user = User(
             id=1,
             telegram_id=12345,
-            username="existing",
-            first_name="Existing",
+            username="existing",  # nosec - test data
+            first_name="Existing",  # nosec - test data
             is_active=True,
         )
         mock_result = MagicMock()
@@ -95,8 +95,8 @@ class TestGetOrCreateUser:
         existing_user = User(
             id=1,
             telegram_id=12345,
-            username="old_username",
-            first_name="Old",
+            username="old_username",  # nosec - test data
+            first_name="Old",  # nosec - test data
             is_active=True,
         )
         mock_result = MagicMock()
@@ -180,7 +180,7 @@ class TestHandleRegistrationAdd:
         mock_telegram_user.last_name = None
 
         with patch("app.bot.handlers.reactions.get_or_create_user") as mock_get_or_create:
-            mock_user = User(id=1, telegram_id=12345, username="testuser", is_active=True)
+            mock_user = User(id=1, telegram_id=12345, username="testuser", is_active=True)  # nosec
             mock_get_or_create.return_value = mock_user
 
             mock_result = MagicMock()
@@ -210,7 +210,7 @@ class TestHandleRegistrationAdd:
         mock_telegram_user.last_name = None
 
         with patch("app.bot.handlers.reactions.get_or_create_user") as mock_get_or_create:
-            mock_user = User(id=1, telegram_id=12345, username="testuser", is_active=True)
+            mock_user = User(id=1, telegram_id=12345, username="testuser", is_active=True)  # nosec
             mock_get_or_create.return_value = mock_user
 
             mock_result = MagicMock()

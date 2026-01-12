@@ -63,21 +63,31 @@ class MatchRepository(BaseRepository[Match]):
             user_ids: List of user IDs
 
         Returns:
-            Set of sorted user ID pairs
+            Set of sorted user ID pairs (includes all pairs from triplets)
         """
         if not user_ids:
             return set()
 
         result = await self.session.execute(
-            select(Match.user1_id, Match.user2_id).where(
-                or_(Match.user1_id.in_(user_ids), Match.user2_id.in_(user_ids))
+            select(Match.user1_id, Match.user2_id, Match.user3_id).where(
+                or_(
+                    Match.user1_id.in_(user_ids),
+                    Match.user2_id.in_(user_ids),
+                    Match.user3_id.in_(user_ids),
+                )
             )
         )
 
         existing_pairs = set()
         for row in result.all():
-            if row[0] is not None and row[1] is not None:
-                existing_pairs.add(tuple(sorted((row[0], row[1]))))
+            user1_id, user2_id, user3_id = row
+            if user1_id is not None and user2_id is not None:
+                existing_pairs.add(tuple(sorted((user1_id, user2_id))))
+            if user3_id is not None:
+                if user1_id is not None:
+                    existing_pairs.add(tuple(sorted((user1_id, user3_id))))
+                if user2_id is not None:
+                    existing_pairs.add(tuple(sorted((user2_id, user3_id))))
 
         return existing_pairs
 
