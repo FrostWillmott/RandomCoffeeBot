@@ -190,7 +190,13 @@ uv run python -m scripts.test_run create_session
 
 #### 3.5.2 Закрытие регистраций
 
+**Важно:** Закрытие регистраций работает только для сессий с истекшим дедлайном (`registration_deadline < NOW()`). Для тестирования нужно сначала установить прошедший дедлайн:
+
 ```bash
+# Установить дедлайн на прошедшую дату (замените SESSION_ID на ID вашей сессии)
+docker compose exec -T db psql -U randomcoffee -d randomcoffee -c "UPDATE sessions SET registration_deadline = NOW() - INTERVAL '1 day' WHERE id = SESSION_ID;"
+
+# Затем запустить закрытие регистраций
 # В Docker:
 docker compose exec bot python -m scripts.test_run close_registrations
 
@@ -266,6 +272,12 @@ SELECT id, status, registration_deadline FROM sessions WHERE id = SESSION_ID;
 
 #### 3.5.4 Запуск всех задач
 
+**Важно:** Команда `all` выполняет все три задачи последовательно, но для реального тестирования она **не подходит** без предварительной подготовки. Причина: после создания сессии дедлайн будет в будущем, поэтому `close_registrations` и `run_matching` ничего не найдут.
+
+**Когда использовать `all`:**
+- Только если вы заранее изменили дедлайн существующей сессии на прошедшую дату
+- Или для проверки, что все команды выполняются без ошибок (но реальной работы не будет)
+
 ```bash
 # В Docker:
 docker compose exec bot python -m scripts.test_run all
@@ -274,7 +286,7 @@ docker compose exec bot python -m scripts.test_run all
 uv run python -m scripts.test_run all
 ```
 
-Это выполнит все три задачи последовательно.
+**Для полного тестирования используйте раздел 3.6 "Тестирование полного цикла".**
 
 #### 3.5.5 Сброс данных для повторного тестирования
 
@@ -310,7 +322,13 @@ docker compose exec bot python -m scripts.test_run create_session
 # 3. Зарегистрироваться через реакцию в канале
 # ... (поставить 👍 на анонс)
 
-# 4. Продолжить тестирование
+# 4. Узнать ID созданной сессии
+docker compose exec -T db psql -U randomcoffee -d randomcoffee -c "SELECT id FROM sessions ORDER BY created_at DESC LIMIT 1;"
+
+# 5. Установить прошедший дедлайн (замените SESSION_ID на полученный ID)
+docker compose exec -T db psql -U randomcoffee -d randomcoffee -c "UPDATE sessions SET registration_deadline = NOW() - INTERVAL '1 day' WHERE id = SESSION_ID;"
+
+# 6. Закрыть регистрации и запустить матчинг
 docker compose exec bot python -m scripts.test_run close_registrations
 docker compose exec bot python -m scripts.test_run run_matching
 ```
@@ -330,10 +348,18 @@ docker compose exec bot python -m scripts.test_run run_matching
 3. **Проверьте регистрацию:**
    ```bash
    make db-shell
-   SELECT * FROM registrations WHERE user_id = YOUR_USER_ID;
+   # Найти регистрации по telegram_id (замените YOUR_TELEGRAM_ID на ваш ID)
+   SELECT r.* FROM registrations r
+   JOIN users u ON r.user_id = u.id
+   WHERE u.telegram_id = YOUR_TELEGRAM_ID;
    ```
 
-4. **Подготовьте сессию к матчингу:**
+4. **Узнайте ID созданной сессии:**
+   ```bash
+   docker compose exec -T db psql -U randomcoffee -d randomcoffee -c "SELECT id FROM sessions ORDER BY created_at DESC LIMIT 1;"
+   ```
+
+5. **Подготовьте сессию к матчингу** (замените SESSION_ID на полученный ID):
 
    **Вариант A: Автоматическое закрытие (рекомендуется)**
    ```bash
@@ -356,12 +382,12 @@ docker compose exec bot python -m scripts.test_run run_matching
    docker compose exec -T db psql -U randomcoffee -d randomcoffee -c "UPDATE sessions SET status = 'closed' WHERE id = SESSION_ID;"
    ```
 
-5. **Запустите матчинг:**
+6. **Запустите матчинг:**
    ```bash
    docker compose exec bot python -m scripts.test_run run_matching
    ```
 
-6. **Проверьте результат:**
+7. **Проверьте результат:**
    - В канале должно появиться сообщение со списком всех матчей
    - Вы должны получить личное уведомление о матче
    - В базе данных должен быть создан матч с темой для обсуждения
@@ -408,9 +434,10 @@ docker compose exec bot python -c "
 from app.bot import get_bot
 import asyncio
 async def check():
-    bot = get_bot()
+    bot = await get_bot()
     me = await bot.get_me()
     print(f'Bot connected: {me.username} (@{me.username})')
+    await bot.session.close()
 asyncio.run(check())
 "
 ```
@@ -544,7 +571,7 @@ SELECT COUNT(*) FROM topics WHERE is_active = true;
 
 3. Проверьте настройки планировщика в `app/scheduler.py` и `app/constants.py`
 
-### 5.7 Матчинг не находит сессий для обработки
+### 5.6 Матчинг не находит сессий для обработки
 
 **Признаки:**
 - Команда `run_matching` завершается без ошибок, но сообщает "0 sessions"
@@ -580,7 +607,7 @@ SELECT COUNT(*) FROM topics WHERE is_active = true;
    ```
    Должно быть минимум 2 регистрации для создания пары.
 
-### 5.6 Уведомления не отправляются
+### 5.7 Уведомления не отправляются
 
 **Возможные причины:**
 1. Пользователь заблокировал бота
