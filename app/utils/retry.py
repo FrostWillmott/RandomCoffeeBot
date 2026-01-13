@@ -7,6 +7,7 @@ from typing import Any, TypeVar
 
 from aiogram.exceptions import (
     TelegramAPIError,
+    TelegramForbiddenError,
     TelegramRetryAfter,
     TelegramServerError,
 )
@@ -66,6 +67,12 @@ def retry_telegram_api(
                 logger.warning(
                     f"Retryable Telegram API error in {func.__name__}: {e}. "
                     f"Will retry according to retry policy."
+                )
+                raise
+            except TelegramForbiddenError as e:
+                logger.info(
+                    f"Telegram API forbidden error in {func.__name__}: {e}. "
+                    f"This is expected when bot can't initiate conversation with a user."
                 )
                 raise
             except TelegramAPIError as e:
