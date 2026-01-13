@@ -4,7 +4,7 @@ import logging
 from typing import Any
 
 from aiogram import Bot
-from aiogram.exceptions import TelegramAPIError
+from aiogram.exceptions import TelegramAPIError, TelegramForbiddenError
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -167,6 +167,12 @@ async def _send_personal_notification(bot: Bot, user: User, match: Match) -> boo
         )
         logger.debug(f"Sent personal notification to user {user.id} for match {match.id}")
         return True
+    except TelegramForbiddenError as e:
+        logger.info(
+            f"Could not send personal notification to user {user.id}: {e}. "
+            f"User has not started a conversation with the bot."
+        )
+        return False
     except Exception as e:
         logger.warning(
             f"Failed to send personal notification to user {user.id}: {e}",
