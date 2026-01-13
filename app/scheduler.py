@@ -15,6 +15,7 @@ from app.constants import (
     SESSION_CREATION_HOUR,
     SESSION_CREATION_MINUTE,
 )
+from app.models.enums import SessionStatus
 from app.services.announcements import post_session_announcement
 from app.services.matching import (
     close_registration_for_expired_sessions,
@@ -31,15 +32,23 @@ async def create_and_announce_session(bot: Bot) -> None:
         logger.info("Creating weekly session...")
         session = await create_weekly_session()
 
-        if session:
-            logger.info(f"Posting announcement for session {session.id}...")
-            success = await post_session_announcement(bot, session)
-            if success:
-                logger.info("Session created and announced successfully")
-            else:
-                logger.error("Failed to post announcement")
-        else:
+        if not session:
             logger.warning("No new session created")
+            return
+
+        if session.status != SessionStatus.OPEN:
+            logger.warning(
+                f"Session {session.id} already exists with status '{session.status}'. "
+                "Skipping announcement. Use reset command to start fresh test."
+            )
+            return
+
+        logger.info(f"Posting announcement for session {session.id}...")
+        success = await post_session_announcement(bot, session)
+        if success:
+            logger.info("Session created and announced successfully")
+        else:
+            logger.error("Failed to post announcement")
 
     except Exception as e:  # Catch all unexpected errors for logging in a background task
         logger.exception(

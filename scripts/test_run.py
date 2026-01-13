@@ -8,12 +8,21 @@ Usage (local):
     uv run python -m scripts.test_run close_registrations
     uv run python -m scripts.test_run run_matching
     uv run python -m scripts.test_run all
+    uv run python -m scripts.test_run reset
 
 Usage (Docker):
     docker compose exec bot python -m scripts.test_run create_session
     docker compose exec bot python -m scripts.test_run close_registrations
     docker compose exec bot python -m scripts.test_run run_matching
     docker compose exec bot python -m scripts.test_run all
+    docker compose exec bot python -m scripts.test_run reset
+
+Commands:
+    create_session      - Create a new session and post announcement
+    close_registrations - Close registrations for expired sessions
+    run_matching        - Run matching for closed sessions
+    all                 - Run all tasks in sequence
+    reset               - Delete the latest session (use before re-testing)
 """
 
 import argparse
@@ -22,9 +31,14 @@ import logging
 import sys
 from typing import Literal
 
+from sqlalchemy import delete, select
+
 from app.bot import get_bot
 from app.config import get_settings
-from app.db.session import engine
+from app.db.session import async_session_maker, engine
+from app.models.match import Match
+from app.models.registration import Registration
+from app.models.session import Session
 from app.scheduler import create_and_announce_session
 from app.services.matching import (
     close_registration_for_expired_sessions,
@@ -75,6 +89,60 @@ async def run_matching(bot) -> None:
         raise
 
 
+async def run_reset() -> None:
+    """Reset test data: delete the latest session and its matches/registrations."""
+    logger = logging.getLogger(__name__)
+    logger.info("=" * 60)
+    logger.info("Running: reset (delete latest session data)")
+    logger.info("=" * 60)
+
+    try:
+        async with async_session_maker() as db_session:
+            # Find the latest session
+            result = await db_session.execute(
+                select(Session).order_by(Session.date.desc()).limit(1)
+            )
+            latest_session = result.scalar_one_or_none()
+
+            if not latest_session:
+                logger.info("No sessions found to reset")
+                return
+
+            session_id = latest_session.id
+            session_date = latest_session.date
+            session_status = latest_session.status
+
+            # Delete matches for this session
+            match_result = await db_session.execute(
+                delete(Match).where(Match.session_id == session_id)
+            )
+            matches_deleted = match_result.rowcount
+
+            # Delete registrations for this session
+            reg_result = await db_session.execute(
+                delete(Registration).where(Registration.session_id == session_id)
+            )
+            registrations_deleted = reg_result.rowcount
+
+            # Delete the session itself
+            await db_session.execute(delete(Session).where(Session.id == session_id))
+
+            await db_session.commit()
+
+            logger.info(
+                f"✓ Reset complete. Deleted session {session_id} "
+                f"(date: {session_date}, status: {session_status})"
+            )
+            logger.info(
+                f"  - Matches deleted: {matches_deleted}"
+                f"\n  - Registrations deleted: {registrations_deleted}"
+            )
+
+    except Exception as e:  # Catch all unexpected errors for logging in a test script
+        logger.exception("✗ reset failed", exc_info=e)
+        raise
+
+
 async def run_all(bot) -> None:
     """Run all scheduler tasks in sequence."""
     logger = logging.getLogger(__name__)
@@ -99,13 +167,23 @@ async def run_all(bot) -> None:
 
 
 async def main_async(
-    action: Literal["create_session", "close_registrations", "run_matching", "all"],
+    action: Literal[
+        "create_session", "close_registrations", "run_matching", "all", "reset"
+    ],
 ) -> None:
     """Main async function to run the selected action."""
     logger = logging.getLogger(__name__)
     bot = None
 
     try:
+        # Reset doesn't need bot
+        if action == "reset":
+            await run_reset()
+            logger.info("=" * 60)
+            logger.info("Reset completed successfully!")
+            logger.info("=" * 60)
+            return
+
         logger.info("Initializing bot and database connections...")
         bot = await get_bot()
 
@@ -154,17 +232,19 @@ Examples:
   uv run python -m scripts.test_run close_registrations
   uv run python -m scripts.test_run run_matching
   uv run python -m scripts.test_run all
+  uv run python -m scripts.test_run reset
 
   # Docker:
   docker compose exec bot python -m scripts.test_run create_session
+  docker compose exec bot python -m scripts.test_run reset
   docker compose exec bot python -m scripts.test_run all
         """,
     )
 
     parser.add_argument(
         "action",
-        choices=["create_session", "close_registrations", "run_matching", "all"],
-        help="Action to perform",
+        choices=["create_session", "close_registrations", "run_matching", "all", "reset"],
+        help="Action to perform (reset: delete latest session for re-testing)",
     )
 
     parser.add_argument(
