@@ -132,8 +132,9 @@ secrets/
 # Ruff
 .ruff_cache/
 
-# AI Assistant files
-# CLAUDE.md and TESTING.md are now tracked in the repository
+# AI Assistant personal configs
+CLAUDE.md
+.ai/
 
 # Snyk Security Extension - AI Rules (auto-generated)
 .cursor/rules/snyk_rules.mdc

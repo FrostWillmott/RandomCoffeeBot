@@ -178,6 +178,44 @@ RandomCoffeeBot/
 ```
 
 
+## Security Best Practices
+
+When deploying RandomCoffeeBot in production:
+
+### Environment Variables
+- ✅ Always use strong, randomly generated values for `SECRET_KEY`
+- ✅ Never commit `.env` files to version control
+- ✅ Rotate credentials regularly
+- ✅ Use separate credentials for dev/staging/production
+
+### Database
+- ✅ Use strong passwords for PostgreSQL
+- ✅ Restrict database access to application containers only
+- ✅ Enable SSL/TLS for database connections in production
+- ✅ Regularly backup your database
+
+### Network
+- ✅ Use firewall rules to restrict access
+- ✅ Only expose necessary ports
+- ✅ Use reverse proxy (nginx) in production
+- ✅ Enable HTTPS for any HTTP endpoints
+
+### Docker
+- ✅ Don't expose ports publicly (use `127.0.0.1:port:port`)
+- ✅ Scan images for vulnerabilities regularly
+- ✅ Keep base images up to date
+- ✅ Use Docker secrets for sensitive data in Swarm/K8s
+
+### Dependencies
+- ✅ Keep dependencies up to date
+- ✅ Review Dependabot alerts promptly
+- ✅ Use `uv` lock file to ensure reproducible builds
+
+### Monitoring
+- ✅ Monitor logs for suspicious activity
+- ✅ Set up alerting for errors and anomalies
+- ✅ Regularly review access logs
+
 ## License
 
 MIT
@@ -189,4 +227,3 @@ MIT
 3. Make your changes
 4. Ensure all pre-commit checks pass
 5. Submit a merge request
-```
