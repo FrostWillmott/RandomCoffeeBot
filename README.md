@@ -1,100 +1,153 @@
 # Random Coffee Bot
 
-Telegram bot for organizing random coffee meetings between participants.
+A Telegram bot that automatically organizes random coffee meetings between community members. The bot creates pairs/triplets, assigns discussion topics, manages registrations, and sends notifications - helping people connect and learn together.
+
+## Quick Start
+
+Get the bot running in under 2 minutes:
+
+1. **Get a Telegram Bot Token** from [@BotFather](https://t.me/BotFather)
+
+2. **Set up environment:**
+   ```bash
+   cp .env.example .env
+   # Edit .env and add your TELEGRAM_BOT_TOKEN
+   ```
+
+3. **Start with Docker:**
+   ```bash
+   docker-compose up -d
+   ```
+
+4. **Seed topics (optional but recommended):**
+   ```bash
+   make db-seed
+   ```
+
+5. **Start chatting** with your bot in Telegram!
+
+The bot will automatically create weekly sessions, manage registrations, and match participants.
+
+## How It Works
+
+### For Participants
+
+1. **Registration**: React with 👍 on the announcement in your channel or use `/start` command
+2. **Get Matched**: Every week the bot creates random pairs/triplets
+3. **Receive Topic**: Get a discussion topic for your meeting (e.g., "Python Decorators", "Async Programming")
+4. **Meet & Learn**: Have your coffee chat and discuss the topic
+5. **Give Feedback**: Rate your experience and help improve matching
+
+### Available Commands
+
+- `/start` - Register for the next Random Coffee session
+- `/help` - Get information about how the bot works
+- `/status` - Check your registration status and upcoming matches
+- `/cancel` - Cancel your registration for the current session
+
+### Automated Workflow
+
+The bot runs on a weekly schedule:
+- **Monday 10:00 UTC** - Creates new session and posts announcement to channel
+- **Every hour** - Closes registrations for expired sessions
+- **Every hour** - Creates matches for closed sessions and sends notifications
 
 ## Features
 
-- Telegram bot built with aiogram 3
-- PostgreSQL database with SQLAlchemy ORM
-- Async database operations with asyncpg
-- Database migrations with Alembic
-- Background task scheduling with APScheduler
-- Docker support for easy deployment
-- Automated code quality checks with Ruff
-- Type checking with mypy
-- Pre-commit hooks for code consistency
-- Comprehensive test suite (unit and integration tests)
-- Support for pair and triplet matching
-- Topic-based conversation starters
+- 🤖 Automated weekly session creation and announcements
+- 👥 Smart matching algorithm (avoids repeat pairings, supports pairs and triplets)
+- 💬 Topic-based conversation starters for every meeting
+- 📊 Registration management via reactions or commands
+- 🔔 Automatic notifications when matches are created
+- ⭐ Feedback system to improve future matches
+- 🐳 Docker-ready deployment
+- 🧪 Comprehensive test coverage (81%+)
+
+## Documentation
+
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - System architecture, data flows, and technical design
+- **[docs/MANUAL_TESTING.md](docs/MANUAL_TESTING.md)** - Complete testing guide for QA
+- **[docs/TOPICS_DESIGN.md](docs/TOPICS_DESIGN.md)** - Discussion topics system design
+- **[tests/README.md](tests/README.md)** - Developer testing guide
+- **[CHANGELOG.md](CHANGELOG.md)** - Version history and changes
 
 ## Requirements
 
-- Python 3.12+
-- uv (package manager)
-- PostgreSQL 13+ (or use Docker)
-- Telegram Bot Token (from @BotFather)
+- Docker & Docker Compose (recommended)
+- OR Python 3.12+ with PostgreSQL 13+ (for local development)
+- Telegram Bot Token from [@BotFather](https://t.me/BotFather)
+- Telegram Channel (for announcements)
 
-## Installation
+## Installation & Development
 
-### Local Development
+### Docker (Recommended)
 
-1. Clone the repository:
 ```bash
+# Clone repository
 git clone https://github.com/FrostWillmott/RandomCoffeeBot.git
 cd RandomCoffeeBot
-```
 
-2. Create and activate virtual environment:
-```bash
-uv venv
-source .venv/bin/activate  # On macOS/Linux
-```
-
-3. Install dependencies:
-```bash
-uv sync --all-extras
-```
-
-4. Install pre-commit hooks:
-```bash
-pre-commit install
-```
-
-5. Configure environment:
-```bash
+# Configure environment
 cp .env.example .env
-# Edit .env:
-# - Add your TELEGRAM_BOT_TOKEN from @BotFather
-# - Change DATABASE_URL host from 'db' to 'localhost' for local development
-```
+# Edit .env and set:
+# - TELEGRAM_BOT_TOKEN (from @BotFather)
+# - CHANNEL_ID (your announcement channel)
 
-6. Run database migrations:
-```bash
-alembic upgrade head
-```
-
-### Docker Development
-
-1. Copy environment file:
-```bash
-cp .env.example .env
-```
-
-2. Edit `.env` and add your TELEGRAM_BOT_TOKEN from @BotFather
-
-3. Start services:
-```bash
+# Start all services
 docker-compose up -d
+
+# Seed discussion topics
+make db-seed
+
+# View logs
+make logs
 ```
 
-## Usage
+### Local Development (Without Docker)
 
-### Local Development
-```bash
-python -m app.main
-```
+1. **Prerequisites:**
+   - Python 3.12+
+   - PostgreSQL 13+
+   - Redis (for FSM state)
+   - [uv](https://github.com/astral-sh/uv) package manager
 
-### Docker
-```bash
-docker-compose up
-```
+2. **Setup:**
+   ```bash
+   # Clone and install
+   git clone https://github.com/FrostWillmott/RandomCoffeeBot.git
+   cd RandomCoffeeBot
+   uv sync --all-extras
 
-### With Makefile
+   # Install pre-commit hooks
+   pre-commit install
+
+   # Configure environment
+   cp .env.example .env
+   # Edit .env:
+   # - Add TELEGRAM_BOT_TOKEN
+   # - Change DATABASE_URL host from 'db' to 'localhost'
+   # - Set REDIS_URL to redis://localhost:6379/0
+
+   # Run migrations
+   alembic upgrade head
+
+   # Seed topics
+   uv run python scripts/seed_topics.py
+
+   # Start bot
+   python -m app.main
+   ```
+
+### Common Commands
+
 ```bash
-make run          # Run locally
-make dev          # Start development environment with Docker
-make down         # Stop Docker services
-make test         # Run tests (auto-manages test DB)
+make dev           # Start development environment (Docker)
+make down          # Stop all services
+make logs          # View bot logs
+make migrate       # Run database migrations
+make db-seed       # Load discussion topics
+make test          # Run tests
+make db-shell      # Open PostgreSQL shell
 ```
 
 ## Development
@@ -178,12 +231,61 @@ RandomCoffeeBot/
 ```
 
 
-## Security Best Practices
+## Deployment
 
-When deploying RandomCoffeeBot in production:
+### Production Deployment
+
+1. **Prepare production environment:**
+   ```bash
+   cp .env.prod.example .env.prod
+   # Edit .env.prod with production values:
+   # - Strong SECRET_KEY (generate with: openssl rand -hex 32)
+   # - Production DATABASE_URL
+   # - REDIS_URL
+   # - DEBUG=False
+   # - LOG_FORMAT=json
+   ```
+
+2. **Deploy with Docker Compose:**
+   ```bash
+   docker-compose -f docker-compose.prod.yml up -d
+   ```
+
+3. **Run migrations:**
+   ```bash
+   docker-compose -f docker-compose.prod.yml exec bot alembic upgrade head
+   ```
+
+4. **Seed topics:**
+   ```bash
+   docker-compose -f docker-compose.prod.yml exec bot python scripts/seed_topics.py
+   ```
+
+5. **Set up monitoring:**
+   - Monitor logs: `docker-compose -f docker-compose.prod.yml logs -f bot`
+   - Check health: `docker-compose -f docker-compose.prod.yml exec bot cat /tmp/healthy`
 
 ### Environment Variables
-- ✅ Always use strong, randomly generated values for `SECRET_KEY`
+
+**Required:**
+- `TELEGRAM_BOT_TOKEN` - Bot token from @BotFather
+- `CHANNEL_ID` - Channel ID or @username for announcements
+- `DATABASE_URL` - PostgreSQL connection string
+- `REDIS_URL` - Redis connection string for FSM storage
+
+**Optional:**
+- `SECRET_KEY` - Random secret for production (auto-generated if DEBUG=True)
+- `DEBUG` - Enable debug mode (default: False)
+- `LOG_LEVEL` - Logging level (default: INFO)
+- `LOG_FORMAT` - Log format: "json" or "text" (default: text)
+- `HEALTHCHECK_HEARTBEAT_FILE` - Health check file path (default: /tmp/healthy)
+
+See `.env.example` for full configuration options.
+
+## Security Best Practices
+
+### Environment & Secrets
+- ✅ Use strong, randomly generated `SECRET_KEY` in production
 - ✅ Never commit `.env` files to version control
 - ✅ Rotate credentials regularly
 - ✅ Use separate credentials for dev/staging/production
@@ -194,27 +296,18 @@ When deploying RandomCoffeeBot in production:
 - ✅ Enable SSL/TLS for database connections in production
 - ✅ Regularly backup your database
 
-### Network
+### Network & Docker
 - ✅ Use firewall rules to restrict access
-- ✅ Only expose necessary ports
-- ✅ Use reverse proxy (nginx) in production
-- ✅ Enable HTTPS for any HTTP endpoints
-
-### Docker
 - ✅ Don't expose ports publicly (use `127.0.0.1:port:port`)
+- ✅ Use reverse proxy (nginx) in production
 - ✅ Scan images for vulnerabilities regularly
 - ✅ Keep base images up to date
-- ✅ Use Docker secrets for sensitive data in Swarm/K8s
 
-### Dependencies
+### Monitoring & Updates
+- ✅ Monitor logs for suspicious activity (`LOG_FORMAT=json` in production)
+- ✅ Set up alerting for errors and anomalies
 - ✅ Keep dependencies up to date
 - ✅ Review Dependabot alerts promptly
-- ✅ Use `uv` lock file to ensure reproducible builds
-
-### Monitoring
-- ✅ Monitor logs for suspicious activity
-- ✅ Set up alerting for errors and anomalies
-- ✅ Regularly review access logs
 
 ## License
 
