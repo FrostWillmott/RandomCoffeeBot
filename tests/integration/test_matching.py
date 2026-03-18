@@ -12,6 +12,9 @@ from app.models.session import Session
 from app.models.topic import Topic
 from app.models.user import User
 from app.repositories.match import MatchRepository
+from app.repositories.registration import RegistrationRepository
+from app.repositories.session import SessionRepository
+from app.repositories.topic import TopicRepository
 from app.services.matching import (
     create_matches_for_session,
     get_previous_matches,
@@ -70,6 +73,16 @@ async def create_topic(db_session) -> Topic:
     return topic
 
 
+def make_repos(db_session):
+    """Build all repositories for matching tests."""
+    return (
+        SessionRepository(db_session),
+        RegistrationRepository(db_session),
+        MatchRepository(db_session),
+        TopicRepository(db_session),
+    )
+
+
 @pytest.mark.asyncio
 async def test_matching_even_participants(db_session):
     """Test matching with an even number of participants."""
@@ -80,9 +93,8 @@ async def test_matching_even_participants(db_session):
     users = [await create_user(db_session, 100 + i, f"u{i}") for i in range(1, 5)]
     await register_users(db_session, test_session.id, users)
 
-    matches_count, unmatched_ids = await create_matches_for_session(
-        test_session.id, db_session=db_session
-    )
+    repos = make_repos(db_session)
+    matches_count, unmatched_ids = await create_matches_for_session(test_session.id, *repos)
 
     assert matches_count == 2
     assert len(unmatched_ids) == 0
@@ -103,9 +115,8 @@ async def test_matching_odd_participants(db_session):
     users = [await create_user(db_session, 200 + i, f"u{i}_odd") for i in range(1, 4)]
     await register_users(db_session, test_session.id, users)
 
-    matches_count, unmatched_ids = await create_matches_for_session(
-        test_session.id, db_session=db_session
-    )
+    repos = make_repos(db_session)
+    matches_count, unmatched_ids = await create_matches_for_session(test_session.id, *repos)
 
     assert matches_count == 1
     assert len(unmatched_ids) == 0
@@ -122,9 +133,8 @@ async def test_matching_insufficient_participants(db_session):
     user = await create_user(db_session, 301, "u1_single")
     await register_users(db_session, test_session.id, [user])
 
-    matches_count, unmatched_ids = await create_matches_for_session(
-        test_session.id, db_session=db_session
-    )
+    repos = make_repos(db_session)
+    matches_count, unmatched_ids = await create_matches_for_session(test_session.id, *repos)
 
     assert matches_count == 0
     assert len(unmatched_ids) == 1
@@ -142,8 +152,9 @@ async def test_matching_duplicate_avoidance(db_session):
     users = [await create_user(db_session, 400 + i, f"u{i}_dup") for i in range(1, 5)]
     user_ids = [u.id for u in users]
 
+    repos = make_repos(db_session)
     await register_users(db_session, session1.id, users)
-    await create_matches_for_session(session1.id, db_session=db_session)
+    await create_matches_for_session(session1.id, *repos)
 
     result = await db_session.execute(select(Match).where(Match.session_id == session1.id))
     session1_pairs = {
@@ -157,7 +168,7 @@ async def test_matching_duplicate_avoidance(db_session):
     for pair in session1_pairs:
         assert pair in past_matches
 
-    matches2_count, _ = await create_matches_for_session(session2.id, db_session=db_session)
+    matches2_count, _ = await create_matches_for_session(session2.id, *repos)
     assert matches2_count == 2
 
     result2 = await db_session.execute(select(Match).where(Match.session_id == session2.id))

@@ -5,27 +5,24 @@ from typing import Any
 
 from aiogram import Bot
 from aiogram.exceptions import TelegramAPIError, TelegramForbiddenError
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.constants import SEND_PERSONAL_NOTIFICATIONS
 from app.models.match import Match
 from app.models.user import User
-from app.repositories.match import MatchRepository
-from app.repositories.user import UserRepository
+from app.repositories.protocols import MatchRepositoryProtocol, UserRepositoryProtocol
 from app.utils.retry import retry_telegram_api
 
 logger = logging.getLogger(__name__)
 
 
-async def mark_user_inactive(user_id: int, db_session: AsyncSession) -> None:
+async def mark_user_inactive(user_id: int, user_repo: UserRepositoryProtocol) -> None:
     """Mark the user as inactive in the database.
 
     Args:
         user_id: User ID to mark inactive
-        db_session: Database session (caller manages transaction).
+        user_repo: User repository (caller creates from db session).
     """
-    user_repo = UserRepository(db_session)
     success = await user_repo.mark_inactive(user_id)
     if not success:
         logger.warning(f"User {user_id} not found, cannot mark inactive")
@@ -42,12 +39,7 @@ def _format_user_mention(user: User) -> str:
 
 @retry_telegram_api(max_attempts=3, initial_wait=1.0, max_wait=30.0)
 async def _send_message_with_retry(bot: Bot, **kwargs: Any) -> None:
-    """Send a message with retry logic for transient errors.
-
-    Args:
-        bot: Bot instance
-        **kwargs: Arguments for bot.send_message
-    """
+    """Send a message with retry logic for transient errors."""
     await bot.send_message(**kwargs)
 
 
@@ -87,15 +79,7 @@ def _build_matches_message(
 
 
 def _build_personal_notification_message(match: Match, user: User) -> str:
-    """Build a personal notification message for a user about their match.
-
-    Args:
-        match: Match object with relations loaded
-        user: User who will receive the notification
-
-    Returns:
-        Formatted message text
-    """
+    """Build a personal notification message for a user about their match."""
     if match.user3_id and match.user3:
         partners = []
         if match.user1.id != user.id:
@@ -125,16 +109,7 @@ def _build_personal_notification_message(match: Match, user: User) -> str:
 
 
 async def _send_personal_notification(bot: Bot, user: User, match: Match) -> bool:
-    """Send a personal notification to a user about their match.
-
-    Args:
-        bot: Bot instance
-        user: User to notify
-        match: Match object with relations loaded
-
-    Returns:
-        True if notification was sent successfully
-    """
+    """Send a personal notification to a user about their match."""
     try:
         message_text = _build_personal_notification_message(match, user)
         await _send_message_with_retry(
@@ -162,7 +137,8 @@ async def _send_personal_notification(bot: Bot, user: User, match: Match) -> boo
 async def notify_all_matches_for_session(
     bot: Bot,
     session_id: int,
-    db_session: AsyncSession,
+    match_repo: MatchRepositoryProtocol,
+    user_repo: UserRepositoryProtocol,
     unmatched_user_ids: list[int] | None = None,
 ) -> bool:
     """Post all matches to the group as a single message.
@@ -170,7 +146,8 @@ async def notify_all_matches_for_session(
     Args:
         bot: Bot instance
         session_id: Session ID to notify about
-        db_session: Database session (caller manages transaction).
+        match_repo: Match repository (caller creates from db session).
+        user_repo: User repository (caller creates from db session).
         unmatched_user_ids: List of user IDs who weren't matched
 
     Returns:
@@ -178,9 +155,6 @@ async def notify_all_matches_for_session(
     """
     settings = get_settings()
     try:
-        match_repo = MatchRepository(db_session)
-        user_repo = UserRepository(db_session)
-
         matches = await match_repo.get_by_session_id_with_relations(session_id)
 
         unmatched_users: list[User] | None = None

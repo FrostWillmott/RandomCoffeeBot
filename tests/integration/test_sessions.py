@@ -7,13 +7,15 @@ from sqlalchemy import select
 
 from app.models.enums import SessionStatus
 from app.models.session import Session
+from app.repositories.session import SessionRepository
 from app.services.sessions import create_weekly_session
 
 
 @pytest.mark.asyncio
 async def test_create_weekly_session_integration(db_session):
     """Integration test for creating a weekly session."""
-    session = await create_weekly_session(db_session)
+    session_repo = SessionRepository(db_session)
+    session = await create_weekly_session(session_repo)
 
     assert session is not None
     assert session.status == SessionStatus.OPEN

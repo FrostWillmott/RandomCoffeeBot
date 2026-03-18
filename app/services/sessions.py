@@ -3,27 +3,25 @@
 import logging
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.constants import REGISTRATION_DURATION_DAYS
 from app.models.enums import SessionStatus
 from app.models.session import Session
-from app.repositories.session import SessionRepository
+from app.repositories.protocols import SessionRepositoryProtocol
 
 logger = logging.getLogger(__name__)
 
 
-async def create_weekly_session(db_session: AsyncSession) -> Session:
+async def create_weekly_session(
+    session_repo: SessionRepositoryProtocol,
+) -> Session:
     """Create a new Random Coffee session for the upcoming week.
 
     Args:
-        db_session: Database session (caller manages transaction).
+        session_repo: Session repository (caller creates from db session).
 
     Returns:
         Created or existing session.
     """
-    session_repo = SessionRepository(db_session)
-
     now = datetime.now(UTC)
     days_ahead = 4 - now.weekday()
     if days_ahead <= 0:

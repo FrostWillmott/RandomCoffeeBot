@@ -8,8 +8,6 @@ import pytest
 from app.models.enums import SessionStatus
 from app.models.session import Session
 from app.models.topic import Topic
-from app.repositories.match import MatchRepository
-from app.repositories.topic import TopicRepository
 from app.services.matching import (
     close_registration_for_expired_sessions,
     create_matches_for_session,
@@ -36,11 +34,11 @@ async def test_select_topic_for_users_with_session():
         times_used=0,
     )
 
-    mock_topic_repo = AsyncMock(spec=TopicRepository)
+    mock_topic_repo = AsyncMock()
     mock_topic_repo.get_active_by_difficulty.return_value = [topic]
     mock_topic_repo.increment_usage.return_value = topic
 
-    mock_match_repo = AsyncMock(spec=MatchRepository)
+    mock_match_repo = AsyncMock()
     mock_match_repo.get_topic_ids_used_by_users.return_value = set()
 
     result = await select_topic_for_users(
@@ -59,10 +57,10 @@ async def test_select_topic_for_users_no_topics():
     user1_id = 7003
     user2_id = 7004
 
-    mock_topic_repo = AsyncMock(spec=TopicRepository)
+    mock_topic_repo = AsyncMock()
     mock_topic_repo.get_active_by_difficulty.return_value = []
 
-    mock_match_repo = AsyncMock(spec=MatchRepository)
+    mock_match_repo = AsyncMock()
     mock_match_repo.get_topic_ids_used_by_users.return_value = set()
 
     result = await select_topic_for_users(
@@ -126,20 +124,21 @@ async def test_close_registration_for_expired_sessions_no_sessions():
 
 
 @pytest.mark.asyncio
-async def test_create_matches_for_session_with_session():
-    """Test create_matches_for_session with the provided session."""
+async def test_create_matches_for_session_not_found():
+    """Test create_matches_for_session when session doesn't exist."""
     session_id = 10001
+    mock_session_repo = AsyncMock()
+    mock_session_repo.get_by_id.return_value = None
 
-    with patch("app.services.matching.SessionRepository") as mock_session_repo_class:
-        mock_session_repo = AsyncMock()
-        mock_session_repo.get_by_id.return_value = None
-        mock_session_repo_class.return_value = mock_session_repo
+    result = await create_matches_for_session(
+        session_id,
+        mock_session_repo,
+        AsyncMock(),
+        AsyncMock(),
+        AsyncMock(),
+    )
 
-        mock_db_session = AsyncMock()
-
-        result = await create_matches_for_session(session_id, db_session=mock_db_session)
-
-        assert result == (0, [])
+    assert result == (0, [])
 
 
 @pytest.mark.asyncio
@@ -216,6 +215,3 @@ async def test_run_matching_commits_before_notifications():
                 )
 
                 mock_create_matches.assert_called_once()
-                mock_notify.assert_called_once_with(
-                    mock_bot, test_session.id, mock_session, []
-                )

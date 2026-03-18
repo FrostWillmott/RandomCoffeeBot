@@ -6,14 +6,28 @@ from sqlalchemy import select
 from app.models.enums import MatchStatus, SessionStatus
 from app.models.match import Match
 from app.models.registration import Registration
+from app.repositories.match import MatchRepository
+from app.repositories.registration import RegistrationRepository
+from app.repositories.session import SessionRepository
+from app.repositories.topic import TopicRepository
 from app.services.matching import create_matches_for_session
+
+
+def make_repos(db_session):
+    """Build all repositories for matching tests."""
+    return (
+        SessionRepository(db_session),
+        RegistrationRepository(db_session),
+        MatchRepository(db_session),
+        TopicRepository(db_session),
+    )
 
 
 @pytest.mark.asyncio
 async def test_complete_registration_to_matching_flow(
     db_session, user_factory, session_factory, topic_factory
 ):
-    """Test complete flow: create session → register users → create matches.
+    """Test complete flow: create session -> register users -> create matches.
 
     Scenario:
         1. Create a session
@@ -44,9 +58,8 @@ async def test_complete_registration_to_matching_flow(
     registrations = result.scalars().all()
     assert len(registrations) == 4
 
-    matches_count, unmatched_ids = await create_matches_for_session(
-        session.id, db_session=db_session
-    )
+    repos = make_repos(db_session)
+    matches_count, unmatched_ids = await create_matches_for_session(session.id, *repos)
 
     assert matches_count == 2
     assert len(unmatched_ids) == 0
@@ -92,7 +105,8 @@ async def test_multi_session_no_duplicate_pairs(
         db_session.add(Registration(user_id=user.id, session_id=session1.id))
     await db_session.commit()
 
-    matches1_count, _ = await create_matches_for_session(session1.id, db_session=db_session)
+    repos = make_repos(db_session)
+    matches1_count, _ = await create_matches_for_session(session1.id, *repos)
     assert matches1_count == 2
 
     result = await db_session.execute(select(Match).where(Match.session_id == session1.id))
@@ -104,7 +118,7 @@ async def test_multi_session_no_duplicate_pairs(
         db_session.add(Registration(user_id=user.id, session_id=session2.id))
     await db_session.commit()
 
-    matches2_count, _ = await create_matches_for_session(session2.id, db_session=db_session)
+    matches2_count, _ = await create_matches_for_session(session2.id, *repos)
     assert matches2_count == 2
 
     await db_session.flush()
@@ -137,9 +151,8 @@ async def test_odd_number_users_one_unmatched(
         db_session.add(Registration(user_id=user.id, session_id=session.id))
     await db_session.commit()
 
-    matches_count, unmatched_ids = await create_matches_for_session(
-        session.id, db_session=db_session
-    )
+    repos = make_repos(db_session)
+    matches_count, unmatched_ids = await create_matches_for_session(session.id, *repos)
 
     assert matches_count == 2
     assert len(unmatched_ids) == 0
@@ -147,13 +160,7 @@ async def test_odd_number_users_one_unmatched(
 
 @pytest.mark.asyncio
 async def test_session_lifecycle_states(db_session, session_factory):
-    """Test session transitions through lifecycle states.
-
-    Scenario:
-        1. Session created as OPEN
-        2. After matching, becomes MATCHED
-        3. Can be marked as COMPLETED
-    """
+    """Test session transitions through lifecycle states."""
     session = await session_factory(status=SessionStatus.OPEN)
     assert session.status == SessionStatus.OPEN
 
@@ -175,13 +182,7 @@ async def test_session_lifecycle_states(db_session, session_factory):
 
 @pytest.mark.asyncio
 async def test_registration_constraints(db_session, user_factory, session_factory):
-    """Test that a user cannot register twice for the same session.
-
-    Scenario:
-        1. User registers for session
-        2. Attempt to register the same user again
-        3. Verify database constraint prevents duplicate
-    """
+    """Test that a user cannot register twice for the same session."""
     from sqlalchemy.exc import IntegrityError
 
     user = await user_factory()

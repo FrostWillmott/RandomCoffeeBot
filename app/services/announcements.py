@@ -5,11 +5,10 @@ from typing import Any
 
 from aiogram import Bot
 from aiogram.exceptions import TelegramAPIError
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.models.session import Session
-from app.repositories.session import SessionRepository
+from app.repositories.protocols import SessionRepositoryProtocol
 from app.utils.retry import retry_telegram_api
 
 logger = logging.getLogger(__name__)
@@ -22,14 +21,14 @@ async def _send_announcement_with_retry(bot: Bot, **kwargs: Any) -> Any:
 
 
 async def post_session_announcement(
-    bot: Bot, session: Session, db_session: AsyncSession
+    bot: Bot, session: Session, session_repo: SessionRepositoryProtocol
 ) -> bool:
     """Post the Random Coffee session announcement to the group.
 
     Args:
         bot: Bot instance
         session: Session to announce
-        db_session: Database session (caller manages transaction).
+        session_repo: Session repository (caller creates from db session).
 
     Returns:
         True if an announcement was posted successfully.
@@ -68,7 +67,6 @@ async def post_session_announcement(
             parse_mode="HTML",
         )
 
-        session_repo = SessionRepository(db_session)
         session.announcement_message_id = message.message_id
         await session_repo.update(session)
 

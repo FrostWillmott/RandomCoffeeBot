@@ -12,15 +12,12 @@ from app.services.announcements import post_session_announcement
 
 
 @pytest.fixture
-def mock_db_session():
-    session = AsyncMock()
-    session.add = MagicMock()
-    session.commit = AsyncMock()
-    return session
+def mock_session_repo():
+    return AsyncMock()
 
 
 @pytest.mark.asyncio
-async def test_post_session_announcement_success(bot, mock_db_session):
+async def test_post_session_announcement_success(bot, mock_session_repo):
     """Test posting a session announcement successfully."""
     session = Session(
         id=1,
@@ -34,19 +31,14 @@ async def test_post_session_announcement_success(bot, mock_db_session):
     mock_message.message_id = 12345
     bot.send_message = AsyncMock(return_value=mock_message)
 
-    with (
-        patch("app.services.announcements.SessionRepository") as mock_repo_class,
-        patch("app.services.announcements.get_settings") as mock_get_settings,
-    ):
+    with patch("app.services.announcements.get_settings") as mock_get_settings:
         mock_settings = MagicMock()
         mock_settings.channel_id = "@test_channel"
         mock_get_settings.return_value = mock_settings
 
-        mock_repo = AsyncMock()
-        mock_repo.update.return_value = session
-        mock_repo_class.return_value = mock_repo
+        mock_session_repo.update.return_value = session
 
-        result = await post_session_announcement(bot, session, mock_db_session)
+        result = await post_session_announcement(bot, session, mock_session_repo)
 
     assert result is True
     bot.send_message.assert_called_once()
@@ -54,7 +46,7 @@ async def test_post_session_announcement_success(bot, mock_db_session):
 
 
 @pytest.mark.asyncio
-async def test_post_session_announcement_telegram_error(bot, mock_db_session):
+async def test_post_session_announcement_telegram_error(bot, mock_session_repo):
     """Test handling TelegramAPIError when posting an announcement."""
     session = Session(
         id=2,
@@ -75,14 +67,14 @@ async def test_post_session_announcement_telegram_error(bot, mock_db_session):
         mock_settings.channel_id = "@test_channel"
         mock_get_settings.return_value = mock_settings
 
-        result = await post_session_announcement(bot, session, mock_db_session)
+        result = await post_session_announcement(bot, session, mock_session_repo)
 
     assert result is False
     bot.send_message.assert_called_once()
 
 
 @pytest.mark.asyncio
-async def test_post_session_announcement_general_error(bot, mock_db_session):
+async def test_post_session_announcement_general_error(bot, mock_session_repo):
     """Test handling TelegramAPIError subclass when posting an announcement."""
     session = Session(
         id=3,
@@ -101,7 +93,7 @@ async def test_post_session_announcement_general_error(bot, mock_db_session):
         mock_settings.channel_id = "@test_channel"
         mock_get_settings.return_value = mock_settings
 
-        result = await post_session_announcement(bot, session, mock_db_session)
+        result = await post_session_announcement(bot, session, mock_session_repo)
 
     assert result is False
     bot.send_message.assert_called_once()

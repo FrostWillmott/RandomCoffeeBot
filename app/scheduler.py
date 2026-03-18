@@ -18,6 +18,7 @@ from app.constants import (
 )
 from app.db.session import async_session_maker
 from app.models.enums import SessionStatus
+from app.repositories.session import SessionRepository
 from app.services.announcements import post_session_announcement
 from app.services.matching import (
     close_registration_for_expired_sessions,
@@ -32,8 +33,10 @@ async def create_and_announce_session(bot: Bot) -> None:
     """Create a new session and post an announcement to the channel."""
     try:
         async with async_session_maker() as db_session:
+            session_repo = SessionRepository(db_session)
+
             logger.info("Creating weekly session...")
-            session = await create_weekly_session(db_session)
+            session = await create_weekly_session(session_repo)
 
             if session.status != SessionStatus.OPEN:
                 logger.warning(
@@ -43,7 +46,7 @@ async def create_and_announce_session(bot: Bot) -> None:
                 return
 
             logger.info(f"Posting announcement for session {session.id}...")
-            success = await post_session_announcement(bot, session, db_session)
+            success = await post_session_announcement(bot, session, session_repo)
             if success:
                 await db_session.commit()
                 logger.info("Session created and announced successfully")
