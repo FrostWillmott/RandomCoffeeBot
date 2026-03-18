@@ -116,13 +116,13 @@ async def run_reset() -> None:
             match_result = await db_session.execute(
                 delete(Match).where(Match.session_id == session_id)
             )
-            matches_deleted = match_result.rowcount
+            matches_deleted = match_result.rowcount  # type: ignore[attr-defined]
 
             # Delete registrations for this session
             reg_result = await db_session.execute(
                 delete(Registration).where(Registration.session_id == session_id)
             )
-            registrations_deleted = reg_result.rowcount
+            registrations_deleted = reg_result.rowcount  # type: ignore[attr-defined]
 
             # Delete the session itself
             await db_session.execute(delete(Session).where(Session.id == session_id))

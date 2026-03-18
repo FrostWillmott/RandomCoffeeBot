@@ -63,9 +63,13 @@ async def shutdown_services(
 
     try:
         await bot.session.close()
+    except Exception as e:
+        logger.warning(f"Error closing bot session: {e}")
+
+    try:
         await engine.dispose()
-    except Exception as e:  # Catch all unexpected errors for logging
-        logger.warning(f"Error during resource cleanup: {e}")
+    except Exception as e:
+        logger.warning(f"Error disposing database engine: {e}")
 
     logger.info("Bot stopped")
     if polling_error:

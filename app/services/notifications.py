@@ -33,7 +33,7 @@ async def mark_user_inactive(user_id: int, session: AsyncSession | None = None) 
                 success = await _mark_user_inactive_logic(db_session, user_id)
                 if success:
                     await db_session.commit()
-            except (TelegramAPIError, SQLAlchemyError) as e:
+            except SQLAlchemyError as e:
                 logger.exception(f"Error marking user {user_id} inactive", exc_info=e)
                 await db_session.rollback()
     else:
@@ -173,7 +173,7 @@ async def _send_personal_notification(bot: Bot, user: User, match: Match) -> boo
             f"User has not started a conversation with the bot."
         )
         return False
-    except Exception as e:
+    except TelegramAPIError as e:
         logger.warning(
             f"Failed to send personal notification to user {user.id}: {e}",
             exc_info=e,
