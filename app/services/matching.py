@@ -280,6 +280,13 @@ async def run_matching_for_closed_sessions(bot: Bot) -> None:
             )
 
             for sess in sessions_to_match:
+                claimed = await session_repo.claim_for_matching(sess.id)
+                if not claimed:
+                    logger.info(f"Session {sess.id} already being processed, skipping")
+                    continue
+
+                await session.flush()
+
                 logger.info(f"Running matching for session {sess.id}")
                 matches_created, unmatched_ids = await create_matches_for_session(
                     sess.id, db_session=session
@@ -289,9 +296,6 @@ async def run_matching_for_closed_sessions(bot: Bot) -> None:
                     f" Unmatched: {len(unmatched_ids)}"
                 )
 
-                # Commit transaction before sending notifications so that
-                # notify_all_matches_for_session can see the created matches
-                # (it uses a new database session with its own transaction)
                 await session.commit()
 
                 if matches_created > 0:

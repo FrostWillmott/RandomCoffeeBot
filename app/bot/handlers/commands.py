@@ -66,7 +66,11 @@ async def _get_user_status_data(session: AsyncSession, user: User):
         .where(
             and_(
                 Registration.user_id == user.id,
-                Session.status.in_([SessionStatus.OPEN, SessionStatus.CLOSED]),
+                Session.status.in_([
+                    SessionStatus.OPEN,
+                    SessionStatus.CLOSED,
+                    SessionStatus.MATCHING,
+                ]),
             )
         )
         .order_by(Session.date.desc())

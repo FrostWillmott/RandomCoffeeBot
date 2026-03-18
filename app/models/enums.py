@@ -8,6 +8,7 @@ class SessionStatus(StrEnum):
 
     OPEN = "open"
     CLOSED = "closed"
+    MATCHING = "matching"
     MATCHED = "matched"
     COMPLETED = "completed"
 

@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from sqlalchemy import and_, select
+from sqlalchemy import and_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.enums import SessionStatus
@@ -104,6 +104,30 @@ class SessionRepository(BaseRepository[Session]):
             )
         )
         return list(result.scalars().all())
+
+    async def claim_for_matching(self, session_id: int) -> bool:
+        """Atomically transition session from CLOSED to MATCHING.
+
+        Uses an atomic UPDATE to prevent concurrent matching of the
+        same session. Only one caller will get rowcount > 0.
+
+        Args:
+            session_id: Session ID to claim
+
+        Returns:
+            True if this caller successfully claimed the session
+        """
+        result = await self.session.execute(
+            update(Session)
+            .where(
+                and_(
+                    Session.id == session_id,
+                    Session.status == SessionStatus.CLOSED,
+                )
+            )
+            .values(status=SessionStatus.MATCHING)
+        )
+        return result.rowcount > 0  # type: ignore[attr-defined, no-any-return]
 
     async def get_by_announcement_message_id(self, message_id: int) -> Session | None:
         """Get session by announcement message ID.
