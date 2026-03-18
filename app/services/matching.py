@@ -2,9 +2,9 @@
 
 import logging
 import random
+from dataclasses import dataclass
 from datetime import UTC, datetime
 
-from aiogram import Bot
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.db.session import async_session_maker
@@ -21,9 +21,17 @@ from app.repositories.protocols import (
 from app.repositories.registration import RegistrationRepository
 from app.repositories.session import SessionRepository
 from app.repositories.topic import TopicRepository
-from app.repositories.user import UserRepository
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class SessionMatchResult:
+    """Result of matching a single session."""
+
+    session_id: int
+    matches_created: int
+    unmatched_user_ids: list[int]
 
 
 async def get_previous_matches(
@@ -240,13 +248,14 @@ async def create_matches_for_session(
     return matches_count, unmatched_ids
 
 
-async def run_matching_for_closed_sessions(bot: Bot) -> None:
+async def run_matching_for_closed_sessions() -> list[SessionMatchResult]:
     """Run matching for all sessions with closed registration.
 
     Scheduler entry point: creates db session and repositories,
-    then delegates to service functions.
+    then delegates to service functions. Returns results for the
+    caller (scheduler) to handle notifications separately.
     """
-    from app.services.notifications import notify_all_matches_for_session
+    results: list[SessionMatchResult] = []
 
     async with async_session_maker() as db_session:
         try:
@@ -254,7 +263,6 @@ async def run_matching_for_closed_sessions(bot: Bot) -> None:
             registration_repo = RegistrationRepository(db_session)
             match_repo = MatchRepository(db_session)
             topic_repo = TopicRepository(db_session)
-            user_repo = UserRepository(db_session)
 
             sessions_to_match = await session_repo.get_closed_sessions_ready_for_matching(
                 datetime.now(UTC)
@@ -270,7 +278,11 @@ async def run_matching_for_closed_sessions(bot: Bot) -> None:
 
                 logger.info(f"Running matching for session {sess.id}")
                 matches_created, unmatched_ids = await create_matches_for_session(
-                    sess.id, session_repo, registration_repo, match_repo, topic_repo
+                    sess.id,
+                    session_repo,
+                    registration_repo,
+                    match_repo,
+                    topic_repo,
                 )
                 logger.info(
                     f"Session {sess.id}: Created {matches_created} matches."
@@ -279,17 +291,20 @@ async def run_matching_for_closed_sessions(bot: Bot) -> None:
 
                 await db_session.commit()
 
-                if matches_created > 0:
-                    logger.info(f"Posting matches to group for session {sess.id}...")
-                    success = await notify_all_matches_for_session(
-                        bot, sess.id, match_repo, user_repo, unmatched_ids
+                results.append(
+                    SessionMatchResult(
+                        session_id=sess.id,
+                        matches_created=matches_created,
+                        unmatched_user_ids=unmatched_ids,
                     )
-                    logger.info(f"Posted matches for session {sess.id}: {success}")
+                )
 
         except SQLAlchemyError as e:
             logger.exception("Error in run_matching_for_closed_sessions", exc_info=e)
             await db_session.rollback()
             raise
+
+    return results
 
 
 async def close_registration_for_expired_sessions() -> None:

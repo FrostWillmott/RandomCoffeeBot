@@ -9,6 +9,7 @@ from app.models.enums import SessionStatus
 from app.models.session import Session
 from app.models.topic import Topic
 from app.services.matching import (
+    SessionMatchResult,
     close_registration_for_expired_sessions,
     create_matches_for_session,
     run_matching_for_closed_sessions,
@@ -142,11 +143,11 @@ async def test_create_matches_for_session_not_found():
 
 
 @pytest.mark.asyncio
-async def test_run_matching_commits_before_notifications():
-    """Test that run_matching_for_closed_sessions commits before notifications.
+async def test_run_matching_returns_results():
+    """Test that run_matching_for_closed_sessions returns match results.
 
-    Verifies the fix for transaction isolation issue where notifications
-    couldn't see matches created in the same transaction before commit.
+    Verifies matching is decoupled from notifications — the function
+    returns SessionMatchResult objects for the caller to handle.
     """
     now = datetime.now(UTC)
     test_session = Session(
@@ -157,61 +158,37 @@ async def test_run_matching_commits_before_notifications():
         created_at=now,
     )
 
-    mock_bot = AsyncMock()
-    mock_bot.send_message = AsyncMock(return_value=MagicMock())
-
     with patch("app.services.matching.async_session_maker") as mock_session_maker:
         with patch(
             "app.services.matching.create_matches_for_session"
         ) as mock_create_matches:
-            with patch(
-                "app.services.notifications.notify_all_matches_for_session"
-            ) as mock_notify:
-                mock_session = AsyncMock()
+            mock_session = AsyncMock()
 
-                mock_query_result = MagicMock()
-                mock_query_result.scalars.return_value.all.return_value = [test_session]
+            mock_query_result = MagicMock()
+            mock_query_result.scalars.return_value.all.return_value = [test_session]
 
-                mock_update_result = MagicMock()
-                mock_update_result.rowcount = 1
+            mock_update_result = MagicMock()
+            mock_update_result.rowcount = 1
 
-                mock_session.execute = AsyncMock(
-                    side_effect=[mock_query_result, mock_update_result]
-                )
-                mock_session.commit = AsyncMock()
-                mock_session.rollback = AsyncMock()
-                mock_session.flush = AsyncMock()
+            mock_session.execute = AsyncMock(
+                side_effect=[mock_query_result, mock_update_result]
+            )
+            mock_session.commit = AsyncMock()
+            mock_session.rollback = AsyncMock()
+            mock_session.flush = AsyncMock()
 
-                mock_session_maker.return_value.__aenter__.return_value = mock_session
-                mock_session_maker.return_value.__aexit__.return_value = None
+            mock_session_maker.return_value.__aenter__.return_value = mock_session
+            mock_session_maker.return_value.__aexit__.return_value = None
 
-                mock_create_matches.return_value = (1, [])
-                mock_notify.return_value = True
+            mock_create_matches.return_value = (3, [42])
 
-                call_order = []
+            results = await run_matching_for_closed_sessions()
 
-                def track_commit(*args, **kwargs):
-                    call_order.append("commit")
-                    return AsyncMock()
+            assert len(results) == 1
+            assert isinstance(results[0], SessionMatchResult)
+            assert results[0].session_id == 1
+            assert results[0].matches_created == 3
+            assert results[0].unmatched_user_ids == [42]
 
-                def track_notify(*args, **kwargs):
-                    call_order.append("notify")
-                    return AsyncMock(return_value=True)
-
-                mock_session.commit.side_effect = track_commit
-                mock_notify.side_effect = track_notify
-
-                await run_matching_for_closed_sessions(mock_bot)
-
-                assert "commit" in call_order, "session.commit() should be called"
-                assert "notify" in call_order, (
-                    "notify_all_matches_for_session() should be called"
-                )
-                commit_index = call_order.index("commit")
-                notify_index = call_order.index("notify")
-                assert commit_index < notify_index, (
-                    "session.commit() should be called BEFORE "
-                    "notify_all_matches_for_session()"
-                )
-
-                mock_create_matches.assert_called_once()
+            mock_session.commit.assert_called_once()
+            mock_create_matches.assert_called_once()
