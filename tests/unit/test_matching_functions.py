@@ -12,6 +12,7 @@ from app.repositories.match import MatchRepository
 from app.repositories.topic import TopicRepository
 from app.services.matching import (
     close_registration_for_expired_sessions,
+    create_matches_for_session,
     run_matching_for_closed_sessions,
     select_topic_for_users,
 )
@@ -42,11 +43,9 @@ async def test_select_topic_for_users_with_session():
     mock_match_repo = AsyncMock(spec=MatchRepository)
     mock_match_repo.get_topic_ids_used_by_users.return_value = set()
 
-    with patch("app.services.matching.TopicRepository", return_value=mock_topic_repo):
-        with patch("app.services.matching.MatchRepository", return_value=mock_match_repo):
-            result = await select_topic_for_users(
-                mock_topic_repo, mock_match_repo, user1_id, user2_id
-            )
+    result = await select_topic_for_users(
+        mock_topic_repo, mock_match_repo, user1_id, user2_id
+    )
 
     assert result is not None
     assert result.id == topic.id
@@ -76,7 +75,6 @@ async def test_select_topic_for_users_no_topics():
 @pytest.mark.asyncio
 async def test_close_registration_for_expired_sessions():
     """Test closing registration for expired sessions."""
-
     now = datetime.now(UTC)
     expired_date = now - timedelta(days=1)
     future_date = now + timedelta(days=1)
@@ -132,23 +130,23 @@ async def test_create_matches_for_session_with_session():
     """Test create_matches_for_session with the provided session."""
     session_id = 10001
 
-    with patch("app.services.matching._create_matches_logic") as mock_create_logic:
-        mock_create_logic.return_value = (2, [])
+    with patch("app.services.matching.SessionRepository") as mock_session_repo_class:
+        mock_session_repo = AsyncMock()
+        mock_session_repo.get_by_id.return_value = None
+        mock_session_repo_class.return_value = mock_session_repo
 
         mock_db_session = AsyncMock()
-        from app.services.matching import create_matches_for_session
 
         result = await create_matches_for_session(session_id, db_session=mock_db_session)
 
-        assert result == (2, [])
-        mock_create_logic.assert_called_once_with(mock_db_session, session_id)
+        assert result == (0, [])
 
 
 @pytest.mark.asyncio
 async def test_run_matching_commits_before_notifications():
     """Test that run_matching_for_closed_sessions commits before notifications.
 
-    This test verifies the fix for transaction isolation issue where notifications
+    Verifies the fix for transaction isolation issue where notifications
     couldn't see matches created in the same transaction before commit.
     """
     now = datetime.now(UTC)
@@ -172,11 +170,18 @@ async def test_run_matching_commits_before_notifications():
             ) as mock_notify:
                 mock_session = AsyncMock()
 
-                mock_result = MagicMock()
-                mock_result.scalars.return_value.all.return_value = [test_session]
-                mock_session.execute = AsyncMock(return_value=mock_result)
+                mock_query_result = MagicMock()
+                mock_query_result.scalars.return_value.all.return_value = [test_session]
+
+                mock_update_result = MagicMock()
+                mock_update_result.rowcount = 1
+
+                mock_session.execute = AsyncMock(
+                    side_effect=[mock_query_result, mock_update_result]
+                )
                 mock_session.commit = AsyncMock()
                 mock_session.rollback = AsyncMock()
+                mock_session.flush = AsyncMock()
 
                 mock_session_maker.return_value.__aenter__.return_value = mock_session
                 mock_session_maker.return_value.__aexit__.return_value = None
@@ -211,4 +216,6 @@ async def test_run_matching_commits_before_notifications():
                 )
 
                 mock_create_matches.assert_called_once()
-                mock_notify.assert_called_once_with(mock_bot, test_session.id, [])
+                mock_notify.assert_called_once_with(
+                    mock_bot, test_session.id, mock_session, []
+                )

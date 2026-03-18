@@ -77,41 +77,16 @@ async def select_topic_for_users(
 
 
 async def create_matches_for_session(
-    session_id: int, db_session: AsyncSession | None = None
+    session_id: int, db_session: AsyncSession
 ) -> tuple[int, list[int]]:
     """Create random matches for a session.
 
     Args:
         session_id: Session ID
-        db_session: Optional database session
+        db_session: Database session (caller manages transaction).
 
     Returns:
-        Tuple of (number of matches created, list of unmatched user_ids)
-    """
-    if db_session is None:
-        async with async_session_maker() as session:
-            try:
-                result = await _create_matches_logic(session, session_id)
-                await session.commit()
-                return result
-            except SQLAlchemyError:
-                await session.rollback()
-                raise
-    else:
-        return await _create_matches_logic(db_session, session_id)
-
-
-async def _create_matches_logic(
-    db_session: AsyncSession, session_id: int
-) -> tuple[int, list[int]]:
-    """Core logic for creating matches.
-
-    Args:
-        db_session: Database session
-        session_id: Session ID
-
-    Returns:
-        Tuple of (matches created, unmatched user IDs)
+        Tuple of (matches created, unmatched user IDs).
     """
     session_repo = SessionRepository(db_session)
     registration_repo = RegistrationRepository(db_session)
@@ -301,7 +276,7 @@ async def run_matching_for_closed_sessions(bot: Bot) -> None:
                 if matches_created > 0:
                     logger.info(f"Posting matches to group for session {sess.id}...")
                     success = await notify_all_matches_for_session(
-                        bot, sess.id, unmatched_ids
+                        bot, sess.id, session, unmatched_ids
                     )
                     logger.info(f"Posted matches for session {sess.id}: {success}")
 

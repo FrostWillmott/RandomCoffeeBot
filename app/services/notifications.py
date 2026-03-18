@@ -5,12 +5,10 @@ from typing import Any
 
 from aiogram import Bot
 from aiogram.exceptions import TelegramAPIError, TelegramForbiddenError
-from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.constants import SEND_PERSONAL_NOTIFICATIONS
-from app.db.session import async_session_maker
 from app.models.match import Match
 from app.models.user import User
 from app.repositories.match import MatchRepository
@@ -20,39 +18,19 @@ from app.utils.retry import retry_telegram_api
 logger = logging.getLogger(__name__)
 
 
-async def mark_user_inactive(user_id: int, session: AsyncSession | None = None) -> None:
+async def mark_user_inactive(user_id: int, db_session: AsyncSession) -> None:
     """Mark the user as inactive in the database.
 
     Args:
         user_id: User ID to mark inactive
-        session: Optional database session
+        db_session: Database session (caller manages transaction).
     """
-    if session is None:
-        async with async_session_maker() as db_session:
-            try:
-                success = await _mark_user_inactive_logic(db_session, user_id)
-                if success:
-                    await db_session.commit()
-            except SQLAlchemyError as e:
-                logger.exception(f"Error marking user {user_id} inactive", exc_info=e)
-                await db_session.rollback()
-    else:
-        await _mark_user_inactive_logic(session, user_id)
-
-
-async def _mark_user_inactive_logic(session: AsyncSession, user_id: int) -> bool:
-    """Core logic for marking user inactive.
-
-    Returns:
-        True if the user was found and marked inactive, False otherwise
-    """
-    user_repo = UserRepository(session)
+    user_repo = UserRepository(db_session)
     success = await user_repo.mark_inactive(user_id)
     if not success:
         logger.warning(f"User {user_id} not found, cannot mark inactive")
     else:
         logger.info(f"Marked user {user_id} as inactive")
-    return success
 
 
 def _format_user_mention(user: User) -> str:
@@ -182,88 +160,91 @@ async def _send_personal_notification(bot: Bot, user: User, match: Match) -> boo
 
 
 async def notify_all_matches_for_session(
-    bot: Bot, session_id: int, unmatched_user_ids: list[int] | None = None
+    bot: Bot,
+    session_id: int,
+    db_session: AsyncSession,
+    unmatched_user_ids: list[int] | None = None,
 ) -> bool:
     """Post all matches to the group as a single message.
 
     Args:
         bot: Bot instance
         session_id: Session ID to notify about
+        db_session: Database session (caller manages transaction).
         unmatched_user_ids: List of user IDs who weren't matched
 
     Returns:
-        True if a message was sent successfully
+        True if a message was sent successfully.
     """
     settings = get_settings()
-    async with async_session_maker() as session:
-        try:
-            match_repo = MatchRepository(session)
-            user_repo = UserRepository(session)
+    try:
+        match_repo = MatchRepository(db_session)
+        user_repo = UserRepository(db_session)
 
-            matches = await match_repo.get_by_session_id_with_relations(session_id)
+        matches = await match_repo.get_by_session_id_with_relations(session_id)
 
-            unmatched_users: list[User] | None = None
-            if unmatched_user_ids:
-                unmatched_users = []
-                for user_id in unmatched_user_ids:
-                    user = await user_repo.get_by_id(user_id)
-                    if user:
-                        unmatched_users.append(user)
+        unmatched_users: list[User] | None = None
+        if unmatched_user_ids:
+            unmatched_users = []
+            for user_id in unmatched_user_ids:
+                user = await user_repo.get_by_id(user_id)
+                if user:
+                    unmatched_users.append(user)
 
-            if not matches:
-                logger.warning(f"No matches found for session {session_id}")
-                return False
-
-            message_text = _build_matches_message(matches, unmatched_users)
-
-            await _send_message_with_retry(
-                bot,
-                chat_id=settings.channel_id,
-                text=message_text,
-                parse_mode="HTML",
-            )
-
-            logger.info(f"Posted {len(matches)} matches to group for session {session_id}")
-
-            if SEND_PERSONAL_NOTIFICATIONS:
-                personal_sent = 0
-                personal_failed = 0
-
-                for match in matches:
-                    if match.user1:
-                        if await _send_personal_notification(bot, match.user1, match):
-                            personal_sent += 1
-                        else:
-                            personal_failed += 1
-
-                    if match.user2:
-                        if await _send_personal_notification(bot, match.user2, match):
-                            personal_sent += 1
-                        else:
-                            personal_failed += 1
-
-                    if match.user3:
-                        if await _send_personal_notification(bot, match.user3, match):
-                            personal_sent += 1
-                        else:
-                            personal_failed += 1
-
-                logger.info(
-                    f"Sent {personal_sent} personal notifications for session {session_id}"
-                    f" ({personal_failed} failed)"
-                )
-
-            return True
-
-        except TelegramAPIError as e:
-            logger.exception(
-                f"Failed to post matches for session {session_id}",
-                exc_info=e,
-            )
+        if not matches:
+            logger.warning(f"No matches found for session {session_id}")
             return False
-        except Exception as e:
-            logger.exception(
-                f"Failed to post matches for session {session_id}",
-                exc_info=e,
+
+        message_text = _build_matches_message(matches, unmatched_users)
+
+        await _send_message_with_retry(
+            bot,
+            chat_id=settings.channel_id,
+            text=message_text,
+            parse_mode="HTML",
+        )
+
+        logger.info(f"Posted {len(matches)} matches to group for session {session_id}")
+
+        if SEND_PERSONAL_NOTIFICATIONS:
+            personal_sent = 0
+            personal_failed = 0
+
+            for match in matches:
+                if match.user1:
+                    if await _send_personal_notification(bot, match.user1, match):
+                        personal_sent += 1
+                    else:
+                        personal_failed += 1
+
+                if match.user2:
+                    if await _send_personal_notification(bot, match.user2, match):
+                        personal_sent += 1
+                    else:
+                        personal_failed += 1
+
+                if match.user3:
+                    if await _send_personal_notification(bot, match.user3, match):
+                        personal_sent += 1
+                    else:
+                        personal_failed += 1
+
+            logger.info(
+                f"Sent {personal_sent} personal notifications for session {session_id}"
+                f" ({personal_failed} failed)"
             )
-            return False
+
+        return True
+
+    except TelegramAPIError as e:
+        logger.exception(
+            f"Failed to post matches for session {session_id}",
+            exc_info=e,
+        )
+        return False
+    except Exception as e:
+        logger.exception(
+            f"Failed to post matches for session {session_id}",
+            exc_info=e,
+        )
+        return False
