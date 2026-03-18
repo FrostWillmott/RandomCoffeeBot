@@ -8,7 +8,7 @@ import sys
 import aiofiles
 
 from app.bot import get_bot, get_dispatcher
-from app.bot.middlewares.throttling import throttling_middleware
+from app.bot.middlewares.throttling import ThrottlingMiddleware
 from app.config import get_settings
 from app.db.session import engine
 from app.scheduler import setup_scheduler, shutdown_scheduler, start_scheduler
@@ -33,7 +33,13 @@ def setup_signal_handlers() -> None:
 
 
 async def shutdown_services(
-    scheduler, bot, dp, heartbeat_task, polling_task=None, polling_error=None
+    scheduler,
+    bot,
+    dp,
+    heartbeat_task,
+    throttling_mw: ThrottlingMiddleware,
+    polling_task=None,
+    polling_error=None,
 ):
     """Cleanly shut down all running services."""
     logger.info("Shutting down services...")
@@ -57,8 +63,8 @@ async def shutdown_services(
     await shutdown_scheduler(scheduler)
 
     try:
-        await throttling_middleware.close()
-    except Exception as e:  # Catch all unexpected errors for logging
+        await throttling_mw.close()
+    except Exception as e:
         logger.warning(f"Error closing throttling middleware Redis client: {e}")
 
     try:
@@ -81,7 +87,7 @@ async def main():
     setup_signal_handlers()
 
     bot = await get_bot()
-    dp = get_dispatcher()
+    dp, throttling_mw = get_dispatcher()
     scheduler = setup_scheduler(bot)
     await start_scheduler(scheduler)
 
@@ -114,7 +120,13 @@ async def main():
                 task.cancel()
 
         await shutdown_services(
-            scheduler, bot, dp, heartbeat_task, polling_task, polling_error
+            scheduler,
+            bot,
+            dp,
+            heartbeat_task,
+            throttling_mw,
+            polling_task,
+            polling_error,
         )
 
 
