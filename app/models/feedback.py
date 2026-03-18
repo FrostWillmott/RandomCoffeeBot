@@ -5,7 +5,14 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, ForeignKey, Integer, Text
+from sqlalchemy import (
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Integer,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -19,6 +26,10 @@ class Feedback(Base):
     """User feedback after a Random Coffee meeting."""
 
     __tablename__ = "feedbacks"
+    __table_args__ = (
+        UniqueConstraint("match_id", "user_id", name="uq_feedback_match_user"),
+        CheckConstraint("rating >= 1 AND rating <= 5", name="ck_feedback_rating_range"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     match_id: Mapped[int] = mapped_column(

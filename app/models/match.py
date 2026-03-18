@@ -47,7 +47,7 @@ class Match(Base):
     status: Mapped[str] = mapped_column(
         String(50), default=MatchStatus.CREATED, nullable=False, index=True
     )
-    meeting_time: Mapped[datetime | None] = mapped_column(DateTime)
+    meeting_time: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     meeting_format: Mapped[str | None] = mapped_column(String(50))
     notes: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(
@@ -55,7 +55,7 @@ class Match(Base):
         default=lambda: datetime.now(UTC),
         nullable=False,
     )
-    confirmed_at: Mapped[datetime | None] = mapped_column(DateTime)
+    confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     session: Mapped[Session] = relationship(back_populates="matches")
     user1: Mapped[User] = relationship(
