@@ -1,6 +1,38 @@
 # Random Coffee Bot
 
-A Telegram bot that automatically organizes random coffee meetings between community members. The bot creates pairs/triplets, assigns discussion topics, manages registrations, and sends notifications - helping people connect and learn together.
+[![CI](https://github.com/FrostWillmott/RandomCoffeeBot/actions/workflows/ci.yml/badge.svg)](https://github.com/FrostWillmott/RandomCoffeeBot/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/FrostWillmott/RandomCoffeeBot/branch/master/graph/badge.svg)](https://codecov.io/gh/FrostWillmott/RandomCoffeeBot)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/downloads/)
+[![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
+A Telegram bot that automatically organizes random coffee meetings between community members. The bot creates pairs/triplets, assigns discussion topics, manages registrations, and sends notifications — helping people connect and learn together.
+
+### Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Runtime | Python 3.12+, asyncio |
+| Bot Framework | aiogram 3 |
+| Database | PostgreSQL 16 + SQLAlchemy 2 (async) |
+| State Storage | Redis (FSM persistence) |
+| Scheduling | APScheduler |
+| Migrations | Alembic |
+| Testing | pytest + pytest-asyncio, 81%+ coverage |
+| CI/CD | GitHub Actions, Docker, Codecov |
+| Code Quality | ruff, mypy, pre-commit |
+
+### Architecture Decisions
+
+1. **Protocol-based Dependency Injection** — services accept repository protocols (`SessionRepositoryProtocol`, etc.) instead of concrete classes. This decouples business logic from data access, makes unit testing trivial with `AsyncMock`, and follows the Dependency Inversion Principle without a DI container.
+
+2. **Matching decoupled from notifications** — `run_matching_for_closed_sessions()` returns pure data (`SessionMatchResult`), and the scheduler orchestrates notification dispatch separately. This keeps the matching algorithm free of Telegram API dependencies, simplifying testing and future transport changes.
+
+3. **Atomic session claiming with `MATCHING` status** — before creating matches, a session transitions `CLOSED → MATCHING` via an atomic `UPDATE ... WHERE status = 'CLOSED'`. Only one worker gets `rowcount > 0`, preventing duplicate matches in concurrent environments without distributed locks.
+
+4. **Explicit session management** — services never create their own database sessions. The caller (handler middleware or scheduler entry point) owns the session lifecycle, giving full control over transaction boundaries and commit/rollback semantics.
+
+5. **Layered architecture** — Handlers → Services → Repositories → Models. Each layer depends only on abstractions of the layer below. Domain logic in services is framework-agnostic and sync-compatible by design.
 
 ## Quick Start
 
