@@ -39,11 +39,8 @@ from app.db.session import async_session_maker, engine
 from app.models.match import Match
 from app.models.registration import Registration
 from app.models.session import Session
-from app.scheduler import create_and_announce_session
-from app.services.matching import (
-    close_registration_for_expired_sessions,
-    run_matching_for_closed_sessions,
-)
+from app.scheduler import create_and_announce_session, match_and_notify
+from app.services.matching import close_registration_for_expired_sessions
 from app.utils.logging import setup_logging
 
 
@@ -76,16 +73,16 @@ async def run_close_registrations() -> None:
 
 
 async def run_matching(bot) -> None:
-    """Run run_matching_for_closed_sessions task."""
+    """Run match_and_notify task."""
     logger = logging.getLogger(__name__)
     logger.info("=" * 60)
-    logger.info("Running: run_matching_for_closed_sessions")
+    logger.info("Running: match_and_notify")
     logger.info("=" * 60)
     try:
-        await run_matching_for_closed_sessions(bot)
-        logger.info("✓ run_matching_for_closed_sessions completed successfully")
+        await match_and_notify(bot)
+        logger.info("✓ match_and_notify completed successfully")
     except Exception as e:  # Catch all unexpected errors for logging in a test script
-        logger.exception("✗ run_matching_for_closed_sessions failed", exc_info=e)
+        logger.exception("✗ match_and_notify failed", exc_info=e)
         raise
 
 
@@ -116,13 +113,13 @@ async def run_reset() -> None:
             match_result = await db_session.execute(
                 delete(Match).where(Match.session_id == session_id)
             )
-            matches_deleted = match_result.rowcount
+            matches_deleted = match_result.rowcount  # type: ignore[attr-defined]
 
             # Delete registrations for this session
             reg_result = await db_session.execute(
                 delete(Registration).where(Registration.session_id == session_id)
             )
-            registrations_deleted = reg_result.rowcount
+            registrations_deleted = reg_result.rowcount  # type: ignore[attr-defined]
 
             # Delete the session itself
             await db_session.execute(delete(Session).where(Session.id == session_id))

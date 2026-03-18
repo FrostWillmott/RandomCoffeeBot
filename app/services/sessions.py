@@ -3,46 +3,25 @@
 import logging
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.constants import REGISTRATION_DURATION_DAYS
-from app.db.session import async_session_maker
 from app.models.enums import SessionStatus
 from app.models.session import Session
-from app.repositories.session import SessionRepository
+from app.repositories.protocols import SessionRepositoryProtocol
 
 logger = logging.getLogger(__name__)
 
 
 async def create_weekly_session(
-    db_session: AsyncSession | None = None,
-) -> Session | None:
+    session_repo: SessionRepositoryProtocol,
+) -> Session:
     """Create a new Random Coffee session for the upcoming week.
 
     Args:
-        db_session: Optional database session. If not provided, creates a new one.
+        session_repo: Session repository (caller creates from db session).
 
     Returns:
-        Created or existing session
+        Created or existing session.
     """
-    if db_session is None:
-        async with async_session_maker() as session:
-            try:
-                result = await _create_weekly_session_logic(session)
-                await session.commit()
-                return result
-            except SQLAlchemyError:
-                await session.rollback()
-                raise
-    else:
-        return await _create_weekly_session_logic(db_session)
-
-
-async def _create_weekly_session_logic(db_session: AsyncSession) -> Session:
-    """Core logic for creating a weekly session."""
-    session_repo = SessionRepository(db_session)
-
     now = datetime.now(UTC)
     days_ahead = 4 - now.weekday()
     if days_ahead <= 0:
@@ -54,7 +33,6 @@ async def _create_weekly_session_logic(db_session: AsyncSession) -> Session:
 
     registration_deadline = session_date - timedelta(days=REGISTRATION_DURATION_DAYS)
 
-    # Close any old OPEN sessions (from previous weeks) before creating a new one
     old_open_sessions = await session_repo.get_sessions_by_status(SessionStatus.OPEN)
     for old_session in old_open_sessions:
         if old_session.date < session_date:

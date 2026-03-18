@@ -24,9 +24,9 @@ services:
     container_name: randomcoffee-db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER must be set in .env}
       POSTGRES_DB: ${POSTGRES_DB:-randomcoffee}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -35,7 +35,7 @@ services:
     networks:
       - randomcoffee-network
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-randomcoffee}" ]
+      test: [ "CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB:-randomcoffee}" ]
       interval: 10s
       timeout: 5s
       retries: 5

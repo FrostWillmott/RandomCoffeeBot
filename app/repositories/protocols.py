@@ -81,6 +81,10 @@ class SessionRepositoryProtocol(Protocol):
         """Get closed sessions ready for matching."""
         ...
 
+    async def claim_for_matching(self, session_id: int) -> bool:
+        """Atomically transition session from CLOSED to MATCHING."""
+        ...
+
     async def get_open_session_by_announcement(self, message_id: int) -> "Session | None":
         """Get open session by announcement message ID."""
         ...

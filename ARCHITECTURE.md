@@ -44,15 +44,15 @@ sequenceDiagram
     participant User2
 
     Scheduler->>MatchingService: run_matching_for_closed_sessions()
-    MatchingService->>DB: Get closed sessions
-    DB-->>MatchingService: Sessions
+    MatchingService->>DB: claim_for_matching() (CLOSED → MATCHING)
     MatchingService->>DB: Get registrations
     DB-->>MatchingService: Registrations
     MatchingService->>DB: Get previous matches
     DB-->>MatchingService: Past matches
     MatchingService->>MatchingService: Create pairs (avoid duplicates)
-    MatchingService->>DB: INSERT matches
-    MatchingService->>NotificationService: notify_all_matches_for_session()
+    MatchingService->>DB: INSERT matches + COMMIT
+    MatchingService-->>Scheduler: SessionMatchResult[]
+    Scheduler->>NotificationService: notify_all_matches_for_session()
     NotificationService->>User1: Send match notification
     NotificationService->>User2: Send match notification
 ```
@@ -81,6 +81,10 @@ graph TB
         AnnouncementService[Announcement Service]
     end
 
+    subgraph "Repository Layer"
+        Repos[Repository Protocols]
+    end
+
     subgraph "Data Layer"
         DB[(PostgreSQL)]
         Redis[(Redis FSM)]
@@ -97,8 +101,13 @@ graph TB
     Handler-->NotificationService
     Scheduler-->SessionService
     Scheduler-->MatchingService
+    Scheduler-->NotificationService
     Scheduler-->AnnouncementService
-    Service-->DB
+    SessionService-->Repos
+    MatchingService-->Repos
+    NotificationService-->Repos
+    AnnouncementService-->Repos
+    Repos-->DB
     Bot-->Redis
 ```
 
@@ -132,7 +141,7 @@ erDiagram
         int id PK
         datetime date
         datetime registration_deadline
-        string status
+        string status "OPEN|CLOSED|MATCHING|MATCHED|COMPLETED"
         int announcement_message_id
         datetime created_at
     }
@@ -205,7 +214,10 @@ async def start_registration(
 
 ### 2. Services (`app/services/`)
 
-Бизнес-логика приложения.
+Бизнес-логика приложения. Сервисы — это функции, которые принимают
+репозитории через протоколы (dependency injection). Конкретные
+реализации репозиториев создаются на уровне вызывающего кода
+(handlers, scheduler).
 
 **Пример использования:**
 
@@ -213,18 +225,28 @@ async def start_registration(
 # app/services/matching.py
 async def create_matches_for_session(
     session_id: int,
-    db_session: AsyncSession | None = None
+    session_repo: SessionRepositoryProtocol,
+    registration_repo: RegistrationRepositoryProtocol,
+    match_repo: MatchRepositoryProtocol,
+    topic_repo: TopicRepositoryProtocol,
 ) -> tuple[int, list[int]]:
-    """Create random matches for a session.
+    """Create random matches for a session."""
+    ...
+```
 
-    Returns:
-        Tuple of (matches_created, unmatched_user_ids)
-    """
-    # Получить регистрации
-    # Получить предыдущие матчи
-    # Создать пары (избегая дубликатов)
-    # Назначить темы
-    # Вернуть результат
+**Вызов из scheduler (создание репозиториев):**
+
+```python
+async with async_session_maker() as db_session:
+    session_repo = SessionRepository(db_session)
+    registration_repo = RegistrationRepository(db_session)
+    match_repo = MatchRepository(db_session)
+    topic_repo = TopicRepository(db_session)
+
+    result = await create_matches_for_session(
+        session_id, session_repo, registration_repo,
+        match_repo, topic_repo,
+    )
 ```
 
 ### 3. Models (`app/models/`)
@@ -251,9 +273,8 @@ class Match(Base):
 
 Промежуточное ПО для обработки запросов.
 
-**Примеры:**
-- `DatabaseMiddleware` - предоставляет сессию БД для каждого запроса
-- `ThrottlingMiddleware` - ограничивает частоту запросов
+- `DatabaseMiddleware` — предоставляет `AsyncSession` для каждого запроса
+- `ThrottlingMiddleware` — ограничивает частоту запросов (создается в `get_dispatcher()` для явного управления жизненным циклом)
 
 
 ## Алгоритм матчинга
@@ -329,27 +350,32 @@ LOG_FORMAT=text
 ### Расписание
 
 ```python
-# Каждый понедельник в 10:00 UTC
+# Каждый понедельник в 10:00 UTC — создание сессии + анонс
 scheduler.add_job(
     create_and_announce_session,
     CronTrigger(day_of_week="mon", hour=10, minute=0, timezone="UTC"),
     id="create_weekly_session"
 )
 
-# Каждый час в :00
+# Каждый час в :00 — закрытие просроченных регистраций
 scheduler.add_job(
     close_registration_for_expired_sessions,
     CronTrigger(minute=0, timezone="UTC"),
     id="close_registrations"
 )
 
-# Каждый час в :15
+# Каждый час в :15 — матчинг + уведомления (разделены)
 scheduler.add_job(
-    run_matching_for_closed_sessions,
+    match_and_notify,
     CronTrigger(minute=15, timezone="UTC"),
     id="run_matching"
 )
 ```
+
+Scheduler выступает оркестратором: `match_and_notify` вызывает
+`run_matching_for_closed_sessions()` (чистая логика данных), затем
+отправляет уведомления через `notify_all_matches_for_session()`.
+Это позволяет сервису матчинга не зависеть от Telegram API.
 
 ## Безопасность
 
@@ -438,28 +464,46 @@ pytest tests/unit/test_matching.py
 ### Создание сессии
 
 ```python
-from app.services.sessions import create_weekly_session
+from app.repositories.session import SessionRepository
 
-session = await create_weekly_session()
-# Создает сессию на следующую пятницу в 10:00 UTC
+session_repo = SessionRepository(db_session)
+session = await create_weekly_session(session_repo)
 ```
 
 ### Создание матчей
 
 ```python
-from app.services.matching import create_matches_for_session
+from app.repositories.match import MatchRepository
+from app.repositories.registration import RegistrationRepository
+from app.repositories.session import SessionRepository
+from app.repositories.topic import TopicRepository
 
-matches_count, unmatched = await create_matches_for_session(session_id=1)
-# Возвращает (количество_матчей, [список_несовмещенных_пользователей])
+session_repo = SessionRepository(db_session)
+registration_repo = RegistrationRepository(db_session)
+match_repo = MatchRepository(db_session)
+topic_repo = TopicRepository(db_session)
+
+matches_count, unmatched = await create_matches_for_session(
+    session_id=1,
+    session_repo=session_repo,
+    registration_repo=registration_repo,
+    match_repo=match_repo,
+    topic_repo=topic_repo,
+)
 ```
 
 ### Отправка уведомлений
 
 ```python
-from app.services.notifications import send_match_notification
+from app.repositories.match import MatchRepository
+from app.repositories.user import UserRepository
 
-success = await send_match_notification(bot, match_id=1)
-# Отправляет уведомление обоим пользователям в паре
+match_repo = MatchRepository(db_session)
+user_repo = UserRepository(db_session)
+
+success = await notify_all_matches_for_session(
+    bot, session_id=1, match_repo=match_repo, user_repo=user_repo
+)
 ```
 
 ## Расширение функциональности

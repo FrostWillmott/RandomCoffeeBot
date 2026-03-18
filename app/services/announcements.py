@@ -5,12 +5,10 @@ from typing import Any
 
 from aiogram import Bot
 from aiogram.exceptions import TelegramAPIError
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
-from app.db.session import async_session_maker
 from app.models.session import Session
-from app.repositories.session import SessionRepository
+from app.repositories.protocols import SessionRepositoryProtocol
 from app.utils.retry import retry_telegram_api
 
 logger = logging.getLogger(__name__)
@@ -18,30 +16,22 @@ logger = logging.getLogger(__name__)
 
 @retry_telegram_api(max_attempts=3, initial_wait=1.0, max_wait=30.0)
 async def _send_announcement_with_retry(bot: Bot, **kwargs: Any) -> Any:
-    """Send an announcement message with retry logic.
-
-    Args:
-        bot: Bot instance
-        **kwargs: Arguments for bot.send_message
-
-    Returns:
-        Sent a message
-    """
+    """Send an announcement message with retry logic."""
     return await bot.send_message(**kwargs)
 
 
 async def post_session_announcement(
-    bot: Bot, session: Session, db_session: AsyncSession | None = None
+    bot: Bot, session: Session, session_repo: SessionRepositoryProtocol
 ) -> bool:
     """Post the Random Coffee session announcement to the group.
 
     Args:
         bot: Bot instance
         session: Session to announce
-        db_session: Optional database session
+        session_repo: Session repository (caller creates from db session).
 
     Returns:
-        True if an announcement was posted successfully
+        True if an announcement was posted successfully.
     """
     settings = get_settings()
     try:
@@ -77,16 +67,8 @@ async def post_session_announcement(
             parse_mode="HTML",
         )
 
-        if db_session is None:
-            async with async_session_maker() as new_session:
-                session_repo = SessionRepository(new_session)
-                session.announcement_message_id = message.message_id
-                await session_repo.update(session)
-                await new_session.commit()
-        else:
-            session_repo = SessionRepository(db_session)
-            session.announcement_message_id = message.message_id
-            await session_repo.update(session)
+        session.announcement_message_id = message.message_id
+        await session_repo.update(session)
 
         logger.info(
             f"Posted announcement for session {session.id} "

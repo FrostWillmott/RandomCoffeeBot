@@ -13,7 +13,7 @@ from app.bot.handlers import (
     registration,
     start,
 )
-from app.bot.middlewares import DatabaseMiddleware, throttling_middleware
+from app.bot.middlewares import DatabaseMiddleware, ThrottlingMiddleware
 from app.config import get_settings
 
 
@@ -26,8 +26,13 @@ async def get_bot() -> Bot:
     )
 
 
-def get_dispatcher() -> Dispatcher:
-    """Create and configure dispatcher."""
+def get_dispatcher() -> tuple[Dispatcher, ThrottlingMiddleware]:
+    """Create and configure dispatcher with middlewares.
+
+    Returns:
+        Tuple of (dispatcher, throttling_middleware) so the caller
+        can manage the middleware lifecycle.
+    """
     settings = get_settings()
     storage = RedisStorage.from_url(
         settings.redis_url,
@@ -35,7 +40,8 @@ def get_dispatcher() -> Dispatcher:
     )
     dp = Dispatcher(storage=storage)
 
-    dp.message.middleware(throttling_middleware)
+    throttling_mw = ThrottlingMiddleware()
+    dp.message.middleware(throttling_mw)
     dp.update.middleware(DatabaseMiddleware())
 
     dp.include_router(start.router)
@@ -45,7 +51,7 @@ def get_dispatcher() -> Dispatcher:
     dp.include_router(feedback.router)
     dp.include_router(commands.router)
 
-    return dp
+    return dp, throttling_mw
 
 
 __all__ = ["get_bot", "get_dispatcher"]

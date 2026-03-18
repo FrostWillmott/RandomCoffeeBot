@@ -7,6 +7,7 @@ from apscheduler.schedulers.asyncio import (
     AsyncIOScheduler,  # type: ignore[import-untyped]
 )
 from apscheduler.triggers.cron import CronTrigger
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.constants import (
     MATCHING_CHECK_MINUTE,
@@ -15,12 +16,17 @@ from app.constants import (
     SESSION_CREATION_HOUR,
     SESSION_CREATION_MINUTE,
 )
+from app.db.session import async_session_maker
 from app.models.enums import SessionStatus
+from app.repositories.match import MatchRepository
+from app.repositories.session import SessionRepository
+from app.repositories.user import UserRepository
 from app.services.announcements import post_session_announcement
 from app.services.matching import (
     close_registration_for_expired_sessions,
     run_matching_for_closed_sessions,
 )
+from app.services.notifications import notify_all_matches_for_session
 from app.services.sessions import create_weekly_session
 
 logger = logging.getLogger(__name__)
@@ -29,32 +35,60 @@ logger = logging.getLogger(__name__)
 async def create_and_announce_session(bot: Bot) -> None:
     """Create a new session and post an announcement to the channel."""
     try:
-        logger.info("Creating weekly session...")
-        session = await create_weekly_session()
+        async with async_session_maker() as db_session:
+            session_repo = SessionRepository(db_session)
 
-        if not session:
-            logger.warning("No new session created")
-            return
+            logger.info("Creating weekly session...")
+            session = await create_weekly_session(session_repo)
 
-        if session.status != SessionStatus.OPEN:
-            logger.warning(
-                f"Session {session.id} already exists with status '{session.status}'. "
-                "Skipping announcement. Use reset command to start fresh test."
-            )
-            return
+            if session.status != SessionStatus.OPEN:
+                logger.warning(
+                    f"Session {session.id} already exists with status "
+                    f"'{session.status}'. Skipping announcement."
+                )
+                return
 
-        logger.info(f"Posting announcement for session {session.id}...")
-        success = await post_session_announcement(bot, session)
-        if success:
-            logger.info("Session created and announced successfully")
-        else:
-            logger.error("Failed to post announcement")
+            logger.info(f"Posting announcement for session {session.id}...")
+            success = await post_session_announcement(bot, session, session_repo)
+            if success:
+                await db_session.commit()
+                logger.info("Session created and announced successfully")
+            else:
+                await db_session.rollback()
+                logger.error("Failed to post announcement")
 
-    except Exception as e:  # Catch all unexpected errors for logging in a background task
-        logger.exception(
-            "Error in create_and_announce_session",
-            exc_info=e,
-        )
+    except SQLAlchemyError as e:
+        logger.exception("Database error in create_and_announce_session", exc_info=e)
+    except Exception as e:
+        logger.exception("Error in create_and_announce_session", exc_info=e)
+
+
+async def match_and_notify(bot: Bot) -> None:
+    """Run matching for closed sessions, then send notifications.
+
+    Orchestrates matching (pure data) and notification (Telegram API)
+    as separate concerns.
+    """
+    try:
+        results = await run_matching_for_closed_sessions()
+
+        for result in results:
+            if result.matches_created > 0:
+                logger.info(f"Posting matches to group for session {result.session_id}...")
+                async with async_session_maker() as db_session:
+                    match_repo = MatchRepository(db_session)
+                    user_repo = UserRepository(db_session)
+                    success = await notify_all_matches_for_session(
+                        bot,
+                        result.session_id,
+                        match_repo,
+                        user_repo,
+                        result.unmatched_user_ids,
+                    )
+                logger.info(f"Posted matches for session {result.session_id}: {success}")
+
+    except Exception as e:
+        logger.exception("Error in match_and_notify", exc_info=e)
 
 
 def setup_scheduler(bot: Bot) -> AsyncIOScheduler:
@@ -82,7 +116,7 @@ def setup_scheduler(bot: Bot) -> AsyncIOScheduler:
     )
 
     scheduler.add_job(
-        run_matching_for_closed_sessions,
+        match_and_notify,
         CronTrigger(minute=MATCHING_CHECK_MINUTE, timezone="UTC"),
         args=[bot],
         id="run_matching",
@@ -107,11 +141,8 @@ async def start_scheduler(scheduler: AsyncIOScheduler):
     try:
         scheduler.start()
         logger.info("Scheduler started")
-    except Exception as e:  # Catch all unexpected errors for logging
-        logger.exception(
-            "Failed to start scheduler",
-            exc_info=e,
-        )
+    except Exception as e:
+        logger.exception("Failed to start scheduler", exc_info=e)
         raise
 
 
@@ -121,8 +152,5 @@ async def shutdown_scheduler(scheduler: AsyncIOScheduler):
         if scheduler.running:
             scheduler.shutdown(wait=True)
             logger.info("Scheduler stopped")
-    except Exception as e:  # Catch all unexpected errors for logging
-        logger.exception(
-            "Error stopping scheduler",
-            exc_info=e,
-        )
+    except Exception as e:
+        logger.exception("Error stopping scheduler", exc_info=e)

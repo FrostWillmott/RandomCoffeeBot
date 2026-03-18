@@ -2,17 +2,22 @@
 
 import logging
 import random
+from dataclasses import dataclass
 from datetime import UTC, datetime
 
-from aiogram import Bot
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import async_session_maker
 from app.models.enums import MatchStatus, SessionStatus
 from app.models.match import Match
 from app.models.topic import Topic
 from app.repositories.match import MatchRepository
+from app.repositories.protocols import (
+    MatchRepositoryProtocol,
+    RegistrationRepositoryProtocol,
+    SessionRepositoryProtocol,
+    TopicRepositoryProtocol,
+)
 from app.repositories.registration import RegistrationRepository
 from app.repositories.session import SessionRepository
 from app.repositories.topic import TopicRepository
@@ -20,24 +25,25 @@ from app.repositories.topic import TopicRepository
 logger = logging.getLogger(__name__)
 
 
+@dataclass
+class SessionMatchResult:
+    """Result of matching a single session."""
+
+    session_id: int
+    matches_created: int
+    unmatched_user_ids: list[int]
+
+
 async def get_previous_matches(
-    match_repo: MatchRepository, user_ids: list[int]
+    match_repo: MatchRepositoryProtocol, user_ids: list[int]
 ) -> set[tuple[int, int]]:
-    """Fetch all pairs of users who have matched before.
-
-    Args:
-        match_repo: Match repository
-        user_ids: List of user IDs
-
-    Returns:
-        Set of sorted user ID pairs
-    """
+    """Fetch all pairs of users who have matched before."""
     return await match_repo.get_previous_matches_for_users(user_ids)
 
 
 async def select_topic_for_users(
-    topic_repo: TopicRepository,
-    match_repo: MatchRepository,
+    topic_repo: TopicRepositoryProtocol,
+    match_repo: MatchRepositoryProtocol,
     *user_ids: int,
 ) -> Topic | None:
     """Select a topic that none of the users have discussed recently.
@@ -48,7 +54,7 @@ async def select_topic_for_users(
         *user_ids: Variable number of user IDs (2 for pairs, 3 for triplets)
 
     Returns:
-        Selected topic or None if no topics are available
+        Selected topic or None if no topics are available.
     """
     if not user_ids:
         logger.error("No user IDs provided for topic selection")
@@ -77,47 +83,24 @@ async def select_topic_for_users(
 
 
 async def create_matches_for_session(
-    session_id: int, db_session: AsyncSession | None = None
+    session_id: int,
+    session_repo: SessionRepositoryProtocol,
+    registration_repo: RegistrationRepositoryProtocol,
+    match_repo: MatchRepositoryProtocol,
+    topic_repo: TopicRepositoryProtocol,
 ) -> tuple[int, list[int]]:
     """Create random matches for a session.
 
     Args:
         session_id: Session ID
-        db_session: Optional database session
+        session_repo: Session repository
+        registration_repo: Registration repository
+        match_repo: Match repository
+        topic_repo: Topic repository
 
     Returns:
-        Tuple of (number of matches created, list of unmatched user_ids)
+        Tuple of (matches created, unmatched user IDs).
     """
-    if db_session is None:
-        async with async_session_maker() as session:
-            try:
-                result = await _create_matches_logic(session, session_id)
-                await session.commit()
-                return result
-            except SQLAlchemyError:
-                await session.rollback()
-                raise
-    else:
-        return await _create_matches_logic(db_session, session_id)
-
-
-async def _create_matches_logic(
-    db_session: AsyncSession, session_id: int
-) -> tuple[int, list[int]]:
-    """Core logic for creating matches.
-
-    Args:
-        db_session: Database session
-        session_id: Session ID
-
-    Returns:
-        Tuple of (matches created, unmatched user IDs)
-    """
-    session_repo = SessionRepository(db_session)
-    registration_repo = RegistrationRepository(db_session)
-    match_repo = MatchRepository(db_session)
-    topic_repo = TopicRepository(db_session)
-
     session_obj = await session_repo.get_by_id(session_id)
 
     if not session_obj:
@@ -197,6 +180,7 @@ async def _create_matches_logic(
                 created_at=datetime.now(UTC),
             )
             matches_to_create.append(match)
+
     while len(pool) >= 2:
         u1 = pool.pop()
 
@@ -264,54 +248,73 @@ async def _create_matches_logic(
     return matches_count, unmatched_ids
 
 
-async def run_matching_for_closed_sessions(bot: Bot) -> None:
+async def run_matching_for_closed_sessions() -> list[SessionMatchResult]:
     """Run matching for all sessions with closed registration.
 
-    Args:
-        bot: Bot instance for sending notifications
+    Scheduler entry point: creates db session and repositories,
+    then delegates to service functions. Returns results for the
+    caller (scheduler) to handle notifications separately.
     """
-    from app.services.notifications import notify_all_matches_for_session
+    results: list[SessionMatchResult] = []
 
-    async with async_session_maker() as session:
+    async with async_session_maker() as db_session:
         try:
-            session_repo = SessionRepository(session)
+            session_repo = SessionRepository(db_session)
+            registration_repo = RegistrationRepository(db_session)
+            match_repo = MatchRepository(db_session)
+            topic_repo = TopicRepository(db_session)
+
             sessions_to_match = await session_repo.get_closed_sessions_ready_for_matching(
                 datetime.now(UTC)
             )
 
             for sess in sessions_to_match:
+                claimed = await session_repo.claim_for_matching(sess.id)
+                if not claimed:
+                    logger.info(f"Session {sess.id} already being processed, skipping")
+                    continue
+
+                await db_session.flush()
+
                 logger.info(f"Running matching for session {sess.id}")
                 matches_created, unmatched_ids = await create_matches_for_session(
-                    sess.id, db_session=session
+                    sess.id,
+                    session_repo,
+                    registration_repo,
+                    match_repo,
+                    topic_repo,
                 )
                 logger.info(
                     f"Session {sess.id}: Created {matches_created} matches."
                     f" Unmatched: {len(unmatched_ids)}"
                 )
 
-                # Commit transaction before sending notifications so that
-                # notify_all_matches_for_session can see the created matches
-                # (it uses a new database session with its own transaction)
-                await session.commit()
+                await db_session.commit()
 
-                if matches_created > 0:
-                    logger.info(f"Posting matches to group for session {sess.id}...")
-                    success = await notify_all_matches_for_session(
-                        bot, sess.id, unmatched_ids
+                results.append(
+                    SessionMatchResult(
+                        session_id=sess.id,
+                        matches_created=matches_created,
+                        unmatched_user_ids=unmatched_ids,
                     )
-                    logger.info(f"Posted matches for session {sess.id}: {success}")
+                )
 
         except SQLAlchemyError as e:
             logger.exception("Error in run_matching_for_closed_sessions", exc_info=e)
-            await session.rollback()
+            await db_session.rollback()
             raise
+
+    return results
 
 
 async def close_registration_for_expired_sessions() -> None:
-    """Close registration for sessions past their deadline."""
-    async with async_session_maker() as session:
+    """Close registration for sessions past their deadline.
+
+    Scheduler entry point: creates db session and repository.
+    """
+    async with async_session_maker() as db_session:
         try:
-            session_repo = SessionRepository(session)
+            session_repo = SessionRepository(db_session)
             sessions_to_close = await session_repo.get_expired_open_sessions(
                 datetime.now(UTC)
             )
@@ -324,10 +327,10 @@ async def close_registration_for_expired_sessions() -> None:
                     f"(deadline: {sess.registration_deadline})"
                 )
 
-            await session.commit()
+            await db_session.commit()
             logger.info(f"Closed registration for {len(sessions_to_close)} sessions")
 
         except SQLAlchemyError as e:
             logger.exception("Error closing registrations", exc_info=e)
-            await session.rollback()
+            await db_session.rollback()
             raise

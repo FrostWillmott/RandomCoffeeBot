@@ -3,23 +3,19 @@
 from datetime import UTC, datetime
 
 import pytest
+from sqlalchemy import select
 
 from app.models.enums import SessionStatus
 from app.models.session import Session
+from app.repositories.session import SessionRepository
 from app.services.sessions import create_weekly_session
 
 
 @pytest.mark.asyncio
 async def test_create_weekly_session_integration(db_session):
-    """Integration test for creating a weekly session.
-
-    Note: DATABASE_URL is set to test database in conftest.py before
-     any imports,
-    so create_weekly_session will use the test database automatically.
-    """
-    from sqlalchemy import select
-
-    session = await create_weekly_session()
+    """Integration test for creating a weekly session."""
+    session_repo = SessionRepository(db_session)
+    session = await create_weekly_session(session_repo)
 
     assert session is not None
     assert session.status == SessionStatus.OPEN

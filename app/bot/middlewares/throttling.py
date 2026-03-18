@@ -60,6 +60,3 @@ class ThrottlingMiddleware(BaseMiddleware):
             await self.redis.close()
         finally:
             self._closed = True
-
-
-throttling_middleware = ThrottlingMiddleware()
