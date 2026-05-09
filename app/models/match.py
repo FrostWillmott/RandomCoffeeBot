@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, Text
+from sqlalchemy import DateTime, Enum, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -44,8 +44,17 @@ class Match(Base):
     topic_id: Mapped[int | None] = mapped_column(
         ForeignKey("topics.id", ondelete="SET NULL"), nullable=True
     )
-    status: Mapped[str] = mapped_column(
-        String(50), default=MatchStatus.CREATED, nullable=False, index=True
+    status: Mapped[MatchStatus] = mapped_column(
+        Enum(
+            MatchStatus,
+            native_enum=False,
+            length=50,
+            create_constraint=False,
+            values_callable=lambda e: [v.value for v in e],
+        ),
+        default=MatchStatus.CREATED,
+        nullable=False,
+        index=True,
     )
     meeting_time: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     meeting_format: Mapped[str | None] = mapped_column(String(50))

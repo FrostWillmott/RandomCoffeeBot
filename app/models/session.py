@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import BigInteger, DateTime, String
+from sqlalchemy import BigInteger, DateTime, Enum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -28,8 +28,17 @@ class Session(Base):
     registration_deadline: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
     )
-    status: Mapped[str] = mapped_column(
-        String(50), default=SessionStatus.OPEN, nullable=False, index=True
+    status: Mapped[SessionStatus] = mapped_column(
+        Enum(
+            SessionStatus,
+            native_enum=False,
+            length=50,
+            create_constraint=False,
+            values_callable=lambda e: [v.value for v in e],
+        ),
+        default=SessionStatus.OPEN,
+        nullable=False,
+        index=True,
     )
     announcement_message_id: Mapped[int | None] = mapped_column(BigInteger)
     created_at: Mapped[datetime] = mapped_column(
