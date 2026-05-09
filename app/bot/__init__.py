@@ -42,6 +42,7 @@ def get_dispatcher() -> tuple[Dispatcher, ThrottlingMiddleware]:
 
     throttling_mw = ThrottlingMiddleware()
     dp.message.middleware(throttling_mw)
+    dp.callback_query.middleware(throttling_mw)
     dp.update.middleware(DatabaseMiddleware())
 
     dp.include_router(start.router)

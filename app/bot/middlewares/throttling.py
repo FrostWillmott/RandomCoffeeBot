@@ -4,50 +4,73 @@ from collections.abc import Awaitable, Callable
 from typing import Any
 
 from aiogram import BaseMiddleware
-from aiogram.types import Message
+from aiogram.types import CallbackQuery, Message, TelegramObject
 from redis.asyncio import Redis
 
 from app.config import get_settings
 
 
 class ThrottlingMiddleware(BaseMiddleware):
-    """Middleware for rate limiting."""
+    """Middleware for per-user rate limiting on messages and callbacks.
 
-    def __init__(self, limit: float = 0.5):
+    Uses Redis SET NX with TTL to enforce a minimum interval between
+    consecutive events from the same user. Separate keys are used for
+    different event types so a user can still tap a button immediately
+    after sending a text message.
+    """
+
+    def __init__(
+        self,
+        message_limit: float = 0.5,
+        callback_limit: float = 0.3,
+    ):
         """Initialize middleware.
 
         Args:
-            limit: Minimum interval between messages in seconds.
+            message_limit: Minimum interval between messages in seconds.
+            callback_limit: Minimum interval between callback queries in seconds.
         """
-        self.limit = limit
+        self.message_limit = message_limit
+        self.callback_limit = callback_limit
         settings = get_settings()
         self.redis = Redis.from_url(settings.redis_url)
         self._closed = False
 
     async def __call__(
         self,
-        handler: Callable[[Message, dict[str, Any]], Awaitable[Any]],
-        event: Message,
+        handler: Callable[[TelegramObject, dict[str, Any]], Awaitable[Any]],
+        event: TelegramObject,
         data: dict[str, Any],
     ) -> Any:
-        """Process event."""
-        if not isinstance(event, Message):
+        """Process event with throttling for messages and callback queries."""
+        if isinstance(event, Message):
+            user = event.from_user
+            kind, limit = "msg", self.message_limit
+        elif isinstance(event, CallbackQuery):
+            user = event.from_user
+            kind, limit = "cb", self.callback_limit
+        else:
             return await handler(event, data)
 
-        if not event.from_user:
+        if not user:
             return await handler(event, data)
 
-        user_id = event.from_user.id
-        key = f"throttle:{user_id}"
-
+        key = f"throttle:{kind}:{user.id}"
         acquired = await self.redis.set(
             key,
             "1",
-            px=int(self.limit * 1000),
+            px=int(limit * 1000),
             nx=True,
         )
 
         if not acquired:
+            # Drop the message silently; for callbacks, still answer() so
+            # the spinner is dismissed without surprising the user.
+            if isinstance(event, CallbackQuery):
+                try:
+                    await event.answer()
+                except Exception:
+                    pass
             return None
 
         return await handler(event, data)
@@ -57,6 +80,10 @@ class ThrottlingMiddleware(BaseMiddleware):
         if self._closed:
             return
         try:
-            await self.redis.close()
+            close = getattr(self.redis, "aclose", None)
+            if close is not None:
+                await close()
+            else:
+                await self.redis.close()
         finally:
             self._closed = True
