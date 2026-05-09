@@ -1,9 +1,13 @@
 # Snyk (https://snyk.io) policy file
 version: v1.28.0
 
-# Ignore hardcoded credentials in test files
-# Test files contain mock/test credentials that are not real secrets
+# Test fixtures contain mock/fake credentials used only for assertions.
+# These are not real secrets and must not block scans.
 ignore:
+  'python/NoHardcodedCredentials/test':
+    - '**/tests/**':
+        reason: Test fixtures with mock credentials for testing only
+        expires: never
   'python/HardcodedPassword':
     - '**/tests/**':
         reason: Test fixtures with mock credentials for testing only
