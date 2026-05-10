@@ -96,4 +96,5 @@ dev = [
     "types-aiofiles>=25.1.0.20251011",
     # CVE-2026-4539 (ReDoS): pin transitive pytest dep up to safe version
     "pygments>=2.20.0",
+    "genbadge[coverage]>=1.1.3",
 ]

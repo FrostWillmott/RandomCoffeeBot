@@ -3,6 +3,8 @@ name: CI
 on:
   push:
     branches: [main, master, develop, feature/*]
+    paths-ignore:
+      - coverage.svg
   pull_request:
     branches: [main, master, develop]
 
@@ -49,6 +51,8 @@ jobs:
     name: Unit Tests
     runs-on: ubuntu-latest
     needs: lint
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v6
 
@@ -86,13 +90,20 @@ jobs:
         run: |
           uv run pytest tests/unit/ -v --cov=app --cov-report=xml --cov-report=term
 
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v6
-        if: success()
+      - name: Generate coverage badge
+        if: >-
+          success() &&
+          (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+        run: uv run genbadge coverage -i coverage.xml -o coverage.svg
+
+      - name: Push coverage badge
+        if: >-
+          success() &&
+          (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+        uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          file: ./coverage.xml
-          fail_ci_if_error: false
-          token: ${{ secrets.CODECOV_TOKEN }}
+          commit_message: "chore: update coverage badge"
+          file_pattern: coverage.svg
 
   integration-tests:
     name: Integration Tests

@@ -1,7 +1,7 @@
 # Random Coffee Bot
 
 [![CI](https://github.com/FrostWillmott/RandomCoffeeBot/actions/workflows/ci.yml/badge.svg)](https://github.com/FrostWillmott/RandomCoffeeBot/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/FrostWillmott/RandomCoffeeBot/branch/master/graph/badge.svg)](https://codecov.io/gh/FrostWillmott/RandomCoffeeBot)
+![coverage](./coverage.svg)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/downloads/)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
@@ -19,7 +19,7 @@ A Telegram bot that automatically organizes random coffee meetings between commu
 | Scheduling | APScheduler |
 | Migrations | Alembic |
 | Testing | pytest + pytest-asyncio, 81%+ coverage |
-| CI/CD | GitHub Actions, Docker, Codecov |
+| CI/CD | GitHub Actions, Docker, coverage badge (genbadge) |
 | Code Quality | ruff, mypy, pre-commit |
 
 ### Architecture Decisions
