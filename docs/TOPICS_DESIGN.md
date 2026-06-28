@@ -1,6 +1,6 @@
-# Дизайн тем для обсуждения
+# Discussion Topics Design
 
-## 📋 Структура темы
+## 📋 Topic Structure
 
 ```python
 class Topic:
@@ -15,16 +15,16 @@ class Topic:
     created_at: datetime
 ```
 
-## 🎯 Категории тем
+## 🎯 Topic Categories
 
-### 1. Python Core (основы языка)
-- Декораторы и их применение
-- Генераторы vs списковые включения
+### 1. Python Core
+- Decorators and their applications
+- Generators vs list comprehensions
 - Context managers (with statement)
-- Дескрипторы и property
-- Метаклассы
-- GIL и его влияние
-- Memory management и garbage collection
+- Descriptors and property
+- Metaclasses
+- GIL and its impact
+- Memory management and garbage collection
 
 ### 2. Async Programming
 - asyncio basics
@@ -32,41 +32,41 @@ class Topic:
 - Event loop internals
 - Async context managers
 - Async generators
-- Обработка ошибок в async коде
+- Error handling in async code
 
 ### 3. Data Structures & Algorithms
-- Реализация LRU cache
-- Поиск и сортировка
-- Деревья и графы
-- Динамическое программирование
-- Time/Space complexity анализ
+- LRU cache implementation
+- Search and sorting
+- Trees and graphs
+- Dynamic programming
+- Time/Space complexity analysis
 
 ### 4. Frameworks (Django/FastAPI/Flask)
 - ORM vs raw SQL
-- Middleware и их использование
+- Middleware and its usage
 - Background tasks
 - REST API design
-- Аутентификация и авторизация
-- Оптимизация запросов (N+1 problem)
+- Authentication and authorization
+- Query optimization (N+1 problem)
 
 ### 5. Databases
-- Индексы и когда их использовать
-- Transactions и ACID
+- Indexes and when to use them
+- Transactions and ACID
 - SQL JOIN types
 - NoSQL vs SQL
-- Миграции схемы БД
+- DB schema migrations
 - Query optimization
 
 ### 6. Testing
 - Unit vs Integration vs E2E
-- Mocking и fixtures
+- Mocking and fixtures
 - pytest best practices
 - Test coverage
-- TDD подход
+- TDD approach
 
 ### 7. System Design
-- Масштабирование приложений
-- Кэширование стратегии
+- Application scaling
+- Caching strategies
 - Message queues (Celery, RabbitMQ)
 - Microservices vs Monolith
 - Load balancing
@@ -76,54 +76,54 @@ class Topic:
 - SOLID principles
 - Design patterns (Factory, Singleton, Strategy, etc.)
 - Code review practices
-- Рефакторинг legacy кода
+- Legacy code refactoring
 
-### 9. DevOps для разработчика
+### 9. DevOps for Developers
 - Docker basics
 - CI/CD pipelines
-- Logging и monitoring
-- Deployment стратегии
+- Logging and monitoring
+- Deployment strategies
 
 ### 10. Soft Skills
-- Code review культура
-- Работа в команде
-- Планирование задач
-- Техническое интервью - как проходить
+- Code review culture
+- Teamwork
+- Task planning
+- Technical interviews - how to pass them
 
 ---
 
-## 💾 Источники тем
+## 💾 Topic Sources
 
-### Вариант 1: Предзаполненная база (рекомендуется для MVP)
+### Option 1: Pre-filled Database (Recommended for MVP)
 
-**Плюсы:**
-- Полный контроль качества
-- Нет зависимости от внешних API
-- Работает offline
-- Предсказуемость
+**Pros:**
+- Full quality control
+- No dependency on external APIs
+- Works offline
+- Predictability
 
-**Минусы:**
-- Требует ручной работы
-- Нужно периодически обновлять
+**Cons:**
+- Requires manual work
+- Needs periodic updates
 
-**Реализация:**
+**Implementation:**
 ```python
 def upgrade():
     topics_data = [
         {
-            "title": "Декораторы в Python",
+            "title": "Decorators in Python",
             "category": "python_core",
             "difficulty": "middle",
             "description": """
-            Декораторы - мощный инструмент Python для модификации поведения функций.
-            Важно понимать как они работают, когда применяются, и какие есть паттерны.
+            Decorators are a powerful Python tool for modifying function behavior.
+            It's important to understand how they work, when they are applied, and what patterns exist.
             """,
             "questions": [
-                "Что такое декоратор и как он работает?",
-                "Разница между @decorator и @decorator()?",
-                "Как написать декоратор с параметрами?",
-                "Что делает @functools.wraps?",
-                "Примеры использования декораторов в production коде?"
+                "What is a decorator and how does it work?",
+                "What is the difference between @decorator and @decorator()?",
+                "How to write a decorator with parameters?",
+                "What does @functools.wraps do?",
+                "Examples of using decorators in production code?"
             ],
             "resources": [
                 "https://realpython.com/primer-on-python-decorators/",
@@ -138,32 +138,32 @@ def upgrade():
         )
 ```
 
-**Сколько нужно тем:** Минимум 50-70 для разнообразия
+**Number of topics needed:** Minimum 50-70 for variety
 
 ---
 
-### Вариант 2: AI-генерация (для масштабирования)
+### Option 2: AI Generation (For Scaling)
 
-**Использование OpenAI API для генерации тем:**
+**Using OpenAI API for topic generation:**
 
 ```python
 # app/services/ai_topic_generator.py
 async def generate_topic(category: str, difficulty: str) -> dict:
-    """Генерирует тему через OpenAI API"""
+    """Generates a topic via OpenAI API"""
 
     prompt = f"""
-    Создай тему для обсуждения на Random Coffee встрече.
+    Create a discussion topic for a Random Coffee meeting.
 
-    Контекст: Подготовка к собеседованию на Middle Python Developer
-    Категория: {category}
-    Сложность: {difficulty}
+    Context: Preparing for a Middle Python Developer interview
+    Category: {category}
+    Difficulty: {difficulty}
 
-    Верни JSON:
+    Return JSON:
     {{
-        "title": "Краткое название темы",
-        "description": "2-3 предложения описания",
-        "questions": ["5 конкретных вопросов для обсуждения"],
-        "resources": ["2-3 ссылки на материалы"]
+        "title": "Brief topic name",
+        "description": "2-3 sentences of description",
+        "questions": ["5 specific questions for discussion"],
+        "resources": ["2-3 links to materials"]
     }}
     """
 
@@ -175,20 +175,20 @@ async def generate_topic(category: str, difficulty: str) -> dict:
     return json.loads(response.choices[0].message.content)
 ```
 
-**Плюсы:**
-- Бесконечное разнообразие
-- Актуальные темы
-- Можно адаптировать под конкретных участников
+**Pros:**
+- Infinite variety
+- Relevant topics
+- Can be adapted for specific participants
 
-**Минусы:**
-- Зависимость от API
-- Стоимость запросов
-- Нужна валидация качества
-- Возможны галлюцинации
+**Cons:**
+- Dependency on API
+- API request costs
+- Quality validation needed
+- Possible hallucinations
 
 ---
 
-### Вариант 3: Комбинированный подход (оптимально)
+### Option 3: Combined Approach (Optimal)
 
 ```python
 class TopicService:
@@ -197,7 +197,7 @@ class TopicService:
         self.ai_generated = []
 
     async def get_topic_for_match(self, match: Match) -> Topic:
-        """Выбирает тему для пары"""
+        """Selects a topic for a pair"""
 
         if random.random() < 0.8:
             return await self._get_manual_topic(match)
@@ -206,7 +206,7 @@ class TopicService:
             return await self._get_or_generate_ai_topic(match)
 
     async def _get_manual_topic(self, match: Match) -> Topic:
-        """Выбирает из предзаполненных тем"""
+        """Selects from pre-filled topics"""
         used_topics = await self._get_used_topics(match.user1, match.user2)
 
         available = [t for t in self.manual_topics if t.id not in used_topics]
@@ -216,7 +216,7 @@ class TopicService:
 
 ---
 
-## 🎲 Алгоритм выбора темы
+## 🎲 Topic Selection Algorithm
 
 ```python
 async def select_topic_for_match(
@@ -225,10 +225,10 @@ async def select_topic_for_match(
     user2: User
 ) -> Topic:
     """
-    Выбирает подходящую тему с учетом:
-    1. Истории встреч (не повторять темы)
-    2. Уровня участников
-    3. Предпочтений (опционально)
+    Selects a suitable topic considering:
+    1. Meeting history (avoid repeating topics)
+    2. Participant level
+    3. Preferences (optional)
     """
 
     discussed_topics = await get_discussed_topics(user1, user2)
@@ -255,39 +255,39 @@ async def select_topic_for_match(
 
 ---
 
-## 📝 Формат отправки темы паре
+## 📝 Topic Message Format
 
 ```
-🎯 Ваша тема для обсуждения:
+🎯 Your discussion topic:
 
-**Декораторы в Python**
+**Decorators in Python**
 
-Декораторы - мощный инструмент Python для модификации поведения функций.
-Важно понимать как они работают, когда применяются, и какие есть паттерны.
+Decorators are a powerful Python tool for modifying function behavior.
+It's important to understand how they work, when they are applied, and what patterns exist.
 
-💬 Вопросы для обсуждения:
-1. Что такое декоратор и как он работает?
-2. Разница между @decorator и @decorator()?
-3. Как написать декоратор с параметрами?
-4. Что делает @functools.wraps?
-5. Примеры использования декораторов в production коде?
+💬 Questions for discussion:
+1. What is a decorator and how does it work?
+2. What is the difference between @decorator and @decorator()?
+3. How to write a decorator with parameters?
+4. What does @functools.wraps do?
+5. Examples of using decorators in production code?
 
-📚 Материалы:
+📚 Resources:
 • https://realpython.com/primer-on-python-decorators/
 • https://peps.python.org/pep-0318/
 
-Приятного обсуждения! 😊
+Enjoy your discussion! 😊
 ```
 
 ---
 
-## 🔄 Система обновления тем
+## 🔄 Topic Update System
 
-### Автоматическое пополнение
+### Automatic Replenishment
 ```python
 # app/jobs/refresh_topics.py
 async def weekly_topic_refresh():
-    """Еженедельное пополнение базы тем"""
+    """Weekly replenishment of the topic database"""
 
     unused_count = await Topic.query.filter(
         Topic.times_used == 0
@@ -302,18 +302,18 @@ async def weekly_topic_refresh():
         await Topic.bulk_create(new_topics)
 ```
 
-### Ручная модерация
+### Manual Moderation
 ```python
-# Админ может:
-# 1. Добавлять темы вручную
-# 2. Редактировать существующие
-# 3. Деактивировать плохие темы
-# 4. Видеть статистику по темам (какие популярны)
+# Admins can:
+# 1. Add topics manually
+# 2. Edit existing topics
+# 3. Deactivate low-quality topics
+# 4. View topic statistics (which ones are popular)
 ```
 
 ---
 
-## 📊 Метрики тем
+## 📊 Topic Metrics
 
 ```python
 class Topic:
@@ -323,26 +323,24 @@ class Topic:
     last_used_at: datetime
 ```
 
-Это позволит:
-- Убирать непопулярные темы
-- Балансировать частоту использования
-- Улучшать качество тем на основе feedback
+This will allow:
+- Removing unpopular topics
+- Balancing usage frequency
+- Improving topic quality based on feedback
 
 ---
 
-## 🎯 Рекомендация для MVP
+## 🎯 Recommendation for MVP
 
-**Начать с Варианта 1 (предзаполненная база):**
+**Start with Option 1 (pre-filled database):**
 
-1. **Создать 50-70 качественных тем** вручную
-2. **Распределить по категориям** (по 5-7 тем на категорию)
-3. **Добавить через Alembic миграцию**
-4. **В будущем** - добавить AI-генерацию для масштабирования
+1. **Create 50-70 quality topics** manually
+2. **Distribute by categories** (5-7 topics per category)
+3. **Add via Alembic migration**
+4. **In the future** - add AI generation for scaling
 
-**Почему именно так:**
-- ✅ Быстрый старт без зависимостей
-- ✅ Гарантированное качество
-- ✅ Нет расходов на API
-- ✅ Можно итеративно улучшать
-
-**Могу помочь составить список из 50 тем прямо сейчас?** 📝
+**Why this way:**
+- ✅ Fast start without dependencies
+- ✅ Guaranteed quality
+- ✅ No API costs
+- ✅ Can be iteratively improved

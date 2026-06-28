@@ -1,88 +1,88 @@
-# Тестирование
+# Testing
 
-## Конфигурация тестовой базы данных
+## Test Database Configuration
 
-Тесты используют **отдельный контейнер PostgreSQL** для полной изоляции от продакшн данных.
+Tests use a **separate PostgreSQL container** for complete isolation from production data.
 
-### Изоляция тестов
+### Test Isolation
 
-1. **Отдельный контейнер:** `randomcoffee-db-test` на порту 5434
-2. **Отдельная БД:** `randomcoffee_test` (изолирована от продакшн)
-3. **Транзакционная изоляция:** Каждый тест запускается в отдельной транзакции, которая автоматически откатывается после завершения
-4. **Автоматическая очистка:** Данные не накапливаются между тестами
-5. **In-memory хранилище:** Используется tmpfs для скорости
+1. **Separate Container:** `randomcoffee-db-test` on port 5434
+2. **Separate DB:** `randomcoffee_test` (isolated from production)
+3. **Transactional Isolation:** Each test runs in a separate transaction that automatically rolls back upon completion
+4. **Automatic Cleanup:** Data does not accumulate between tests
+5. **In-memory Storage:** tmpfs is used for speed
 
-### Быстрый старт
+### Quick Start
 
-#### Использование Makefile (рекомендуется)
+#### Using Makefile (Recommended)
 
 ```bash
-# Запустить тесты (автоматически запустит/остановит тестовую БД)
+# Run tests (automatically starts/stops the test DB)
 make test
 
-# Запустить тесты с покрытием
+# Run tests with coverage
 make test-coverage
 
-# Запустить тесты в watch mode
+# Run tests in watch mode
 make test-watch
 ```
 
-#### Ручное управление
+#### Manual Management
 
 ```bash
-# Запустить тестовую БД
+# Start the test DB
 make test-db-up
-# или
+# or
 docker-compose -f docker-compose.test.yml up -d db-test
 
-# Запустить тесты
+# Run tests
 uv run pytest tests/ -v
 
-# Остановить тестовую БД
+# Stop the test DB
 make test-db-down
-# или
+# or
 docker-compose -f docker-compose.test.yml down
 ```
 
-### Настройка
+### Configuration
 
-#### Переменные окружения
+#### Environment Variables
 
-- `TEST_DATABASE_NAME` - имя тестовой БД (по умолчанию: `randomcoffee_test`)
-- `TEST_DATABASE_HOST` - хост БД (по умолчанию: `localhost`)
-- `TEST_DATABASE_PORT` - порт БД (по умолчанию: `5434` - отдельно от продакшн на 5432)
-- `TEST_DATABASE_USER` - пользователь БД (по умолчанию: `postgres`)
-- `TEST_DATABASE_PASSWORD` - пароль БД (по умолчанию: `postgres`)
-- `TEST_DATABASE_URL` - полный URL тестовой БД (переопределяет все выше)
-- `TEST_DATABASE_BASE_URL` - URL для подключения к postgres БД (для создания тестовой БД)
+- `TEST_DATABASE_NAME` - test DB name (default: `randomcoffee_test`)
+- `TEST_DATABASE_HOST` - DB host (default: `localhost`)
+- `TEST_DATABASE_PORT` - DB port (default: `5434` - separate from production at 5432)
+- `TEST_DATABASE_USER` - DB user (default: `postgres`)
+- `TEST_DATABASE_PASSWORD` - DB password (default: `postgres`)
+- `TEST_DATABASE_URL` - full test DB URL (overrides all the above)
+- `TEST_DATABASE_BASE_URL` - URL to connect to the postgres DB (for creating the test DB)
 
-### Запуск тестов
+### Running Tests
 
 ```bash
-# Все тесты (с автоматическим управлением БД)
+# All tests (with automatic DB management)
 make test
 
-# Все тесты (если БД уже запущена)
+# All tests (if the DB is already running)
 uv run pytest tests/ -v
 
-# Только unit-тесты
+# Unit tests only
 uv run pytest tests/unit/ -v
 
-# Только интеграционные тесты
+# Integration tests only
 uv run pytest tests/integration/ -v
 
-# С покрытием кода
+# With code coverage
 make test-coverage
-# или
+# or
 uv run pytest tests/ --cov=app --cov-report=html
 ```
 
-### Структура тестов
+### Test Structure
 
 ```
 tests/
-├── conftest.py                    # Конфигурация и фикстуры
-├── unit/                           # Unit-тесты (~82 теста)
+├── conftest.py                    # Configuration and fixtures
+├── unit/                          # Unit tests (~82 tests)
 │   ├── test_announcements_mocked.py
 │   ├── test_config.py
 │   ├── test_db_session.py
@@ -95,47 +95,47 @@ tests/
 │   ├── test_sessions_mocked.py
 │   ├── test_utils_context.py
 │   └── test_utils_retry.py
-└── integration/                    # Интеграционные тесты (~18 тестов)
+└── integration/                   # Integration tests (~18 tests)
     ├── test_e2e_flow.py
     ├── test_helpers.py
     ├── test_matching.py
     └── test_sessions.py
 ```
 
-### Важные моменты
+### Important Points
 
-1. **Изоляция:** Каждый тест изолирован через транзакции
-2. **Автоматическая очистка:** Не нужно вручную удалять данные
-3. **Быстрота:** Транзакции быстрее чем полная очистка БД
-4. **Безопасность:** Продакшн БД никогда не используется для тестов
+1. **Isolation:** Each test is isolated via transactions
+2. **Automatic Cleanup:** No need to manually delete data
+3. **Speed:** Transactions are faster than a full DB cleanup
+4. **Security:** The production DB is never used for tests
 
-### Преимущества текущей конфигурации
+### Advantages of the Current Configuration
 
-1. **Полная изоляция:** Отдельный контейнер, отдельный порт, отдельная БД
-2. **Быстрота:** tmpfs для in-memory хранилища
-3. **Автоматизация:** Makefile команды для удобства
-4. **Безопасность:** Продакшн БД никогда не используется
-5. **Параллельность:** Можно запускать тесты параллельно с продакшн
+1. **Full Isolation:** Separate container, separate port, separate DB
+2. **Speed:** tmpfs for in-memory storage
+3. **Automation:** Makefile commands for convenience
+4. **Security:** Production DB is never used
+5. **Parallelism:** Tests can be run in parallel with production
 
 ### Troubleshooting
 
-**Ошибка подключения к БД:**
+**DB Connection Error:**
 ```bash
-# Проверить, что тестовая БД запущена
+# Verify that the test DB is running
 docker-compose -f docker-compose.test.yml ps
 
-# Проверить логи
+# Check logs
 docker-compose -f docker-compose.test.yml logs db-test
 
-# Проверить подключение
+# Check connection
 psql -h localhost -p 5434 -U postgres -d randomcoffee_test
 ```
 
-**Конфликт портов:**
-- Убедитесь, что порт 5434 свободен
-- Или измените `TEST_DATABASE_PORT` в переменных окружения
+**Port Conflict:**
+- Ensure port 5434 is free
+- Or change `TEST_DATABASE_PORT` in environment variables
 
-**Тесты не изолированы:**
-- Убедитесь, что используется фикстура `db_session`
-- Проверьте, что транзакции откатываются (см. `conftest.py`)
-- Убедитесь, что используется правильный порт (5434, а не 5432)
+**Tests are not isolated:**
+- Ensure the `db_session` fixture is used
+- Verify that transactions are rolled back (see `conftest.py`)
+- Ensure the correct port is being used (5434 instead of 5432)

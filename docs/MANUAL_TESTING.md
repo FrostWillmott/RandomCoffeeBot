@@ -1,257 +1,257 @@
-# Руководство по тестированию Random Coffee Bot
+# Random Coffee Bot Testing Guide
 
-Это руководство поможет вам проверить работоспособность бота и убедиться, что все функции работают корректно.
+This guide will help you verify the bot's functionality and ensure that all features are working correctly.
 
-## Раздел 1: Подготовка
+## Section 1: Preparation
 
-### 1.1 Проверка конфигурации
+### 1.1 Configuration Check
 
-Убедитесь, что файл `.env` настроен правильно:
+Ensure your `.env` file is configured correctly:
 
 ```bash
-# Проверьте наличие обязательных переменных:
+# Check for mandatory variables:
 TELEGRAM_BOT_TOKEN=your_bot_token_here
 CHANNEL_ID=@your_channel_username
 DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/randomcoffee
 REDIS_URL=redis://redis:6379/0
 ```
 
-**Важно:**
-- `TELEGRAM_BOT_TOKEN` должен быть получен от [@BotFather](https://t.me/BotFather)
-- `CHANNEL_ID` должен быть ID или username канала, где будут публиковаться анонсы
-- Для локального запуска измените `DATABASE_URL` на `postgresql+asyncpg://postgres:postgres@localhost:5432/randomcoffee`
+**Important:**
+- `TELEGRAM_BOT_TOKEN` must be obtained from [@BotFather](https://t.me/BotFather)
+- `CHANNEL_ID` should be the ID or username of the channel where announcements will be posted
+- For local runs, change `DATABASE_URL` to `postgresql+asyncpg://postgres:postgres@localhost:5432/randomcoffee`
 
-### 1.2 Проверка миграций базы данных
+### 1.2 Database Migrations Check
 
-Убедитесь, что все миграции применены:
+Ensure all migrations are applied:
 
 ```bash
-# В Docker:
+# In Docker:
 make migrate
 
-# Локально:
+# Locally:
 alembic upgrade head
 ```
 
-### 1.3 Проверка наличия тем в базе данных
+### 1.3 Discussion Topics Check
 
-Темы для обсуждения должны быть загружены в базу данных. Проверьте и загрузите при необходимости:
+Discussion topics should be loaded into the database. Check and load them if necessary:
 
 ```bash
-# В Docker:
+# In Docker:
 make db-seed
 
-# Локально:
+# Locally:
 uv run python scripts/seed_topics.py
 ```
 
-Скрипт автоматически проверит наличие тем и загрузит их, если база пуста.
+The script will automatically check for existing topics and load them if the database is empty.
 
-**Проверка через SQL (опционально):**
+**Verification via SQL (optional):**
 
 ```bash
-# Подключиться к базе данных:
+# Connect to the database:
 make db-shell
 
-# Выполнить запрос:
+# Run the query:
 SELECT COUNT(*) FROM topics WHERE is_active = true;
 SELECT category, COUNT(*) FROM topics GROUP BY category;
 ```
 
-Должно быть загружено несколько десятков тем по различным категориям (core_python, frameworks, architecture, etc.).
+Dozens of topics should be loaded across various categories (core_python, frameworks, architecture, etc.).
 
-## Раздел 2: Запуск бота
+## Section 2: Running the Bot
 
-### 2.1 Запуск в Docker (рекомендуется)
+### 2.1 Running in Docker (Recommended)
 
 ```bash
-# Запустить все сервисы (bot, db, redis):
+# Start all services (bot, db, redis):
 make dev
 
-# Проверить статус контейнеров:
+# Check container status:
 make ps
 
-# Просмотреть логи:
+# View logs:
 make logs
 
-# Или логи только бота:
+# Or only bot logs:
 docker compose logs -f bot
 ```
 
-**Проверка успешного запуска:**
+**Successful Startup Verification:**
 
-1. В логах должно быть сообщение о запуске бота:
+1. The logs should show a message indicating the bot has started:
    ```
    Bot started successfully
    Scheduler started
    ```
 
-2. Контейнеры должны быть в статусе `Up`:
+2. Containers should be in the `Up` status:
    ```bash
    make ps
    ```
 
-3. Проверьте healthcheck файл (если настроен):
+3. Check the heartbeat file (if configured):
    ```bash
    docker compose exec bot cat /tmp/healthy
    ```
 
-### 2.2 Запуск локально (без Docker)
+### 2.2 Running Locally (Without Docker)
 
-**Требования:**
-- PostgreSQL должен быть запущен на localhost:5432
-- Redis должен быть запущен на localhost:6379
-- В `.env` изменен `DATABASE_URL` на `postgresql+asyncpg://postgres:postgres@localhost:5432/randomcoffee`
+**Requirements:**
+- PostgreSQL running at localhost:5432
+- Redis running at localhost:6379
+- `DATABASE_URL` in `.env` changed to `postgresql+asyncpg://postgres:postgres@localhost:5432/randomcoffee`
 
 ```bash
-# Запустить бота:
+# Start the bot:
 make run
 
-# Или напрямую:
+# Or directly:
 uv run python -m app.main
 ```
 
-**Проверка успешного запуска:**
+**Successful Startup Verification:**
 
-В консоли должны появиться сообщения:
+The console should display the following messages:
 ```
 INFO: Bot started successfully
 INFO: Scheduler started
 INFO: Polling started
 ```
 
-## Раздел 3: Тестирование основных функций
+## Section 3: Testing Core Functions
 
-### 3.1 Тестирование команды /start
+### 3.1 Testing the /start Command
 
-1. Найдите вашего бота в Telegram (по username, который вы указали при создании)
-2. Отправьте команду `/start`
-3. **Ожидаемый результат:**
-   - Бот должен ответить приветственным сообщением
-   - Должно появиться главное меню с кнопками
-   - Для новых пользователей: полное описание работы бота
-   - Для существующих: краткое приветствие
+1. Find your bot on Telegram (using the username you specified during creation)
+2. Send the `/start` command
+3. **Expected Result:**
+   - The bot should respond with a welcome message
+   - A main menu with buttons should appear
+   - For new users: a full description of how the bot works
+   - For existing users: a brief greeting
 
-**Проверка в базе данных:**
+**Database Verification:**
 ```bash
 make db-shell
 SELECT * FROM users WHERE telegram_id = YOUR_TELEGRAM_ID;
 ```
 
-Пользователь должен быть создан или обновлен в базе данных.
+The user should be created or updated in the database.
 
-### 3.2 Тестирование команды /help
+### 3.2 Testing the /help Command
 
-1. Отправьте команду `/help` боту
-2. **Ожидаемый результат:**
-   - Бот должен отправить сообщение со справкой
-   - Должна быть информация о доступных командах
-   - Должно быть описание процесса Random Coffee
+1. Send the `/help` command to the bot
+2. **Expected Result:**
+   - The bot should send a message with help information
+   - Information about available commands should be included
+   - A description of the Random Coffee process should be present
 
-### 3.3 Тестирование команды /status
+### 3.3 Testing the /status Command
 
-1. Отправьте команду `/status` боту
-2. **Ожидаемый результат:**
-   - Бот должен показать ваш текущий статус
-   - Информацию о регистрациях на предстоящие сессии
-   - Информацию о текущих матчах
+1. Send the `/status` command to the bot
+2. **Expected Result:**
+   - The bot should show your current status
+   - Information about registrations for upcoming sessions
+   - Information about current matches
 
-### 3.4 Тестирование главного меню
+### 3.4 Testing the Main Menu
 
-1. Нажмите на кнопки в главном меню:
-   - **"Регистрация"** - должна открыться форма регистрации
-   - **"Мои матчи"** - должны показаться ваши текущие матчи
-   - **"Справка"** - должна показаться справка
+1. Click the buttons in the main menu:
+   - **"Registration"** - the registration form should open
+   - **"My Matches"** - your current matches should be shown
+   - **"Help"** - help information should be shown
 
-### 3.5 Тестирование работы планировщика
+### 3.5 Testing the Scheduler
 
-Планировщик автоматически выполняет задачи по расписанию. Для тестирования можно запустить задачи вручную:
+The scheduler automatically performs tasks according to the schedule. For testing, tasks can be run manually:
 
-#### 3.5.1 Создание сессии
+#### 3.5.1 Session Creation
 
 ```bash
-# В Docker:
+# In Docker:
 docker compose exec bot python -m scripts.test_run create_session
 
-# Локально:
+# Locally:
 uv run python -m scripts.test_run create_session
 ```
 
-**Ожидаемый результат:**
-- В логах должно быть сообщение о создании сессии
-- В канале (указанном в `CHANNEL_ID`) должно появиться сообщение-анонс
-- В базе данных должна быть создана новая сессия:
+**Expected Result:**
+- The logs should show a message about the session creation
+- An announcement message should appear in the channel (specified in `CHANNEL_ID`)
+- A new session should be created in the database:
   ```bash
   make db-shell
   SELECT * FROM sessions ORDER BY created_at DESC LIMIT 1;
   ```
 
-**Важно:** Если сессия на текущую неделю уже существует с другим статусом (CLOSED, MATCHED, COMPLETED), команда выведет предупреждение и НЕ создаст новый анонс. Для повторного тестирования используйте команду `reset` (см. раздел 3.5.5).
+**Important:** If a session for the current week already exists with a different status (CLOSED, MATCHED, COMPLETED), the command will output a warning and will NOT create a new announcement. To re-test, use the `reset` command (see Section 3.5.5).
 
-#### 3.5.2 Закрытие регистраций
+#### 3.5.2 Closing Registrations
 
-**Важно:** Закрытие регистраций работает только для сессий с истекшим дедлайном (`registration_deadline < NOW()`). Для тестирования нужно сначала установить прошедший дедлайн:
+**Important:** Closing registrations only works for sessions with an expired deadline (`registration_deadline < NOW()`). For testing, you must first set a past deadline:
 
 ```bash
-# Установить дедлайн на прошедшую дату (замените SESSION_ID на ID вашей сессии)
+# Set deadline to a past date (replace SESSION_ID with your session's ID)
 docker compose exec -T db psql -U randomcoffee -d randomcoffee -c "UPDATE sessions SET registration_deadline = NOW() - INTERVAL '1 day' WHERE id = SESSION_ID;"
 
-# Затем запустить закрытие регистраций
-# В Docker:
+# Then run the registration closing
+# In Docker:
 docker compose exec bot python -m scripts.test_run close_registrations
 
-# Локально:
+# Locally:
 uv run python -m scripts.test_run close_registrations
 ```
 
-**Ожидаемый результат:**
-- Сессии с истекшим сроком регистрации должны быть закрыты
-- Статус сессий должен измениться на `CLOSED`
+**Expected Result:**
+- Sessions with expired registration deadlines should be closed
+- The session status should change to `CLOSED`
 
-#### 3.5.3 Запуск матчинга
+#### 3.5.3 Running Matching
 
-**Важно:** Матчинг работает только для сессий со статусом `CLOSED` и истекшим дедлайном регистрации. Если сессия еще открыта, матчинг не найдет сессий для обработки.
+**Important:** Matching only works for sessions with status `CLOSED` and an expired registration deadline. If a session is still open, matching will not find any sessions to process.
 
-**Подготовка сессии к матчингу:**
+**Preparing a Session for Matching:**
 
-Перед запуском матчинга нужно убедиться, что сессия закрыта. Есть два способа:
+Before running the matching process, ensure the session is closed. There are two ways:
 
-**Способ 1: Автоматическое закрытие (рекомендуется для тестирования)**
+**Method 1: Automatic Closing (Recommended for Testing)**
 ```bash
-# Установить дедлайн на прошедшую дату
+# Set deadline to a past date
 docker compose exec -T db psql -U randomcoffee -d randomcoffee -c "UPDATE sessions SET registration_deadline = NOW() - INTERVAL '1 day' WHERE id = SESSION_ID;"
 
-# Закрыть регистрации (автоматически закроет сессию)
+# Close registrations (will automatically close the session)
 docker compose exec bot python -m scripts.test_run close_registrations
 ```
 
-**Способ 2: Ручное закрытие**
+**Method 2: Manual Closing**
 ```bash
-# ВАЖНО: При ручном закрытии также нужно установить прошедший дедлайн,
-# иначе матчинг не найдет сессию (требуется: status = 'closed' AND registration_deadline < NOW())
+# IMPORTANT: When closing manually, you also need to set a past deadline,
+# otherwise matching won't find the session (requires: status = 'closed' AND registration_deadline < NOW())
 
-# Установить прошедший дедлайн
+# Set a past deadline
 docker compose exec -T db psql -U randomcoffee -d randomcoffee -c "UPDATE sessions SET registration_deadline = NOW() - INTERVAL '1 day' WHERE id = SESSION_ID;"
 
-# Закрыть сессию вручную
+# Manually close the session
 docker compose exec -T db psql -U randomcoffee -d randomcoffee -c "UPDATE sessions SET status = 'closed' WHERE id = SESSION_ID;"
 ```
 
-**Запуск матчинга:**
+**Running Matching:**
 ```bash
-# В Docker:
+# In Docker:
 docker compose exec bot python -m scripts.test_run run_matching
 
-# Локально:
+# Locally:
 uv run python -m scripts.test_run run_matching
 ```
 
-**Ожидаемый результат:**
-- Для закрытых сессий должны быть созданы матчи
-- Участники должны получить уведомления о матчах в канале и личные сообщения
-- В базе данных должны быть созданы записи в таблице `matches`
+**Expected Result:**
+- Matches should be created for closed sessions
+- Participants should receive match notifications in the channel and private messages
+- Records should be created in the `matches` table in the database
 
-**Проверка в базе данных:**
+**Database Verification:**
 ```bash
 make db-shell
 SELECT * FROM matches ORDER BY created_at DESC LIMIT 5;
@@ -259,138 +259,138 @@ SELECT * FROM registrations WHERE session_id = SESSION_ID;
 SELECT id, status, registration_deadline FROM sessions WHERE id = SESSION_ID;
 ```
 
-**Если матчинг не находит сессий:**
-- Убедитесь, что сессия имеет статус `CLOSED`
-- **КРИТИЧНО:** Проверьте, что `registration_deadline < NOW()` - матчинг требует ОБА условия:
-  - `status = 'closed'` И
+**If matching does not find sessions:**
+- Ensure the session status is `CLOSED`
+- **CRITICAL:** Check that `registration_deadline < NOW()` - matching requires BOTH conditions:
+  - `status = 'closed'` AND
   - `registration_deadline < current_time`
-- Если дедлайн в будущем, установите прошедшую дату:
+- If the deadline is in the future, set it to a past date:
   ```bash
   docker compose exec -T db psql -U randomcoffee -d randomcoffee -c "UPDATE sessions SET registration_deadline = NOW() - INTERVAL '1 day' WHERE id = SESSION_ID;"
   ```
-- Проверьте наличие регистраций на сессию (минимум 2 пользователя для пары, 3 для триплета)
+- Check for registrations for the session (minimum 2 users for a pair, 3 for a triplet)
 
-#### 3.5.4 Запуск всех задач
+#### 3.5.4 Running All Tasks
 
-**Важно:** Команда `all` выполняет все три задачи последовательно, но для реального тестирования она **не подходит** без предварительной подготовки. Причина: после создания сессии дедлайн будет в будущем, поэтому `close_registrations` и `run_matching` ничего не найдут.
+**Important:** The `all` command executes all three tasks sequentially, but it is **not suitable** for real testing without prior preparation. Reason: after creating a session, the deadline will be in the future, so `close_registrations` and `run_matching` will find nothing.
 
-**Когда использовать `all`:**
-- Только если вы заранее изменили дедлайн существующей сессии на прошедшую дату
-- Или для проверки, что все команды выполняются без ошибок (но реальной работы не будет)
+**When to use `all`:**
+- Only if you have previously changed the deadline of an existing session to a past date
+- Or to verify that all commands execute without errors (though no real work will be done)
 
 ```bash
-# В Docker:
+# In Docker:
 docker compose exec bot python -m scripts.test_run all
 
-# Локально:
+# Locally:
 uv run python -m scripts.test_run all
 ```
 
-**Для полного тестирования используйте раздел 3.6 "Тестирование полного цикла".**
+**For full cycle testing, use Section 3.6 "Full Cycle Testing".**
 
-#### 3.5.5 Сброс данных для повторного тестирования
+#### 3.5.5 Resetting Data for Repeated Testing
 
-После прохождения полного цикла тестирования (создание → регистрация → закрытие → матчинг), сессия переходит в статус MATCHED. Для повторного тестирования нужно удалить текущую сессию:
+After completing a full testing cycle (creation → registration → closing → matching), the session transitions to `MATCHED` status. To repeat the test, you need to delete the current session:
 
 ```bash
-# В Docker:
+# In Docker:
 docker compose exec bot python -m scripts.test_run reset
 
-# Локально:
+# Locally:
 uv run python -m scripts.test_run reset
 ```
 
-**Что делает команда reset:**
-- Находит последнюю сессию в базе данных
-- Удаляет все матчи для этой сессии
-- Удаляет все регистрации для этой сессии
-- Удаляет саму сессию
+**What the `reset` command does:**
+- Finds the last session in the database
+- Deletes all matches for this session
+- Deletes all registrations for this session
+- Deletes the session itself
 
-**Когда использовать:**
-- После завершения полного цикла тестирования
-- Если сессия находится в неправильном статусе
-- Перед повторным тестированием с чистого состояния
+**When to use:**
+- After completing a full testing cycle
+- If a session is in the wrong status
+- Before re-testing from a clean state
 
-**Типичный цикл повторного тестирования:**
+**Typical Repeat Testing Cycle:**
 ```bash
-# 1. Сбросить предыдущие данные
+# 1. Reset previous data
 docker compose exec bot python -m scripts.test_run reset
 
-# 2. Создать новую сессию
+# 2. Create a new session
 docker compose exec bot python -m scripts.test_run create_session
 
-# 3. Зарегистрироваться через реакцию в канале
-# ... (поставить 👍 на анонс)
+# 3. Register via reaction in the channel
+# ... (put 👍 on the announcement)
 
-# 4. Узнать ID созданной сессии
+# 4. Get the ID of the created session
 docker compose exec -T db psql -U randomcoffee -d randomcoffee -c "SELECT id FROM sessions ORDER BY created_at DESC LIMIT 1;"
 
-# 5. Установить прошедший дедлайн (замените SESSION_ID на полученный ID)
+# 5. Set a past deadline (replace SESSION_ID with the obtained ID)
 docker compose exec -T db psql -U randomcoffee -d randomcoffee -c "UPDATE sessions SET registration_deadline = NOW() - INTERVAL '1 day' WHERE id = SESSION_ID;"
 
-# 6. Закрыть регистрации и запустить матчинг
+# 6. Close registrations and run matching
 docker compose exec bot python -m scripts.test_run close_registrations
 docker compose exec bot python -m scripts.test_run run_matching
 ```
 
-### 3.6 Тестирование полного цикла
+### 3.6 Full Cycle Testing
 
-1. **Создайте тестовую сессию:**
+1. **Create a test session:**
    ```bash
    docker compose exec bot python -m scripts.test_run create_session
    ```
 
-2. **Зарегистрируйтесь через бота:**
-   - Откройте канал, где был опубликован анонс
-   - Поставьте реакцию 👍 на сообщение-анонс
-   - Или используйте команду регистрации в боте
+2. **Register via the bot:**
+   - Open the channel where the announcement was published
+   - React with 👍 to the announcement message
+   - Or use the registration command in the bot
 
-3. **Проверьте регистрацию:**
+3. **Verify registration:**
    ```bash
    make db-shell
-   # Найти регистрации по telegram_id (замените YOUR_TELEGRAM_ID на ваш ID)
+   # Find registrations by telegram_id (replace YOUR_TELEGRAM_ID with your ID)
    SELECT r.* FROM registrations r
    JOIN users u ON r.user_id = u.id
    WHERE u.telegram_id = YOUR_TELEGRAM_ID;
    ```
 
-4. **Узнайте ID созданной сессии:**
+4. **Get the ID of the created session:**
    ```bash
    docker compose exec -T db psql -U randomcoffee -d randomcoffee -c "SELECT id FROM sessions ORDER BY created_at DESC LIMIT 1;"
    ```
 
-5. **Подготовьте сессию к матчингу** (замените SESSION_ID на полученный ID):
+5. **Prepare the session for matching** (replace SESSION_ID with the obtained ID):
 
-   **Вариант A: Автоматическое закрытие (рекомендуется)**
+   **Option A: Automatic Closing (Recommended)**
    ```bash
-   # Установить дедлайн на прошедшую дату
+   # Set deadline to a past date
    docker compose exec -T db psql -U randomcoffee -d randomcoffee -c "UPDATE sessions SET registration_deadline = NOW() - INTERVAL '1 day' WHERE id = SESSION_ID;"
 
-   # Закрыть регистрации (автоматически закроет сессию)
+   # Close registrations (will automatically close the session)
    docker compose exec bot python -m scripts.test_run close_registrations
    ```
 
-   **Вариант B: Ручное закрытие**
+   **Option B: Manual Closing**
    ```bash
-   # ВАЖНО: При ручном закрытии также нужно установить прошедший дедлайн,
-   # иначе матчинг не найдет сессию
+   # IMPORTANT: Manual closing also requires setting a past deadline,
+   # otherwise matching will not find the session
 
-   # Установить прошедший дедлайн
+   # Set a past deadline
    docker compose exec -T db psql -U randomcoffee -d randomcoffee -c "UPDATE sessions SET registration_deadline = NOW() - INTERVAL '1 day' WHERE id = SESSION_ID;"
 
-   # Закрыть сессию вручную
+   # Manually close the session
    docker compose exec -T db psql -U randomcoffee -d randomcoffee -c "UPDATE sessions SET status = 'closed' WHERE id = SESSION_ID;"
    ```
 
-6. **Запустите матчинг:**
+6. **Run matching:**
    ```bash
    docker compose exec bot python -m scripts.test_run run_matching
    ```
 
-7. **Проверьте результат:**
-   - В канале должно появиться сообщение со списком всех матчей
-   - Вы должны получить личное уведомление о матче
-   - В базе данных должен быть создан матч с темой для обсуждения
+7. **Verify the result:**
+   - An announcement message with a list of all matches should appear in the channel
+   - You should receive a private match notification
+   - A match with a discussion topic should be created in the database
    ```bash
    make db-shell
    SELECT m.id, u1.username as user1, u2.username as user2, t.title as topic
@@ -401,15 +401,15 @@ docker compose exec bot python -m scripts.test_run run_matching
    WHERE m.session_id = SESSION_ID;
    ```
 
-## Раздел 4: Проверка работоспособности
+## Section 4: Health Checks
 
-### 4.1 Проверка подключения к базе данных
+### 4.1 Database Connection Check
 
 ```bash
-# Проверить подключение через psql:
+# Check connection via psql:
 make db-shell
 
-# Или проверить через Python:
+# Or check via Python:
 docker compose exec bot python -c "
 from app.db.session import engine
 import asyncio
@@ -421,15 +421,15 @@ asyncio.run(check())
 "
 ```
 
-**Ожидаемый результат:** Подключение успешно, запрос выполняется.
+**Expected Result:** Connection successful, query executes.
 
-### 4.2 Проверка подключения к Telegram API
+### 4.2 Telegram API Connection Check
 
 ```bash
-# Проверить через логи:
+# Check via logs:
 make logs | grep -i "telegram\|bot started"
 
-# Или проверить статус бота:
+# Or check bot status:
 docker compose exec bot python -c "
 from app.bot import get_bot
 import asyncio
@@ -442,252 +442,252 @@ asyncio.run(check())
 "
 ```
 
-**Ожидаемый результат:** Бот успешно подключен, возвращается информация о боте.
+**Expected Result:** Bot successfully connected, information about the bot is returned.
 
-### 4.3 Проверка работы Redis
+### 4.3 Redis Check
 
 ```bash
-# Проверить подключение к Redis:
+# Check Redis connection:
 docker compose exec redis redis-cli ping
 
-# Должно вернуться: PONG
+# Should return: PONG
 ```
 
-### 4.4 Проверка логов на ошибки
+### 4.4 Checking Logs for Errors
 
 ```bash
-# Просмотреть логи:
+# View logs:
 make logs
 
-# Или только ошибки:
+# Or only errors:
 make logs | grep -i "error\|exception\|failed"
 
-# Проверить логи бота:
+# Check bot logs:
 docker compose logs bot | tail -50
 ```
 
-**Что проверить:**
-- Нет критических ошибок (ERROR, CRITICAL)
-- Нет исключений (Exception, Traceback)
-- Нет проблем с подключением к БД или Telegram API
+**What to check:**
+- No critical errors (ERROR, CRITICAL)
+- No exceptions (Exception, Traceback)
+- No problems connecting to the database or Telegram API
 
-## Раздел 5: Типичные проблемы и решения
+## Section 5: Common Issues and Solutions
 
-### 5.1 Бот не отвечает на команды
+### 5.1 Bot Does Not Respond to Commands
 
-**Возможные причины:**
-1. Бот не запущен - проверьте `make ps` или логи
-2. Неверный `TELEGRAM_BOT_TOKEN` - проверьте `.env` файл
-3. Бот заблокирован пользователем - разблокируйте бота в Telegram
+**Possible Reasons:**
+1. Bot is not running - check `make ps` or logs
+2. Incorrect `TELEGRAM_BOT_TOKEN` - check your `.env` file
+3. Bot is blocked by the user - unblock the bot on Telegram
 
-**Решение:**
+**Solution:**
 ```bash
-# Проверить статус:
+# Check status:
 make ps
 
-# Перезапустить:
+# Restart:
 make down
 make dev
 
-# Проверить логи:
+# Check logs:
 make logs
 ```
 
-### 5.2 Ошибки подключения к базе данных
+### 5.2 Database Connection Errors
 
-**Возможные причины:**
-1. База данных не запущена
-2. Неверный `DATABASE_URL` в `.env`
-3. Миграции не применены
+**Possible Reasons:**
+1. Database is not running
+2. Incorrect `DATABASE_URL` in `.env`
+3. Migrations have not been applied
 
-**Решение:**
+**Solution:**
 ```bash
-# Проверить статус БД:
+# Check DB status:
 docker compose ps db
 
-# Проверить подключение:
+# Check connection:
 make db-shell
 
-# Применить миграции:
+# Apply migrations:
 make migrate
 
-# Перезапустить БД:
+# Restart DB:
 docker compose restart db
 ```
 
-### 5.3 Отсутствие тем в базе данных
+### 5.3 Missing Topics in the Database
 
-**Признаки:**
-- При матчинге нет доступных тем
-- В логах: "No topics available for matching!"
+**Symptoms:**
+- No available topics during matching
+- In logs: "No topics available for matching!"
 
-**Решение:**
+**Solution:**
 ```bash
-# Загрузить темы:
+# Load topics:
 make db-seed
 
-# Проверить количество:
+# Check count:
 make db-shell
 SELECT COUNT(*) FROM topics WHERE is_active = true;
 ```
 
-### 5.4 Проблемы с конфигурацией
+### 5.4 Configuration Issues
 
-**Признаки:**
-- Ошибки при запуске бота
-- Сообщения о недостающих переменных окружения
+**Symptoms:**
+- Errors during bot startup
+- Messages about missing environment variables
 
-**Решение:**
-1. Проверьте наличие файла `.env`
-2. Убедитесь, что все обязательные переменные установлены:
+**Solution:**
+1. Check for the existence of the `.env` file
+2. Ensure all mandatory variables are set:
    - `TELEGRAM_BOT_TOKEN`
    - `CHANNEL_ID`
    - `DATABASE_URL`
    - `REDIS_URL`
-3. Проверьте формат значений (без лишних пробелов, кавычек)
-4. Перезапустите бота после изменения `.env`:
+3. Check the format of the values (no extra spaces, quotes)
+4. Restart the bot after changing `.env`:
    ```bash
    make down
    make dev
    ```
 
-### 5.5 Планировщик не выполняет задачи
+### 5.5 Scheduler Does Not Execute Tasks
 
-**Признаки:**
-- Сессии не создаются автоматически
-- Регистрации не закрываются
-- Матчинг не запускается
+**Symptoms:**
+- Sessions are not created automatically
+- Registrations are not closed
+- Matching is not initiated
 
-**Решение:**
-1. Проверьте логи планировщика:
+**Solution:**
+1. Check scheduler logs:
    ```bash
    make logs | grep -i "scheduler\|job"
    ```
 
-2. Запустите задачи вручную для проверки:
+2. Run tasks manually for verification:
    ```bash
    docker compose exec bot python -m scripts.test_run all
    ```
 
-3. Проверьте настройки планировщика в `app/scheduler.py` и `app/constants.py`
+3. Check scheduler settings in `app/scheduler.py` and `app/constants.py`
 
-### 5.6 Матчинг не находит сессий для обработки
+### 5.6 Matching Does Not Find Sessions to Process
 
-**Признаки:**
-- Команда `run_matching` завершается без ошибок, но сообщает "0 sessions"
-- В логах: "Closed registration for 0 sessions" или "Found 0 closed sessions ready for matching"
+**Symptoms:**
+- `run_matching` command finishes without errors but reports "0 sessions"
+- In logs: "Closed registration for 0 sessions" or "Found 0 closed sessions ready for matching"
 
-**Возможные причины:**
-1. Сессия еще открыта (статус `open` вместо `closed`)
-2. Дедлайн регистрации еще не истек
-3. Нет регистраций на сессию
+**Possible Reasons:**
+1. Session is still open (status `open` instead of `closed`)
+2. Registration deadline has not yet expired
+3. No registrations for the session
 
-**Решение:**
-1. Проверьте статус сессии:
+**Solution:**
+1. Check session status:
    ```bash
    make db-shell
    SELECT id, status, registration_deadline, NOW() as current_time FROM sessions WHERE id = SESSION_ID;
    ```
 
-2. Если сессия открыта, закройте ее:
+2. If the session is open, close it:
    ```bash
-   # Установить прошедший дедлайн и закрыть автоматически
+   # Set a past deadline and close automatically
    docker compose exec -T db psql -U randomcoffee -d randomcoffee -c "UPDATE sessions SET registration_deadline = NOW() - INTERVAL '1 day' WHERE id = SESSION_ID;"
    docker compose exec bot python -m scripts.test_run close_registrations
 
-   # Или закрыть вручную (ВАЖНО: также установить прошедший дедлайн!)
+   # Or close manually (IMPORTANT: also set a past deadline!)
    docker compose exec -T db psql -U randomcoffee -d randomcoffee -c "UPDATE sessions SET registration_deadline = NOW() - INTERVAL '1 day' WHERE id = SESSION_ID;"
    docker compose exec -T db psql -U randomcoffee -d randomcoffee -c "UPDATE sessions SET status = 'closed' WHERE id = SESSION_ID;"
    ```
 
-3. Проверьте наличие регистраций:
+3. Check for registrations:
    ```bash
    make db-shell
    SELECT COUNT(*) FROM registrations WHERE session_id = SESSION_ID;
    ```
-   Должно быть минимум 2 регистрации для создания пары.
+   There must be at least 2 registrations to create a pair.
 
-### 5.7 Уведомления не отправляются
+### 5.7 Notifications Are Not Sent
 
-**Возможные причины:**
-1. Пользователь заблокировал бота
-2. Ошибки в Telegram API
-3. Неверный формат сообщений
+**Possible Reasons:**
+1. User blocked the bot
+2. Errors in the Telegram API
+3. Incorrect message format
 
-**Решение:**
-1. Проверьте логи на ошибки отправки:
+**Solution:**
+1. Check logs for sending errors:
    ```bash
    make logs | grep -i "notification\|telegram\|send"
    ```
 
-2. Проверьте, что пользователь не заблокировал бота
-3. Проверьте права бота (должен иметь возможность отправлять сообщения)
+2. Verify that the user has not blocked the bot
+3. Check bot permissions (must be able to send messages)
 
-### 5.8 Регистрация идёт на старую сессию / Анонс не публикуется
+### 5.8 Registration Is for an Old Session / Announcement Is Not Published
 
-**Признаки:**
-- При создании сессии появляется предупреждение о статусе
-- Регистрация через реакцию не работает
-- При повторном запуске `create_session` анонс не публикуется
+**Symptoms:**
+- A warning about status appears when creating a session
+- Registration via reaction does not work
+- When re-running `create_session`, the announcement is not published
 
-**Возможные причины:**
-1. Сессия на текущую неделю уже существует с статусом не OPEN (CLOSED, MATCHED, COMPLETED)
-2. Это повторное тестирование без сброса данных
+**Possible Reasons:**
+1. A session for the current week already exists with a status other than OPEN (CLOSED, MATCHED, COMPLETED)
+2. This is a repeat test without resetting data
 
-**Решение:**
+**Solution:**
 ```bash
-# Сбросить данные последней сессии
+# Reset the data of the last session
 docker compose exec bot python -m scripts.test_run reset
 
-# Создать новую сессию
+# Create a new session
 docker compose exec bot python -m scripts.test_run create_session
 ```
 
-**Проверка состояния сессий:**
+**Checking Session State:**
 ```bash
 make db-shell
 SELECT id, date, status, announcement_message_id FROM sessions ORDER BY date DESC LIMIT 5;
 ```
 
-## Чеклист быстрой проверки
+## Quick Check Checklist
 
-Используйте этот чеклист для быстрой проверки работоспособности:
+Use this checklist for a quick health check:
 
-- [ ] Конфигурация `.env` настроена правильно
-- [ ] Миграции применены (`make migrate`)
-- [ ] Темы загружены в БД (`make db-seed`)
-- [ ] Бот запущен и работает (`make ps`, `make logs`)
-- [ ] Команда `/start` работает и создает пользователя
-- [ ] Команда `/help` возвращает справку
-- [ ] Команда `/status` показывает статус пользователя
-- [ ] Главное меню отображается корректно
-- [ ] Создание сессии работает (`scripts/test_run create_session`)
-- [ ] Анонс публикуется в канале
-- [ ] Регистрация через реакцию работает
-- [ ] Сессия закрыта перед запуском матчинга (статус `closed`, дедлайн истек)
-- [ ] Матчинг создает пары (`scripts/test_run run_matching`)
-- [ ] Уведомления о матчах отправляются
-- [ ] Нет ошибок в логах
-- [ ] Для повторного теста: сброс данных работает (`scripts/test_run reset`)
+- [ ] `.env` configuration is set up correctly
+- [ ] Migrations applied (`make migrate`)
+- [ ] Topics loaded into the database (`make db-seed`)
+- [ ] Bot is running (`make ps`, `make logs`)
+- [ ] `/start` command works and creates a user
+- [ ] `/help` command returns help information
+- [ ] `/status` command shows user status
+- [ ] Main menu displays correctly
+- [ ] Session creation works (`scripts/test_run create_session`)
+- [ ] Announcement is published in the channel
+- [ ] Registration via reaction works
+- [ ] Session is closed before matching (status `closed`, deadline expired)
+- [ ] Matching creates pairs (`scripts/test_run run_matching`)
+- [ ] Match notifications are sent
+- [ ] No errors in logs
+- [ ] For repeat tests: data reset works (`scripts/test_run reset`)
 
-## Дополнительные команды для отладки
+## Additional Debugging Commands
 
 ```bash
-# Просмотр всех пользователей:
+# View all users:
 make db-shell
 SELECT id, telegram_id, username, first_name, is_active FROM users;
 
-# Просмотр всех сессий:
+# View all sessions:
 SELECT id, date, status, registration_deadline FROM sessions ORDER BY date DESC;
 
-# Просмотр всех регистраций:
+# View all registrations:
 SELECT r.id, u.username, s.date, r.created_at
 FROM registrations r
 JOIN users u ON r.user_id = u.id
 JOIN sessions s ON r.session_id = s.id
 ORDER BY r.created_at DESC;
 
-# Просмотр всех матчей:
+# View all matches:
 SELECT m.id, u1.username as user1, u2.username as user2, t.title as topic, m.status
 FROM matches m
 JOIN users u1 ON m.user1_id = u1.id
@@ -695,12 +695,12 @@ JOIN users u2 ON m.user2_id = u2.id
 LEFT JOIN topics t ON m.topic_id = t.id
 ORDER BY m.created_at DESC;
 
-# Очистка тестовых данных (осторожно!):
-# Удалить все регистрации и матчи для тестирования:
+# Clear test data (use with caution!):
+# Delete all registrations and matches for testing:
 DELETE FROM matches;
 DELETE FROM registrations;
 ```
 
 ---
 
-**Примечание:** При тестировании в продакшн-окружении будьте осторожны с удалением данных и запуском тестовых команд.
+**Note:** Be careful when deleting data and running test commands in a production environment.

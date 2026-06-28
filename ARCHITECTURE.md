@@ -1,12 +1,12 @@
-# Random Coffee Bot - Архитектура
+# Random Coffee Bot - Architecture
 
-## Обзор системы
+## System Overview
 
-Random Coffee Bot - это Telegram бот для организации случайных встреч между участниками сообщества. Бот автоматически создает пары, назначает темы для обсуждения и управляет процессом регистрации.
+Random Coffee Bot is a Telegram bot for organizing random meetings between community members. The bot automatically creates pairs, assigns discussion topics, and manages the registration process.
 
-## Архитектурные диаграммы
+## Architecture Diagrams
 
-### Поток данных при регистрации
+### Registration Data Flow
 
 ```mermaid
 sequenceDiagram
@@ -16,7 +16,7 @@ sequenceDiagram
     participant Service
     participant DB
 
-    User->>Bot: /start или кнопка "Register"
+    User->>Bot: /start or "Register" button
     Bot->>Handler: start_registration()
     Handler->>Service: get_next_open_session()
     Service->>DB: SELECT session WHERE status=OPEN
@@ -32,7 +32,7 @@ sequenceDiagram
     Handler->>User: Registration confirmed
 ```
 
-### Поток создания матчей
+### Match Creation Flow
 
 ```mermaid
 sequenceDiagram
@@ -57,7 +57,7 @@ sequenceDiagram
     NotificationService->>User2: Send match notification
 ```
 
-### Компонентная архитектура
+### Component Architecture
 
 ```mermaid
 graph TB
@@ -111,9 +111,9 @@ graph TB
     Bot-->Redis
 ```
 
-## Модель данных
+## Data Model
 
-### ER-диаграмма
+### ER Diagram
 
 ```mermaid
 erDiagram
@@ -187,13 +187,13 @@ erDiagram
     }
 ```
 
-## Основные компоненты
+## Core Components
 
 ### 1. Handlers (`app/bot/handlers/`)
 
-Обработчики пользовательских команд и callback'ов.
+Handlers for user commands and callbacks.
 
-**Пример использования:**
+**Usage Example:**
 
 ```python
 # app/bot/handlers/registration.py
@@ -204,22 +204,19 @@ async def start_registration(
     state: FSMContext
 ) -> None:
     """Handle registration button click."""
-    # Получить следующую открытую сессию
+    # Get the next open session
     next_session = await get_next_open_session(session)
 
-    # Проверить существующую регистрацию
-    # Показать подтверждение
-    # Сохранить регистрацию
+    # Check for existing registration
+    # Show confirmation
+    # Save registration
 ```
 
 ### 2. Services (`app/services/`)
 
-Бизнес-логика приложения. Сервисы — это функции, которые принимают
-репозитории через протоколы (dependency injection). Конкретные
-реализации репозиториев создаются на уровне вызывающего кода
-(handlers, scheduler).
+Business logic of the application. Services are functions that accept repositories via protocols (dependency injection). Concrete repository implementations are created at the calling code level (handlers, scheduler).
 
-**Пример использования:**
+**Usage Example:**
 
 ```python
 # app/services/matching.py
@@ -234,7 +231,7 @@ async def create_matches_for_session(
     ...
 ```
 
-**Вызов из scheduler (создание репозиториев):**
+**Call from scheduler (creating repositories):**
 
 ```python
 async with async_session_maker() as db_session:
@@ -251,9 +248,9 @@ async with async_session_maker() as db_session:
 
 ### 3. Models (`app/models/`)
 
-SQLAlchemy модели для работы с БД.
+SQLAlchemy models for working with the database.
 
-**Пример использования:**
+**Usage Example:**
 
 ```python
 # app/models/match.py
@@ -271,100 +268,100 @@ class Match(Base):
 
 ### 4. Middlewares (`app/bot/middlewares/`)
 
-Промежуточное ПО для обработки запросов.
+Middleware for processing requests.
 
-- `DatabaseMiddleware` — предоставляет `AsyncSession` для каждого запроса
-- `ThrottlingMiddleware` — ограничивает частоту запросов (создается в `get_dispatcher()` для явного управления жизненным циклом)
+- `DatabaseMiddleware` — provides `AsyncSession` for each request
+- `ThrottlingMiddleware` — limits the frequency of requests (created in `get_dispatcher()` for explicit lifecycle management)
 
 
-## Алгоритм матчинга
+## Matching Algorithm
 
-### Псевдокод
+### Pseudocode
 
 ```python
 async def create_matches(session_id: int) -> tuple[int, list[int]]:
-    # 1. Получить все регистрации для сессии
+    # 1. Get all registrations for the session
     registrations = get_registrations(session_id)
 
     if len(registrations) < 2:
         return 0, [r.user_id for r in registrations]
 
-    # 2. Получить предыдущие матчи для избежания дубликатов
+    # 2. Get previous matches to avoid duplicates
     user_ids = [r.user_id for r in registrations]
     past_matches = get_previous_matches(user_ids)
 
-    # 3. Перемешать пользователей
+    # 3. Shuffle users
     pool = list(registrations)
     random.shuffle(pool)
 
     matches = []
 
-    # 4. Greedy matching с избежанием дубликатов
+    # 4. Greedy matching with duplicate avoidance
     while len(pool) >= 2:
         u1 = pool.pop()
 
-        # Найти совместимого партнера
+        # Find a fresh partner
         partner = find_fresh_partner(u1, pool, past_matches)
 
         if partner:
-            # Создать матч
+            # Create match
             topic = select_topic_for_users(u1.user_id, partner.user_id)
             match = create_match(u1, partner, topic)
             matches.append(match)
             pool.remove(partner)
         else:
-            # Если все пары уже встречались, создать матч все равно
+            # If all pairs have already met, create a match anyway
             if len(pool) > 0:
                 partner = pool.pop()
                 create_match(u1, partner, topic)
 
-    # 5. Вернуть результат
+    # 5. Return the result
     unmatched = [u.user_id for u in pool]
     return len(matches), unmatched
 ```
 
-## Конфигурация
+## Configuration
 
-### Переменные окружения
+### Environment Variables
 
-Все настройки через переменные окружения (см. `.env.example`):
+All settings are managed via environment variables (see `.env.example`):
 
-- `TELEGRAM_BOT_TOKEN` - токен бота от @BotFather
-- `DATABASE_URL` - строка подключения к PostgreSQL
-- `REDIS_URL` - строка подключения к Redis
-- `LOG_LEVEL` - уровень логирования (DEBUG, INFO, WARNING, ERROR)
-- `LOG_FORMAT` - формат логов (text, json)
+- `TELEGRAM_BOT_TOKEN` - bot token from @BotFather
+- `DATABASE_URL` - PostgreSQL connection string
+- `REDIS_URL` - Redis connection string
+- `LOG_LEVEL` - logging level (DEBUG, INFO, WARNING, ERROR)
+- `LOG_FORMAT` - logging format (text, json)
 
-### Настройка логирования
+### Logging Configuration
 
 ```python
-# Структурированное логирование (JSON) для продакшена
+# Structured logging (JSON) for production
 LOG_FORMAT=json
 
-# Текстовое логирование для разработки
+# Text logging for development
 LOG_FORMAT=text
 ```
 
-## Планировщик задач
+## Task Scheduler
 
-### Расписание
+### Schedule
 
 ```python
-# Каждый понедельник в 10:00 UTC — создание сессии + анонс
+# Every Monday at 10:00 UTC — session creation + announcement
 scheduler.add_job(
     create_and_announce_session,
     CronTrigger(day_of_week="mon", hour=10, minute=0, timezone="UTC"),
     id="create_weekly_session"
 )
 
-# Каждый час в :00 — закрытие просроченных регистраций
+# Every hour at :00 — closing expired registrations
 scheduler.add_job(
     close_registration_for_expired_sessions,
     CronTrigger(minute=0, timezone="UTC"),
     id="close_registrations"
 )
 
-# Каждый час в :15 — матчинг + уведомления (разделены)
+# Every hour at :15 — matching + notifications (separated)
 scheduler.add_job(
     match_and_notify,
     CronTrigger(minute=15, timezone="UTC"),
@@ -372,16 +369,13 @@ scheduler.add_job(
 )
 ```
 
-Scheduler выступает оркестратором: `match_and_notify` вызывает
-`run_matching_for_closed_sessions()` (чистая логика данных), затем
-отправляет уведомления через `notify_all_matches_for_session()`.
-Это позволяет сервису матчинга не зависеть от Telegram API.
+The scheduler acts as an orchestrator: `match_and_notify` calls `run_matching_for_closed_sessions()` (pure data logic), and then sends notifications via `notify_all_matches_for_session()`. This allows the matching service to be independent of the Telegram API.
 
-## Безопасность
+## Security
 
-### Валидация входных данных
+### Input Data Validation
 
-Все callback данные валидируются через Pydantic схемы:
+All callback data is validated via Pydantic schemas:
 
 ```python
 from app.schemas.callbacks import parse_callback_data
@@ -390,35 +384,35 @@ callback_data = parse_callback_data(callback.data)
 # Raises ValueError if invalid
 ```
 
-### Обработка ошибок
+### Error Handling
 
-- Все исключения логируются с полным контекстом
-- Используется `logger.exception()` для трейсинга
-- Retry логика для транзиентных ошибок Telegram API
+- All exceptions are logged with full context
+- `logger.exception()` is used for tracing
+- Retry logic for transient Telegram API errors
 
-### SQL Injection защита
+### SQL Injection Protection
 
-- Все SQL запросы через SQLAlchemy ORM
-- Параметризованные запросы для raw SQL
+- All SQL queries go through SQLAlchemy ORM
+- Parameterized queries for raw SQL
 
-## Мониторинг
+## Monitoring
 
-### Логирование
+### Logging
 
-Приложение использует структурированное логирование для мониторинга:
+The application uses structured logging for monitoring:
 
-- **JSON формат** для продакшена (легко парсится системами логирования)
-- **Текстовый формат** для разработки (удобно читать)
-- **Correlation IDs** для отслеживания запросов
-- **Уровни логирования** (DEBUG, INFO, WARNING, ERROR)
+- **JSON format** for production (easily parsed by logging systems)
+- **Text format** for development (convenient to read)
+- **Correlation IDs** for tracking requests
+- **Logging levels** (DEBUG, INFO, WARNING, ERROR)
 
-### Heartbeat файл
+### Heartbeat File
 
-Приложение создает heartbeat файл (`/tmp/healthy` по умолчанию) для проверки работоспособности. Файл обновляется каждые 15 секунд.
+The application creates a heartbeat file (`/tmp/healthy` by default) to check health status. The file is updated every 15 seconds.
 
-Это позволяет оркестраторам (Docker, Kubernetes) проверять состояние приложения без необходимости в отдельном HTTP сервере.
+This allows orchestrators (Docker, Kubernetes) to check the application's state without needing a separate HTTP server.
 
-## Развертывание
+## Deployment
 
 ### Docker
 
@@ -430,38 +424,38 @@ docker-compose up -d
 docker-compose -f docker-compose.prod.yml up -d
 ```
 
-### Миграции
+### Migrations
 
 ```bash
-# Применить миграции
+# Apply migrations
 alembic upgrade head
 
-# Создать новую миграцию
+# Create a new migration
 alembic revision --autogenerate -m "description"
 ```
 
-## Тестирование
+## Testing
 
-### Запуск тестов
+### Running Tests
 
 ```bash
-# Все тесты
+# All tests
 pytest
 
-# С покрытием
+# With coverage
 pytest --cov=app --cov-report=html
 
-# Конкретный файл
+# Specific file
 pytest tests/unit/test_matching.py
 ```
 
-### Покрытие
+### Coverage
 
-Минимальное покрытие: 80% (проверяется в CI)
+Minimum coverage: 80% (checked in CI)
 
-## Примеры использования API
+## API Usage Examples
 
-### Создание сессии
+### Session Creation
 
 ```python
 from app.repositories.session import SessionRepository
@@ -470,7 +464,7 @@ session_repo = SessionRepository(db_session)
 session = await create_weekly_session(session_repo)
 ```
 
-### Создание матчей
+### Match Creation
 
 ```python
 from app.repositories.match import MatchRepository
@@ -492,7 +486,7 @@ matches_count, unmatched = await create_matches_for_session(
 )
 ```
 
-### Отправка уведомлений
+### Sending Notifications
 
 ```python
 from app.repositories.match import MatchRepository
@@ -506,33 +500,33 @@ success = await notify_all_matches_for_session(
 )
 ```
 
-## Расширение функциональности
+## Extending Functionality
 
-### Добавление нового handler
+### Adding a new handler
 
-1. Создать файл в `app/bot/handlers/`
-2. Определить router и handlers
-3. Зарегистрировать router в `app/bot/__init__.py`
+1. Create a file in `app/bot/handlers/`
+2. Define router and handlers
+3. Register the router in `app/bot/__init__.py`
 
-### Добавление новой миграции
+### Adding a new migration
 
 ```bash
 alembic revision --autogenerate -m "add new field"
-# Проверить сгенерированную миграцию
+# Check the generated migration
 alembic upgrade head
 ```
 
-## Производительность
+## Performance
 
-### Оптимизации
+### Optimizations
 
-- Индексы на часто запрашиваемые поля
-- Connection pooling для БД
-- Retry логика для API вызовов
-- Асинхронная обработка всех операций
+- Indexes on frequently queried fields
+- Connection pooling for the database
+- Retry logic for API calls
+- Asynchronous processing of all operations
 
-### Масштабирование
+### Scaling
 
-- Горизонтальное масштабирование через несколько инстансов бота
-- Redis для разделения FSM состояния
-- PostgreSQL для надежного хранения данных
+- Horizontal scaling via multiple bot instances
+- Redis for shared FSM state
+- PostgreSQL for reliable data storage
