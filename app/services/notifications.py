@@ -6,6 +6,7 @@ from typing import Any
 from aiogram import Bot
 from aiogram.exceptions import TelegramAPIError, TelegramForbiddenError
 
+from app.bot.keyboards.inline import get_match_actions_keyboard
 from app.config import get_settings
 from app.constants import SEND_PERSONAL_NOTIFICATIONS
 from app.models.match import Match
@@ -117,6 +118,7 @@ async def _send_personal_notification(bot: Bot, user: User, match: Match) -> boo
             chat_id=user.telegram_id,
             text=message_text,
             parse_mode="HTML",
+            reply_markup=get_match_actions_keyboard(match.id),
         )
         logger.debug(f"Sent personal notification to user {user.id} for match {match.id}")
         return True

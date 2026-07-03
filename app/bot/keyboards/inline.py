@@ -17,6 +17,23 @@ def get_main_menu_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
+def get_match_actions_keyboard(match_id: int) -> InlineKeyboardMarkup:
+    """Get keyboard with actions for a matched user's personal notification."""
+    buttons = [
+        [
+            InlineKeyboardButton(
+                text="✅ Подтвердить встречу", callback_data=f"confirm_match:{match_id}"
+            ),
+        ],
+        [
+            InlineKeyboardButton(
+                text="⭐ Оставить отзыв", callback_data=f"start_feedback:{match_id}"
+            ),
+        ],
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
 def get_confirm_registration_keyboard() -> InlineKeyboardMarkup:
     """Get a confirmation keyboard for registration."""
     buttons = [
