@@ -47,10 +47,6 @@ class UserRepositoryProtocol(Protocol):
         """Mark the user as inactive."""
         ...
 
-    async def get_active_by_telegram_id(self, telegram_id: int) -> "User | None":
-        """Get an active user by Telegram ID."""
-        ...
-
 
 class SessionRepositoryProtocol(Protocol):
     """Protocol for Session repository."""
@@ -207,12 +203,6 @@ class TopicRepositoryProtocol(Protocol):
 
     async def get_active(self) -> "list[Topic]":
         """Get all active topics."""
-        ...
-
-    async def get_least_used_active_topics(
-        self, difficulty: str, limit: int = 10
-    ) -> "list[Topic]":
-        """Get least used active topics with difficulty."""
         ...
 
     async def increment_usage(self, topic_id: int) -> "Topic | None":

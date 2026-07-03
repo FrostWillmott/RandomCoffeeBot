@@ -89,20 +89,3 @@ class UserRepository(BaseRepository[User]):
         user.is_active = False
         await self.session.flush()
         return True
-
-    async def get_active_by_telegram_id(self, telegram_id: int) -> User | None:
-        """Get an active user by Telegram ID.
-
-        Args:
-            telegram_id: Telegram user ID
-
-        Returns:
-            Active user or None
-        """
-        result = await self.session.execute(
-            select(User).where(
-                User.telegram_id == telegram_id,
-                User.is_active.is_(True),
-            )
-        )
-        return result.scalar_one_or_none()  # type: ignore[no-any-return]
