@@ -32,6 +32,20 @@ class UserRepository(BaseRepository[User]):
         )
         return result.scalar_one_or_none()  # type: ignore[no-any-return]
 
+    async def get_by_ids(self, user_ids: list[int]) -> list[User]:
+        """Get users by their IDs using a single IN query.
+
+        Args:
+            user_ids: List of user IDs
+
+        Returns:
+            List of users (in no guaranteed order)
+        """
+        if not user_ids:
+            return []
+        result = await self.session.execute(select(User).where(User.id.in_(user_ids)))
+        return list(result.scalars().all())
+
     async def get_or_create(
         self,
         telegram_id: int,

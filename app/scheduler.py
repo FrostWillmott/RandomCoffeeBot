@@ -19,6 +19,7 @@ from app.constants import (
 from app.db.session import async_session_maker
 from app.models.enums import SessionStatus
 from app.repositories.match import MatchRepository
+from app.repositories.registration import RegistrationRepository
 from app.repositories.session import SessionRepository
 from app.repositories.user import UserRepository
 from app.services.announcements import post_session_announcement
@@ -126,17 +127,65 @@ async def match_and_notify(bot: Bot) -> None:
                 async with async_session_maker() as db_session:
                     match_repo = MatchRepository(db_session)
                     user_repo = UserRepository(db_session)
+                    session_repo = SessionRepository(db_session)
+                    reg_repo = RegistrationRepository(db_session)
                     success = await notify_all_matches_for_session(
                         bot,
                         result.session_id,
                         match_repo,
                         user_repo,
-                        result.unmatched_user_ids,
+                        session_repo,
+                        reg_repo,
                     )
+                    if success:
+                        await db_session.commit()
                 logger.info(f"Posted matches for session {result.session_id}: {success}")
 
     except Exception as e:
         logger.exception("Error in match_and_notify", exc_info=e)
+
+
+async def recover_unnotified_matched_sessions(bot: Bot) -> None:
+    """Recover matched sessions whose notifications were never sent.
+
+    Covers the gap between committing matches and sending notifications:
+    if the process crashes between, this recovery job picks up unmatched
+    MATCHED sessions.
+    """
+    try:
+        async with async_session_maker() as db_session:
+            session_repo = SessionRepository(db_session)
+            sessions = await session_repo.get_matched_not_notified_sessions()
+
+            if not sessions:
+                return
+
+            logger.info(f"Found {len(sessions)} unnotified matched session(s), retrying...")
+            for sess in sessions:
+                logger.info(f"Retrying notifications for session {sess.id}")
+                match_repo = MatchRepository(db_session)
+                user_repo = UserRepository(db_session)
+                reg_repo = RegistrationRepository(db_session)
+                success = await notify_all_matches_for_session(
+                    bot,
+                    sess.id,
+                    match_repo,
+                    user_repo,
+                    session_repo,
+                    reg_repo,
+                )
+                if success:
+                    await db_session.commit()
+                    logger.info(f"Recovered notifications for session {sess.id}")
+                else:
+                    logger.error(f"Still could not notify for session {sess.id}")
+
+    except SQLAlchemyError as e:
+        logger.exception(
+            "Database error in recover_unnotified_matched_sessions", exc_info=e
+        )
+    except Exception as e:
+        logger.exception("Error in recover_unnotified_matched_sessions", exc_info=e)
 
 
 def setup_scheduler(bot: Bot) -> AsyncIOScheduler:
@@ -176,6 +225,14 @@ def setup_scheduler(bot: Bot) -> AsyncIOScheduler:
         CronTrigger(minute=30, timezone="UTC"),
         args=[bot],
         id="recover_announcements",
+        replace_existing=True,
+    )
+
+    scheduler.add_job(
+        recover_unnotified_matched_sessions,
+        CronTrigger(minute=45, timezone="UTC"),
+        args=[bot],
+        id="recover_notifications",
         replace_existing=True,
     )
 

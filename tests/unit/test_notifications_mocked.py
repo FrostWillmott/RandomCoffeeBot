@@ -137,6 +137,15 @@ async def test_mark_user_inactive_user_not_found():
     mock_user_repo.mark_inactive.assert_called_once_with(user_id)
 
 
+def _make_mock_repos():
+    """Create standard mock repos for notification tests."""
+    mock_session_repo = AsyncMock()
+    mock_session_repo.get_by_id.return_value = MagicMock()
+    mock_reg_repo = AsyncMock()
+    mock_reg_repo.get_by_session_id_with_users.return_value = []
+    return mock_session_repo, mock_reg_repo
+
+
 @pytest.mark.asyncio
 async def test_notify_all_matches_for_session_success():
     """Test posting all matches to group successfully."""
@@ -159,12 +168,18 @@ async def test_notify_all_matches_for_session_success():
     mock_match_repo.get_by_session_id_with_relations.return_value = [match]
 
     mock_user_repo = AsyncMock()
+    mock_session_repo, mock_reg_repo = _make_mock_repos()
 
     mock_bot = AsyncMock()
     mock_bot.send_message = AsyncMock(return_value=MagicMock())
 
     result = await notify_all_matches_for_session(
-        mock_bot, session_id, mock_match_repo, mock_user_repo
+        mock_bot,
+        session_id,
+        mock_match_repo,
+        mock_user_repo,
+        mock_session_repo,
+        mock_reg_repo,
     )
 
     assert result is True
@@ -183,11 +198,17 @@ async def test_notify_all_matches_for_session_no_matches():
     mock_match_repo.get_by_session_id_with_relations.return_value = []
 
     mock_user_repo = AsyncMock()
+    mock_session_repo, mock_reg_repo = _make_mock_repos()
 
     mock_bot = AsyncMock()
 
     result = await notify_all_matches_for_session(
-        mock_bot, session_id, mock_match_repo, mock_user_repo
+        mock_bot,
+        session_id,
+        mock_match_repo,
+        mock_user_repo,
+        mock_session_repo,
+        mock_reg_repo,
     )
 
     assert result is False
@@ -196,7 +217,7 @@ async def test_notify_all_matches_for_session_no_matches():
 
 @pytest.mark.asyncio
 async def test_notify_all_matches_with_unmatched_users():
-    """Test notification includes unmatched users."""
+    """Test notification includes unmatched users computed from DB."""
     session_id = 6003
 
     user1 = User(id=1, telegram_id=1, username="user1", first_name="User1", is_active=True)  # nosec
@@ -223,16 +244,35 @@ async def test_notify_all_matches_with_unmatched_users():
     mock_match_repo.get_by_session_id_with_relations.return_value = [match]
 
     mock_user_repo = AsyncMock()
-    mock_user_repo.get_by_id.return_value = unmatched
+    mock_user_repo.get_by_ids.return_value = [unmatched]
+
+    mock_session_repo = AsyncMock()
+    mock_session_repo.get_by_id.return_value = MagicMock()
+    mock_reg_repo = AsyncMock()
+    # 3 users registered, 2 matched → 1 unmatched
+    from app.models.registration import Registration
+
+    mock_registrations = [
+        MagicMock(spec=Registration, user_id=1),
+        MagicMock(spec=Registration, user_id=2),
+        MagicMock(spec=Registration, user_id=3),
+    ]
+    mock_reg_repo.get_by_session_id_with_users.return_value = mock_registrations
 
     mock_bot = AsyncMock()
     mock_bot.send_message = AsyncMock(return_value=MagicMock())
 
     result = await notify_all_matches_for_session(
-        mock_bot, session_id, mock_match_repo, mock_user_repo, unmatched_user_ids=[3]
+        mock_bot,
+        session_id,
+        mock_match_repo,
+        mock_user_repo,
+        mock_session_repo,
+        mock_reg_repo,
     )
 
     assert result is True
+    assert mock_user_repo.get_by_ids.called
     assert mock_bot.send_message.call_count == 3
     group_call = mock_bot.send_message.call_args_list[0]
     message_text = group_call.kwargs["text"]

@@ -11,12 +11,14 @@ def test_scheduler_initialization(bot):
 
     assert scheduler is not None
     jobs = scheduler.get_jobs()
-    assert len(jobs) == 3
+    assert len(jobs) == 5
 
     job_ids = {job.id for job in jobs}
     assert "create_weekly_session" in job_ids
     assert "close_registrations" in job_ids
     assert "run_matching" in job_ids
+    assert "recover_announcements" in job_ids
+    assert "recover_notifications" in job_ids
 
 
 def test_scheduler_cron_trigger_configuration(bot):

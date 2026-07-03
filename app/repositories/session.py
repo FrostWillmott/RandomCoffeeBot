@@ -143,6 +143,18 @@ class SessionRepository(BaseRepository[Session]):
         )
         return result.scalar_one_or_none()  # type: ignore[no-any-return]
 
+    async def get_matched_not_notified_sessions(self) -> list[Session]:
+        """Get MATCHED sessions whose notifications have not been sent."""
+        result = await self.session.execute(
+            select(Session).where(
+                and_(
+                    Session.status == SessionStatus.MATCHED,
+                    Session.notifications_sent_at.is_(None),
+                )
+            )
+        )
+        return list(result.scalars().all())
+
     async def get_open_unannounced_sessions(self) -> list[Session]:
         """Get OPEN sessions whose announcement has not been posted.
 

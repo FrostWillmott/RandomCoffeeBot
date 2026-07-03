@@ -42,6 +42,9 @@ class Session(Base):
         index=True,
     )
     announcement_message_id: Mapped[int | None] = mapped_column(BigInteger)
+    notifications_sent_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(UTC),

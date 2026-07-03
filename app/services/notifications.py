@@ -1,6 +1,7 @@
 """Notification service for posting match results to a group."""
 
 import logging
+from datetime import UTC, datetime
 from typing import Any
 
 from aiogram import Bot
@@ -11,7 +12,12 @@ from app.config import get_settings
 from app.constants import SEND_PERSONAL_NOTIFICATIONS
 from app.models.match import Match
 from app.models.user import User
-from app.repositories.protocols import MatchRepositoryProtocol, UserRepositoryProtocol
+from app.repositories.protocols import (
+    MatchRepositoryProtocol,
+    RegistrationRepositoryProtocol,
+    SessionRepositoryProtocol,
+    UserRepositoryProtocol,
+)
 from app.utils.retry import retry_telegram_api
 
 logger = logging.getLogger(__name__)
@@ -147,16 +153,22 @@ async def notify_all_matches_for_session(
     session_id: int,
     match_repo: MatchRepositoryProtocol,
     user_repo: UserRepositoryProtocol,
-    unmatched_user_ids: list[int] | None = None,
+    session_repo: SessionRepositoryProtocol,
+    registration_repo: RegistrationRepositoryProtocol,
 ) -> bool:
     """Post all matches to the group as a single message.
+
+    Computes unmatched users from the database (registrations minus
+    matched participants) instead of relying on in-memory state. Marks
+    the session as notified on success via notifications_sent_at.
 
     Args:
         bot: Bot instance
         session_id: Session ID to notify about
         match_repo: Match repository (caller creates from db session).
         user_repo: User repository (caller creates from db session).
-        unmatched_user_ids: List of user IDs who weren't matched
+        session_repo: Session repository.
+        registration_repo: Registration repository.
 
     Returns:
         True if a message was sent successfully.
@@ -165,17 +177,24 @@ async def notify_all_matches_for_session(
     try:
         matches = await match_repo.get_by_session_id_with_relations(session_id)
 
-        unmatched_users: list[User] | None = None
-        if unmatched_user_ids:
-            unmatched_users = []
-            for user_id in unmatched_user_ids:
-                user = await user_repo.get_by_id(user_id)
-                if user:
-                    unmatched_users.append(user)
-
         if not matches:
             logger.warning(f"No matches found for session {session_id}")
             return False
+
+        # Compute unmatched users from DB: registrations minus matched participants.
+        registrations = await registration_repo.get_by_session_id_with_users(session_id)
+        all_registered_ids = {r.user_id for r in registrations}
+        matched_ids = set()
+        for m in matches:
+            matched_ids.add(m.user1_id)
+            matched_ids.add(m.user2_id)
+            if m.user3_id:
+                matched_ids.add(m.user3_id)
+        unmatched_ids = list(all_registered_ids - matched_ids)
+
+        unmatched_users: list[User] | None = None
+        if unmatched_ids:
+            unmatched_users = await user_repo.get_by_ids(unmatched_ids)
 
         message_text = _build_matches_message(matches, unmatched_users)
 
@@ -193,26 +212,10 @@ async def notify_all_matches_for_session(
             personal_failed = 0
 
             for match in matches:
-                if match.user1:
-                    if await _send_personal_notification(
-                        bot, match.user1, match, user_repo
-                    ):
-                        personal_sent += 1
-                    else:
-                        personal_failed += 1
-
-                if match.user2:
-                    if await _send_personal_notification(
-                        bot, match.user2, match, user_repo
-                    ):
-                        personal_sent += 1
-                    else:
-                        personal_failed += 1
-
-                if match.user3:
-                    if await _send_personal_notification(
-                        bot, match.user3, match, user_repo
-                    ):
+                for user_attr in (match.user1, match.user2, match.user3):
+                    if user_attr is None:
+                        continue
+                    if await _send_personal_notification(bot, user_attr, match, user_repo):
                         personal_sent += 1
                     else:
                         personal_failed += 1
@@ -221,6 +224,12 @@ async def notify_all_matches_for_session(
                 f"Sent {personal_sent} personal notifications for session {session_id}"
                 f" ({personal_failed} failed)"
             )
+
+        # Mark session as notified so recovery jobs can skip it.
+        session_obj = await session_repo.get_by_id(session_id)
+        if session_obj:
+            session_obj.notifications_sent_at = datetime.now(UTC)
+            await session_repo.update(session_obj)
 
         return True
 

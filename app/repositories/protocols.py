@@ -25,6 +25,10 @@ class UserRepositoryProtocol(Protocol):
         """Get user by Telegram ID."""
         ...
 
+    async def get_by_ids(self, user_ids: list[int]) -> "list[User]":
+        """Get users by their IDs using a single IN query."""
+        ...
+
     async def get_or_create(
         self,
         telegram_id: int,
@@ -87,6 +91,10 @@ class SessionRepositoryProtocol(Protocol):
 
     async def get_open_unannounced_sessions(self) -> "list[Session]":
         """Get OPEN sessions whose announcement has not been posted."""
+        ...
+
+    async def get_matched_not_notified_sessions(self) -> "list[Session]":
+        """Get MATCHED sessions whose notifications have not been sent."""
         ...
 
     async def create(self, entity: "Session") -> "Session":
