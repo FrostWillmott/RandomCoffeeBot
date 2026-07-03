@@ -61,13 +61,16 @@ class BaseRepository(Generic[ModelType]):
     async def update(self, entity: ModelType) -> ModelType:
         """Update existing entity.
 
+        Unlike create(), this does not call session.add() because the
+        entity is already attached to the session. Only flush and refresh
+        are needed to persist changes.
+
         Args:
-            entity: Entity to update
+            entity: Entity to update (must be already tracked by session)
 
         Returns:
             Updated entity
         """
-        self.session.add(entity)
         await self.session.flush()
         await self.session.refresh(entity)
         return entity
