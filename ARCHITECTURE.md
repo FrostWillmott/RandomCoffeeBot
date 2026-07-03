@@ -296,26 +296,32 @@ async def create_matches(session_id: int) -> tuple[int, list[int]]:
 
     matches = []
 
-    # 4. Greedy matching with duplicate avoidance
+    # 4. Handle odd-sized group: form a triplet from 3 users
+    if len(pool) % 2 == 1 and len(pool) >= 3:
+        u1, u2, u3 = pool[-3:]
+        pool = pool[:-3]
+        topic = select_topic_for_users(u1.user_id, u2.user_id, u3.user_id)
+        match = create_triple_match(u1, u2, u3, topic)
+        matches.append(match)
+
+    # 5. Greedy pair matching
     while len(pool) >= 2:
         u1 = pool.pop()
-
-        # Find a fresh partner
         partner = find_fresh_partner(u1, pool, past_matches)
 
         if partner:
-            # Create match
             topic = select_topic_for_users(u1.user_id, partner.user_id)
             match = create_match(u1, partner, topic)
             matches.append(match)
             pool.remove(partner)
         else:
-            # If all pairs have already met, create a match anyway
+            # If all remaining users have already met, pair anyway
             if len(pool) > 0:
                 partner = pool.pop()
+                topic = select_topic_for_users(u1.user_id, partner.user_id)
                 create_match(u1, partner, topic)
 
-    # 5. Return the result
+    # 6. Return the result
     unmatched = [u.user_id for u in pool]
     return len(matches), unmatched
 ```
@@ -346,30 +352,48 @@ LOG_FORMAT=text
 
 ### Schedule
 
+The schedule is configured via constants in `app/constants.py` (day of week, hour,
+minute offsets). The actual triggers are built in `setup_scheduler()` using
+`CronTrigger` with values from constants.
+
 ```python
-# Every Monday at 10:00 UTC — session creation + announcement
+# Weekly session creation + channel announcement
 scheduler.add_job(
     create_and_announce_session,
-    CronTrigger(day_of_week="mon", hour=10, minute=0, timezone="UTC"),
-    id="create_weekly_session"
+    CronTrigger(day_of_week=SESSION_CREATION_DAY, hour=SESSION_CREATION_HOUR,
+                minute=SESSION_CREATION_MINUTE, timezone="UTC"),
+    id="create_weekly_session",
 )
 
-# Every hour at :00 — closing expired registrations
+# Hourly — close registrations for expired sessions
 scheduler.add_job(
     close_registration_for_expired_sessions,
-    CronTrigger(minute=0, timezone="UTC"),
-    id="close_registrations"
+    CronTrigger(minute=REGISTRATION_CLOSE_CHECK_MINUTE, timezone="UTC"),
+    id="close_registrations",
 )
 
-# Every hour at :15 — matching + notifications (separated)
+# Hourly — run matching and send notifications
 scheduler.add_job(
     match_and_notify,
-    CronTrigger(minute=15, timezone="UTC"),
-    id="run_matching"
+    CronTrigger(minute=MATCHING_CHECK_MINUTE, timezone="UTC"),
+    id="run_matching",
 )
 ```
 
-The scheduler acts as an orchestrator: `match_and_notify` calls `run_matching_for_closed_sessions()` (pure data logic), and then sends notifications via `notify_all_matches_for_session()`. This allows the matching service to be independent of the Telegram API.
+The scheduler acts as an orchestrator: `match_and_notify` calls
+`run_matching_for_closed_sessions()` (pure data logic), and then sends
+notifications via `notify_all_matches_for_session()`. This keeps the matching
+service independent of the Telegram API.
+
+### Scaling note
+
+The bot uses long polling (`await dp.start_polling(bot)`), which means
+Telegram delivers updates to a single consumer. Running multiple bot instances
+with long polling **will not** horizontally scale message processing — one
+instance receives all updates. For multi-instance deployments, switch to
+webhooks behind a load balancer, and add a unique constraint on
+`Session.date` to prevent duplicate session creation by concurrent scheduler
+jobs.
 
 ## Security
 
@@ -403,7 +427,6 @@ The application uses structured logging for monitoring:
 
 - **JSON format** for production (easily parsed by logging systems)
 - **Text format** for development (convenient to read)
-- **Correlation IDs** for tracking requests
 - **Logging levels** (DEBUG, INFO, WARNING, ERROR)
 
 ### Heartbeat File
