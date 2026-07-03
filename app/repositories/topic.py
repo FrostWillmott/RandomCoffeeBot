@@ -1,6 +1,6 @@
 """Topic repository for data access."""
 
-from sqlalchemy import and_, select
+from sqlalchemy import and_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.topic import Topic
@@ -47,7 +47,10 @@ class TopicRepository(BaseRepository[Topic]):
         return list(result.scalars().all())
 
     async def increment_usage(self, topic_id: int) -> Topic | None:
-        """Increment usage count for a topic.
+        """Increment usage count for a topic atomically.
+
+        Uses a direct UPDATE to avoid the read-modify-write race.
+        Returns the topic after increment (or None if not found).
 
         Args:
             topic_id: Topic ID
@@ -55,9 +58,10 @@ class TopicRepository(BaseRepository[Topic]):
         Returns:
             Updated topic or None if not found
         """
-        topic = await self.get_by_id(topic_id)
-        if topic:
-            topic.times_used += 1
-            await self.session.flush()
-            await self.session.refresh(topic)
-        return topic  # type: ignore[no-any-return]
+        await self.session.execute(
+            update(Topic)
+            .where(Topic.id == topic_id)
+            .values(times_used=Topic.times_used + 1)
+        )
+        await self.session.flush()
+        return await self.get_by_id(topic_id)
