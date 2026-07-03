@@ -1,5 +1,6 @@
 """Throttling middleware to prevent spam."""
 
+import logging
 from collections.abc import Awaitable, Callable
 from typing import Any
 
@@ -56,12 +57,21 @@ class ThrottlingMiddleware(BaseMiddleware):
             return await handler(event, data)
 
         key = f"throttle:{kind}:{user.id}"
-        acquired = await self.redis.set(
-            key,
-            "1",
-            px=int(limit * 1000),
-            nx=True,
-        )
+        try:
+            acquired = await self.redis.set(
+                key,
+                "1",
+                px=int(limit * 1000),
+                nx=True,
+            )
+        except Exception:
+            # Redis is unavailable — fail open and let the event through.
+            logging.getLogger(__name__).warning(
+                "Throttling Redis unavailable, failing open for %s:%s",
+                kind,
+                user.id,
+            )
+            return await handler(event, data)
 
         if not acquired:
             # Drop the message silently; for callbacks, still answer() so

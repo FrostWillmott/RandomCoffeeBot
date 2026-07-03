@@ -75,7 +75,7 @@ The bot will automatically create weekly sessions, manage registrations, and mat
 - `/start` - Register for the next Random Coffee session
 - `/help` - Get information about how the bot works
 - `/status` - Check your registration status and upcoming matches
-- `/cancel` - Cancel your registration for the current session
+
 
 ### Automated Workflow
 
