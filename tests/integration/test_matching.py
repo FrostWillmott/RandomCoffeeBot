@@ -1,10 +1,12 @@
 """Integration tests for matching service."""
 
+import asyncio
 from datetime import UTC, datetime, timedelta
 
 import pytest
 from sqlalchemy import select
 
+from app.db.session import async_session_maker
 from app.models.enums import MatchStatus, SessionStatus
 from app.models.match import Match
 from app.models.registration import Registration
@@ -18,6 +20,7 @@ from app.repositories.topic import TopicRepository
 from app.services.matching import (
     create_matches_for_session,
     get_previous_matches,
+    run_matching_for_closed_sessions,
 )
 
 
@@ -201,3 +204,72 @@ async def test_get_previous_matches(db_session):
     past_matches = await get_previous_matches(match_repo, [u1.id, u2.id])
     expected_pair = tuple(sorted((u1.id, u2.id)))
     assert expected_pair in past_matches
+
+
+# --- Atomic claim tests ---
+
+
+@pytest.mark.asyncio
+async def test_claim_for_matching_single(db_session):
+    """Sequential claims: first succeeds, second fails (already MATCHING)."""
+    test_date = datetime.now(UTC) + timedelta(days=5)
+    test_session = await create_session(db_session, test_date)
+    # Session is already CLOSED from create_session helper
+
+    session_repo = SessionRepository(db_session)
+    # First claim — should succeed
+    claimed1 = await session_repo.claim_for_matching(test_session.id)
+    assert claimed1 is True
+
+    # Second claim — should fail (status is now MATCHING, not CLOSED)
+    claimed2 = await session_repo.claim_for_matching(test_session.id)
+    assert claimed2 is False
+
+
+@pytest.mark.asyncio
+async def test_claim_for_matching_concurrent(db_session):
+    """Two concurrent claims on same CLOSED session — exactly one wins."""
+    test_date = datetime.now(UTC) + timedelta(days=5)
+    test_session = await create_session(db_session, test_date)
+
+    async def try_claim() -> bool:
+        async with async_session_maker() as s:
+            repo = SessionRepository(s)
+            result = await repo.claim_for_matching(test_session.id)
+            await s.commit()
+            return result
+
+    results = await asyncio.gather(try_claim(), try_claim())
+    true_count = sum(1 for r in results if r is True)
+
+    assert true_count == 1, f"Expected exactly one True, got results: {results}"
+
+
+@pytest.mark.asyncio
+async def test_run_matching_for_closed_sessions_full_flow(db_session):
+    """End-to-end test: closed session with registrations gets matched."""
+    await create_topic(db_session)
+    test_date = datetime.now(UTC) + timedelta(days=5)
+    deadline = datetime.now(UTC) - timedelta(hours=1)
+    test_session = Session(
+        date=test_date,
+        registration_deadline=deadline,
+        status=SessionStatus.CLOSED,
+        created_at=datetime.now(UTC),
+    )
+    db_session.add(test_session)
+    await db_session.commit()
+    await db_session.refresh(test_session)
+
+    users = [await create_user(db_session, 800 + i, f"u{i}_full") for i in range(1, 5)]
+    await register_users(db_session, test_session.id, users)
+
+    results = await run_matching_for_closed_sessions()
+
+    assert len(results) == 1
+    assert results[0].session_id == test_session.id
+    assert results[0].matches_created == 2
+    assert len(results[0].unmatched_user_ids) == 0
+
+    await db_session.refresh(test_session)
+    assert test_session.status == SessionStatus.MATCHED
