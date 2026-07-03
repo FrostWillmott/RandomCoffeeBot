@@ -18,7 +18,7 @@ A Telegram bot that automatically organizes random coffee meetings between commu
 | State Storage | Redis (FSM persistence) |
 | Scheduling | APScheduler |
 | Migrations | Alembic |
-| Testing | pytest + pytest-asyncio, 81%+ coverage |
+| Testing | pytest + pytest-asyncio, comprehensive test coverage |
 | CI/CD | GitHub Actions, Docker, coverage badge (genbadge) |
 | Code Quality | ruff, mypy, pre-commit |
 

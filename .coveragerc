@@ -1,9 +1,6 @@
 [run]
 source = app
 omit =
-    */bot/*
-    */main.py
-    */scheduler.py
     */__pycache__/*
     */tests/*
 
