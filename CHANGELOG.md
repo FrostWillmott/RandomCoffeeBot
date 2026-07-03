@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comprehensive CLAUDE.md documentation for AI-assisted development
 - Integration test suite with factory fixtures and E2E test flows
 - GitHub Actions CI/CD workflow with PostgreSQL and Redis services
-- Coverage reporting with pytest-cov (81%+ coverage)
+- Coverage reporting with pytest-cov
 - Docker healthcheck system with heartbeat monitoring
 - Pre-commit hooks for code quality (ruff, mypy)
 - Triplet matching support for odd number of participants

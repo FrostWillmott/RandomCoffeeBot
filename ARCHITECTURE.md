@@ -474,7 +474,8 @@ pytest tests/unit/test_matching.py
 
 ### Coverage
 
-Minimum coverage: 80% (checked in CI)
+Coverage is tracked via the badge in README, generated from
+the full test suite (unit + integration) in CI.
 
 ## API Usage Examples
 

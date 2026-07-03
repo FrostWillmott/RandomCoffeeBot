@@ -11,18 +11,13 @@
 **Файлы:**
 - `test_announcements_mocked.py` - тесты для announcements service
 - `test_config.py` - тесты для конфигурации
-- `test_db_session.py` - тесты для работы с сессиями БД
-- `test_helpers_mocked.py` - тесты для helpers service
 - `test_matching_functions.py` - тесты для matching service
 - `test_notifications_mocked.py` - тесты для notifications service
 - `test_reactions_handler.py` - тесты для обработки реакций
 - `test_scheduler.py` - тесты для планировщика задач
 - `test_schemas_callbacks.py` - тесты для схем callback данных
 - `test_sessions_mocked.py` - тесты для sessions service
-- `test_utils_context.py` - тесты для утилит контекста
 - `test_utils_retry.py` - тесты для утилит retry логики
-
-**Итого:** ~82 unit-теста
 
 **Преимущества:**
 - Быстрые (не требуют БД)
@@ -35,11 +30,8 @@
 
 **Файлы:**
 - `test_e2e_flow.py` - end-to-end тесты полного потока регистрации и матчинга
-- `test_helpers.py` - интеграционные тесты для helpers service
-- `test_matching.py` - интеграционные тесты для matching алгоритма
+- `test_matching.py` - интеграционные тесты для matching алгоритма и atomic claim
 - `test_sessions.py` - интеграционные тесты для sessions service
-
-**Итого:** ~18 интеграционных тестов
 
 **Преимущества:**
 - Проверяют реальное поведение с БД
@@ -56,7 +48,9 @@
 - `test_notifications.py` - заменен на `test_notifications_mocked.py`
 - `test_sessions.py` - заменен на `test_sessions_mocked.py`
 - `test_announcements.py` - заменен на `test_announcements_mocked.py`
-- `test_helpers.py` - заменен на `test_helpers_mocked.py`
+- `test_helpers.py` / `test_helpers_mocked.py` - удалены вместе с `app/services/helpers.py`
+- `test_db_session.py` - удален вместе с `get_db()` из `app/db/session.py`
+- `test_utils_context.py` - удален вместе с `app/utils/context.py`
 - `test_matching_helpers.py` - функциональность покрыта в `test_matching.py`
 
 ## Запуск тестов
@@ -85,14 +79,13 @@ uv run pytest tests/unit/ --cov=app.services --cov=app.models --cov-report=term
 
 ## Покрытие
 
-Текущее покрытие: **81%+** (весь проект)
+Текущее покрытие: отслеживается бейджем в README (весь проект)
 
 - Models: 100%
-- Services: 73-85%
-  - announcements: 84%
-  - helpers: 100%
-  - sessions: 86%
-  - notifications: 78%
-  - matching: 73% (сложная логика, требует интеграционных тестов)
-- Repositories: 70-94%
-- Utils: 65-100%
+- Services:
+  - announcements: ~90%
+  - sessions: ~86%
+  - notifications: ~78%
+  - matching: ~48% (сложная логика, основные сценарии покрыты интеграционными тестами)
+- Repositories: 35-100%
+- Utils: 93-100%
