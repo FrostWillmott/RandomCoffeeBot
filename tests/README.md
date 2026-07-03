@@ -82,22 +82,18 @@ uv run pytest tests/ --cov=app --cov-report=html
 ```
 tests/
 ├── conftest.py                    # Configuration and fixtures
-├── unit/                          # Unit tests (~82 tests)
+├── unit/                          # Unit tests
 │   ├── test_announcements_mocked.py
 │   ├── test_config.py
-│   ├── test_db_session.py
-│   ├── test_helpers_mocked.py
 │   ├── test_matching_functions.py
 │   ├── test_notifications_mocked.py
 │   ├── test_reactions_handler.py
 │   ├── test_scheduler.py
 │   ├── test_schemas_callbacks.py
 │   ├── test_sessions_mocked.py
-│   ├── test_utils_context.py
 │   └── test_utils_retry.py
-└── integration/                   # Integration tests (~18 tests)
+└── integration/                   # Integration tests
     ├── test_e2e_flow.py
-    ├── test_helpers.py
     ├── test_matching.py
     └── test_sessions.py
 ```

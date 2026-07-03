@@ -93,7 +93,7 @@ The bot runs on a weekly schedule:
 - 🔔 Automatic notifications when matches are created
 - ⭐ Feedback system to improve future matches
 - 🐳 Docker-ready deployment
-- 🧪 Comprehensive test coverage (81%+)
+- 🧪 Comprehensive test coverage
 
 ## Documentation
 
@@ -208,7 +208,7 @@ pre-commit run --all-files
 
 ### Testing
 
-The project includes comprehensive test coverage (81%+):
+The project includes comprehensive test coverage:
 
 ```bash
 make test              # Run all tests (auto-manages test DB)
