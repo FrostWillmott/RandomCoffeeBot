@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import BigInteger, DateTime, Enum
+from sqlalchemy import BigInteger, DateTime, Enum, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -20,6 +20,7 @@ class Session(Base):
     """Random Coffee session (daily event)."""
 
     __tablename__ = "sessions"
+    __table_args__ = (UniqueConstraint("date", name="uq_session_date"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     date: Mapped[datetime] = mapped_column(

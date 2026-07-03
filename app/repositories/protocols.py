@@ -85,6 +85,10 @@ class SessionRepositoryProtocol(Protocol):
         """Get open session by announcement message ID."""
         ...
 
+    async def get_open_unannounced_sessions(self) -> "list[Session]":
+        """Get OPEN sessions whose announcement has not been posted."""
+        ...
+
     async def create(self, entity: "Session") -> "Session":
         """Create a new session."""
         ...

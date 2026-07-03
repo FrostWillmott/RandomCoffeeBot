@@ -143,6 +143,21 @@ class SessionRepository(BaseRepository[Session]):
         )
         return result.scalar_one_or_none()  # type: ignore[no-any-return]
 
+    async def get_open_unannounced_sessions(self) -> list[Session]:
+        """Get OPEN sessions whose announcement has not been posted.
+
+        Returns sessions with status OPEN and announcement_message_id IS NULL.
+        """
+        result = await self.session.execute(
+            select(Session).where(
+                and_(
+                    Session.status == SessionStatus.OPEN,
+                    Session.announcement_message_id.is_(None),
+                )
+            )
+        )
+        return list(result.scalars().all())
+
     async def get_open_session_by_announcement(self, message_id: int) -> Session | None:
         """Get open session by announcement message ID.
 

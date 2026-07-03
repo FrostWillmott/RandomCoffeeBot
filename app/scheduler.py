@@ -33,7 +33,13 @@ logger = logging.getLogger(__name__)
 
 
 async def create_and_announce_session(bot: Bot) -> None:
-    """Create a new session and post an announcement to the channel."""
+    """Create a new session and post an announcement to the channel.
+
+    The session is committed BEFORE the announcement attempt so that
+    a failed announcement does not lose the session. The session stays
+    OPEN with announcement_message_id = NULL and a recovery job picks
+    it up later.
+    """
     try:
         async with async_session_maker() as db_session:
             session_repo = SessionRepository(db_session)
@@ -48,19 +54,61 @@ async def create_and_announce_session(bot: Bot) -> None:
                 )
                 return
 
+            # Commit session first — don't lose it if announcement fails.
+            await db_session.commit()
+            logger.info(f"Session {session.id} created and committed")
+
+        # Post announcement in a separate DB session so failure
+        # cannot roll back the session creation.
+        async with async_session_maker() as db_session:
+            session_repo = SessionRepository(db_session)
             logger.info(f"Posting announcement for session {session.id}...")
             success = await post_session_announcement(bot, session, session_repo)
             if success:
                 await db_session.commit()
-                logger.info("Session created and announced successfully")
+                logger.info(f"Session {session.id} announced successfully")
             else:
-                await db_session.rollback()
-                logger.error("Failed to post announcement")
+                logger.error(
+                    f"Failed to post announcement for session {session.id} "
+                    f"— session exists but is unannounced"
+                )
 
     except SQLAlchemyError as e:
         logger.exception("Database error in create_and_announce_session", exc_info=e)
     except Exception as e:
         logger.exception("Error in create_and_announce_session", exc_info=e)
+
+
+async def recover_unannounced_sessions(bot: Bot) -> None:
+    """Recover sessions that were created but never announced.
+
+    Runs periodically to catch sessions where announcement failed
+    (e.g. Telegram was down, process crashed between create and announce).
+    """
+    try:
+        async with async_session_maker() as db_session:
+            session_repo = SessionRepository(db_session)
+            sessions = await session_repo.get_open_unannounced_sessions()
+
+            if not sessions:
+                return
+
+            logger.info(f"Found {len(sessions)} unannounced session(s), retrying...")
+            for sess in sessions:
+                logger.info(
+                    f"Retrying announcement for session {sess.id} (date: {sess.date})"
+                )
+                success = await post_session_announcement(bot, sess, session_repo)
+                if success:
+                    await db_session.commit()
+                    logger.info(f"Recovered announcement for session {sess.id}")
+                else:
+                    logger.error(f"Still could not announce session {sess.id}")
+
+    except SQLAlchemyError as e:
+        logger.exception("Database error in recover_unannounced_sessions", exc_info=e)
+    except Exception as e:
+        logger.exception("Error in recover_unannounced_sessions", exc_info=e)
 
 
 async def match_and_notify(bot: Bot) -> None:
@@ -120,6 +168,14 @@ def setup_scheduler(bot: Bot) -> AsyncIOScheduler:
         CronTrigger(minute=MATCHING_CHECK_MINUTE, timezone="UTC"),
         args=[bot],
         id="run_matching",
+        replace_existing=True,
+    )
+
+    scheduler.add_job(
+        recover_unannounced_sessions,
+        CronTrigger(minute=30, timezone="UTC"),
+        args=[bot],
+        id="recover_announcements",
         replace_existing=True,
     )
 
