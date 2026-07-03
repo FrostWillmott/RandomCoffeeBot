@@ -12,7 +12,6 @@ from app.models.registration import Registration
 from app.repositories.registration import RegistrationRepository
 from app.repositories.session import SessionRepository
 from app.repositories.user import UserRepository
-from app.services.users import get_or_create_user
 from app.utils.user_formatting import format_user_mention, get_username_required_message
 
 router = Router()
@@ -93,8 +92,8 @@ async def handle_registration_add(
         logger.info(f"User {telegram_user.id} tried to register without username")
         return
 
-    user = await get_or_create_user(
-        session=session,
+    user_repo = UserRepository(session)
+    user = await user_repo.get_or_create(
         telegram_id=telegram_user.id,
         username=telegram_user.username,
         first_name=telegram_user.first_name,

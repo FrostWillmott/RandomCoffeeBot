@@ -6,7 +6,6 @@ import pytest
 from aiogram.types import ReactionTypeEmoji
 
 from app.bot.handlers.reactions import (
-    get_or_create_user,
     handle_reaction,
     handle_registration_add,
     handle_registration_remove,
@@ -15,6 +14,7 @@ from app.bot.handlers.reactions import (
 from app.models.registration import Registration
 from app.models.session import Session
 from app.models.user import User
+from app.repositories.user import UserRepository
 
 
 class TestHasEmoji:
@@ -46,12 +46,11 @@ class TestHasEmoji:
 
 
 class TestGetOrCreateUser:
-    """Tests for get_or_create_user function."""
+    """Tests for UserRepository.get_or_create method."""
 
     @pytest.mark.asyncio
     async def test_get_existing_user(self):
-        """Test it getting existing user."""
-        mock_session = MagicMock()
+        """Test getting existing user."""
         existing_user = User(
             id=1,
             telegram_id=12345,
@@ -59,12 +58,14 @@ class TestGetOrCreateUser:
             first_name="Existing",  # nosec - test data
             is_active=True,
         )
+        mock_session = MagicMock()
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = existing_user
         mock_session.execute = AsyncMock(return_value=mock_result)
         mock_session.flush = AsyncMock()
 
-        user = await get_or_create_user(mock_session, 12345, "existing", "Existing", None)
+        user_repo = UserRepository(mock_session)
+        user = await user_repo.get_or_create(12345, "existing", "Existing", None)
 
         assert user == existing_user
         mock_session.add.assert_not_called()
@@ -79,7 +80,8 @@ class TestGetOrCreateUser:
         mock_session.flush = AsyncMock()
         mock_session.refresh = AsyncMock()
 
-        user = await get_or_create_user(mock_session, 12345, "newuser", "New", "User")
+        user_repo = UserRepository(mock_session)
+        user = await user_repo.get_or_create(12345, "newuser", "New", "User")
 
         assert user.telegram_id == 12345
         assert user.username == "newuser"
@@ -91,7 +93,6 @@ class TestGetOrCreateUser:
     @pytest.mark.asyncio
     async def test_update_user_info(self):
         """Test updating user info when changed."""
-        mock_session = MagicMock()
         existing_user = User(
             id=1,
             telegram_id=12345,
@@ -99,12 +100,14 @@ class TestGetOrCreateUser:
             first_name="Old",  # nosec - test data
             is_active=True,
         )
+        mock_session = MagicMock()
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = existing_user
         mock_session.execute = AsyncMock(return_value=mock_result)
         mock_session.flush = AsyncMock()
 
-        user = await get_or_create_user(mock_session, 12345, "new_username", "New", "Last")
+        user_repo = UserRepository(mock_session)
+        user = await user_repo.get_or_create(12345, "new_username", "New", "Last")
 
         assert user.username == "new_username"
         assert user.first_name == "New"
@@ -179,7 +182,7 @@ class TestHandleRegistrationAdd:
         mock_telegram_user.first_name = "Test"
         mock_telegram_user.last_name = None
 
-        with patch("app.bot.handlers.reactions.get_or_create_user") as mock_get_or_create:
+        with patch.object(UserRepository, "get_or_create") as mock_get_or_create:
             mock_user = User(id=1, telegram_id=12345, username="testuser", is_active=True)  # nosec
             mock_get_or_create.return_value = mock_user
 
@@ -209,7 +212,7 @@ class TestHandleRegistrationAdd:
         mock_telegram_user.first_name = "Test"
         mock_telegram_user.last_name = None
 
-        with patch("app.bot.handlers.reactions.get_or_create_user") as mock_get_or_create:
+        with patch.object(UserRepository, "get_or_create") as mock_get_or_create:
             mock_user = User(id=1, telegram_id=12345, username="testuser", is_active=True)  # nosec
             mock_get_or_create.return_value = mock_user
 

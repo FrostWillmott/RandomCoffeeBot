@@ -9,7 +9,7 @@ from aiogram.types import Message, ReplyKeyboardRemove
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot.keyboards import get_main_menu_keyboard
-from app.services.users import get_or_create_user
+from app.repositories.user import UserRepository
 
 router = Router()
 
@@ -23,8 +23,8 @@ async def cmd_start(message: Message, session: AsyncSession) -> None:
     if not message.from_user:
         return
 
-    user = await get_or_create_user(
-        session=session,
+    user_repo = UserRepository(session)
+    user = await user_repo.get_or_create(
         telegram_id=message.from_user.id,
         username=message.from_user.username,
         first_name=message.from_user.first_name,
