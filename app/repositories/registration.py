@@ -111,7 +111,7 @@ class RegistrationRepository(BaseRepository[Registration]):
             )
             .order_by(Session.date.desc())
         )
-        return list(result.all())  # type: ignore[return-value]
+        return list(result.all())  # type: ignore[arg-type]
 
     async def exists(self, session_id: int, user_id: int) -> bool:
         """Check if registration exists.

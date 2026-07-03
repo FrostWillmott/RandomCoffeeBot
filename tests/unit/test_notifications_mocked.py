@@ -211,8 +211,11 @@ async def test_notify_all_matches_for_session_no_matches():
         mock_reg_repo,
     )
 
-    assert result is False
+    assert result is True
     mock_bot.send_message.assert_not_called()
+    # Verify the session was marked as notified so the recovery job skips it.
+    session_obj = mock_session_repo.get_by_id.return_value
+    assert session_obj.notifications_sent_at is not None
 
 
 @pytest.mark.asyncio

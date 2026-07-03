@@ -74,15 +74,16 @@ class MatchRepository(BaseRepository[Match]):
             return set()
 
         # Get the IDs of the last N sessions for filtering.
-        from app.models.session import Session
-
-        recent_session_ids_subq = (
-            select(Session.id).order_by(Session.date.desc()).limit(max_sessions).subquery()
+        recent_session_ids = (
+            select(Session.id)
+            .order_by(Session.date.desc())
+            .limit(max_sessions)
+            .scalar_subquery()
         )
 
         result = await self.session.execute(
             select(Match.user1_id, Match.user2_id, Match.user3_id).where(
-                Match.session_id.in_(recent_session_ids_subq),
+                Match.session_id.in_(recent_session_ids),
                 or_(
                     Match.user1_id.in_(user_ids),
                     Match.user2_id.in_(user_ids),
@@ -140,7 +141,7 @@ class MatchRepository(BaseRepository[Match]):
             )
             .order_by(Session.date.desc())
         )
-        return list(result.all())  # type: ignore[return-value]
+        return list(result.all())  # type: ignore[arg-type]
 
     async def get_matches_for_user(self, user_id: int) -> list[Match]:
         """Get all matches for a user.

@@ -3,6 +3,7 @@
 import logging
 
 from aiogram import Router
+from aiogram.exceptions import TelegramAPIError
 from aiogram.types import MessageReactionUpdated, ReactionTypeEmoji
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -84,11 +85,20 @@ async def handle_registration_add(
     """
     if not telegram_user.username:
         user_mention = format_user_mention(telegram_user)
-        await reaction.bot.send_message(
-            chat_id=telegram_user.id,
-            text=get_username_required_message(user_mention),
-            parse_mode="HTML",
-        )
+        try:
+            await reaction.bot.send_message(
+                chat_id=telegram_user.id,
+                text=get_username_required_message(user_mention),
+                parse_mode="HTML",
+            )
+        except TelegramAPIError:
+            # User likely hasn't started a private chat with the bot;
+            # fall back to posting in the group where the reaction happened.
+            await reaction.bot.send_message(
+                chat_id=reaction.chat.id,
+                text=get_username_required_message(user_mention),
+                parse_mode="HTML",
+            )
         logger.info(f"User {telegram_user.id} tried to register without username")
         return
 

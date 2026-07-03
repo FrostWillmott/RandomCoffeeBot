@@ -178,7 +178,12 @@ async def notify_all_matches_for_session(
 
         if not matches:
             logger.warning(f"No matches found for session {session_id}")
-            return False
+            # Mark as notified so the recovery job does not retry forever.
+            session_obj = await session_repo.get_by_id(session_id)
+            if session_obj:
+                session_obj.notifications_sent_at = datetime.now(UTC)
+                await session_repo.update(session_obj)
+            return True
 
         # Compute unmatched users from DB: registrations minus matched participants.
         registrations = await registration_repo.get_by_session_id_with_users(session_id)
