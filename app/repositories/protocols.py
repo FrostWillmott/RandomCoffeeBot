@@ -127,6 +127,13 @@ class MatchRepositoryProtocol(Protocol):
         """Update existing match."""
         ...
 
+    async def get_active_matches_with_session(
+        self,
+        user_id: int,
+    ) -> "list[tuple[Match, Session]]":
+        """Get active matches with joined Session for a user."""
+        ...
+
 
 class RegistrationRepositoryProtocol(Protocol):
     """Protocol for Registration repository."""
@@ -159,6 +166,13 @@ class RegistrationRepositoryProtocol(Protocol):
 
     async def delete(self, entity: "Registration") -> None:
         """Delete registration."""
+        ...
+
+    async def get_active_registrations_with_session(
+        self,
+        user_id: int,
+    ) -> "list[tuple[Registration, Session]]":
+        """Get active registrations with joined Session for a user."""
         ...
 
 

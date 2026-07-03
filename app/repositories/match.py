@@ -4,7 +4,9 @@ from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.models.enums import MatchStatus
 from app.models.match import Match
+from app.models.session import Session
 from app.repositories.base import BaseRepository
 
 
@@ -102,6 +104,32 @@ class MatchRepository(BaseRepository[Match]):
         """
         result = await self.session.execute(select(Match).where(Match.topic_id == topic_id))
         return list(result.scalars().all())
+
+    async def get_active_matches_with_session(
+        self,
+        user_id: int,
+    ) -> list[tuple[Match, Session]]:
+        """Get active matches with joined Session for a user.
+
+        Returns matches with status CREATED or CONFIRMED where the user
+        participates, ordered by session date descending.
+        """
+        result = await self.session.execute(
+            select(Match, Session)
+            .join(Session)
+            .where(
+                and_(
+                    or_(
+                        Match.user1_id == user_id,
+                        Match.user2_id == user_id,
+                        Match.user3_id == user_id,
+                    ),
+                    Match.status.in_([MatchStatus.CREATED, MatchStatus.CONFIRMED]),
+                )
+            )
+            .order_by(Session.date.desc())
+        )
+        return list(result.all())  # type: ignore[return-value]
 
     async def get_matches_for_user(self, user_id: int) -> list[Match]:
         """Get all matches for a user.

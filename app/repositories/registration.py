@@ -4,7 +4,9 @@ from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.models.enums import SessionStatus
 from app.models.registration import Registration
+from app.models.session import Session
 from app.repositories.base import BaseRepository
 
 
@@ -84,6 +86,32 @@ class RegistrationRepository(BaseRepository[Registration]):
             select(Registration).where(Registration.user_id == user_id)
         )
         return list(result.scalars().all())
+
+    async def get_active_registrations_with_session(
+        self,
+        user_id: int,
+    ) -> list[tuple[Registration, Session]]:
+        """Get active registrations with joined Session for a user.
+
+        Returns registrations for sessions that are OPEN, CLOSED, or MATCHING,
+        ordered by session date descending.
+        """
+        result = await self.session.execute(
+            select(Registration, Session)
+            .join(Session)
+            .where(
+                and_(
+                    Registration.user_id == user_id,
+                    Session.status.in_([
+                        SessionStatus.OPEN,
+                        SessionStatus.CLOSED,
+                        SessionStatus.MATCHING,
+                    ]),
+                )
+            )
+            .order_by(Session.date.desc())
+        )
+        return list(result.all())  # type: ignore[return-value]
 
     async def exists(self, session_id: int, user_id: int) -> bool:
         """Check if registration exists.

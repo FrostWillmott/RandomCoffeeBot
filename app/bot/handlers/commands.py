@@ -5,15 +5,13 @@ from collections.abc import Sequence
 from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.types import CallbackQuery, Message
-from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot.keyboards import get_main_menu_keyboard
-from app.models.enums import MatchStatus, SessionStatus
-from app.models.match import Match
-from app.models.registration import Registration
-from app.models.session import Session
+from app.models.enums import MatchStatus
 from app.models.user import User
+from app.repositories.match import MatchRepository
+from app.repositories.registration import RegistrationRepository
 from app.repositories.user import UserRepository
 
 router = Router()
@@ -60,39 +58,10 @@ async def cmd_help(event: Message | CallbackQuery) -> None:
 
 async def _get_user_status_data(session: AsyncSession, user: User):
     """Retrieve active registrations and matches for a user."""
-    reg_stmt = (
-        select(Registration, Session)
-        .join(Session)
-        .where(
-            and_(
-                Registration.user_id == user.id,
-                Session.status.in_([
-                    SessionStatus.OPEN,
-                    SessionStatus.CLOSED,
-                    SessionStatus.MATCHING,
-                ]),
-            )
-        )
-        .order_by(Session.date.desc())
-    )
-    match_stmt = (
-        select(Match, Session)
-        .join(Session)
-        .where(
-            and_(
-                or_(
-                    Match.user1_id == user.id,
-                    Match.user2_id == user.id,
-                    Match.user3_id == user.id,
-                ),
-                Match.status.in_([MatchStatus.CREATED, MatchStatus.CONFIRMED]),
-            )
-        )
-        .order_by(Session.date.desc())
-    )
-
-    registrations = (await session.execute(reg_stmt)).all()
-    matches = (await session.execute(match_stmt)).all()
+    reg_repo = RegistrationRepository(session)
+    match_repo = MatchRepository(session)
+    registrations = await reg_repo.get_active_registrations_with_session(user.id)
+    matches = await match_repo.get_active_matches_with_session(user.id)
     return registrations, matches
 
 
