@@ -109,7 +109,12 @@ def _build_personal_notification_message(match: Match, user: User) -> str:
     return message
 
 
-async def _send_personal_notification(bot: Bot, user: User, match: Match) -> bool:
+async def _send_personal_notification(
+    bot: Bot,
+    user: User,
+    match: Match,
+    user_repo: UserRepositoryProtocol,
+) -> bool:
     """Send a personal notification to a user about their match."""
     try:
         message_text = _build_personal_notification_message(match, user)
@@ -127,6 +132,7 @@ async def _send_personal_notification(bot: Bot, user: User, match: Match) -> boo
             f"Could not send personal notification to user {user.id}: {e}. "
             f"User has not started a conversation with the bot."
         )
+        await mark_user_inactive(user.id, user_repo)
         return False
     except TelegramAPIError as e:
         logger.warning(
@@ -188,19 +194,25 @@ async def notify_all_matches_for_session(
 
             for match in matches:
                 if match.user1:
-                    if await _send_personal_notification(bot, match.user1, match):
+                    if await _send_personal_notification(
+                        bot, match.user1, match, user_repo
+                    ):
                         personal_sent += 1
                     else:
                         personal_failed += 1
 
                 if match.user2:
-                    if await _send_personal_notification(bot, match.user2, match):
+                    if await _send_personal_notification(
+                        bot, match.user2, match, user_repo
+                    ):
                         personal_sent += 1
                     else:
                         personal_failed += 1
 
                 if match.user3:
-                    if await _send_personal_notification(bot, match.user3, match):
+                    if await _send_personal_notification(
+                        bot, match.user3, match, user_repo
+                    ):
                         personal_sent += 1
                     else:
                         personal_failed += 1
