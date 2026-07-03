@@ -17,6 +17,7 @@ from tenacity import (
     stop_after_attempt,
     wait_exponential,
 )
+from tenacity.wait import wait_base
 
 logger = logging.getLogger(__name__)
 
@@ -28,13 +29,43 @@ RETRYABLE_ERRORS = (
 T = TypeVar("T")
 
 
+class _TelegramRetryWait(wait_base):
+    """Wait strategy that respects TelegramRetryAfter.retry_after.
+
+    When the exception is TelegramRetryAfter, uses the value Telegram
+    explicitly returned. Otherwise falls through to exponential backoff.
+    """
+
+    def __init__(
+        self,
+        multiplier: float = 1.0,
+        max_wait: float = 60.0,
+        exp_base: float = 2.0,
+    ):
+        self._fallback = wait_exponential(
+            multiplier=multiplier,
+            max=max_wait,
+            exp_base=exp_base,
+        )
+
+    def __call__(self, retry_state):
+        exc = retry_state.outcome.exception()
+        if isinstance(exc, TelegramRetryAfter) and exc.retry_after is not None:
+            # Clamp to a reasonable max to avoid extreme waits.
+            return min(float(exc.retry_after), 120.0)
+        return self._fallback(retry_state)
+
+
 def retry_telegram_api(
     max_attempts: int = 3,
     initial_wait: float = 1.0,
     max_wait: float = 60.0,
     exponential_base: float = 2.0,
 ) -> Callable[[Callable[..., T]], Callable[..., T]]:
-    """Decorator for retrying Telegram API calls with exponential backoff.
+    """Decorator for retrying Telegram API calls.
+
+    Uses TelegramRetryAfter.retry_after when available; falls back to
+    exponential backoff for other retryable errors.
 
     Args:
         max_attempts: Maximum number of retry attempts (default: 3)
@@ -48,9 +79,9 @@ def retry_telegram_api(
     retry_decorator = retry(
         retry=retry_if_exception_type(RETRYABLE_ERRORS),
         stop=stop_after_attempt(max_attempts),
-        wait=wait_exponential(
+        wait=_TelegramRetryWait(
             multiplier=initial_wait,
-            max=max_wait,
+            max_wait=max_wait,
             exp_base=exponential_base,
         ),
         reraise=True,

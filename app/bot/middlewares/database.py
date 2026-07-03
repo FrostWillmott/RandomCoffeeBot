@@ -24,7 +24,9 @@ class DatabaseMiddleware(BaseMiddleware):
             data["session"] = session
             try:
                 result = await handler(event, data)
-                await session.commit()
+                # Only commit if the handler actually modified something.
+                if session.new or session.dirty or session.deleted:
+                    await session.commit()
                 return result
             except SQLAlchemyError:
                 await session.rollback()

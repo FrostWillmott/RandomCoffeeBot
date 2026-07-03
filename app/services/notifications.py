@@ -9,7 +9,6 @@ from aiogram.exceptions import TelegramAPIError, TelegramForbiddenError
 
 from app.bot.keyboards.inline import get_match_actions_keyboard
 from app.config import get_settings
-from app.constants import SEND_PERSONAL_NOTIFICATIONS
 from app.models.match import Match
 from app.models.user import User
 from app.repositories.protocols import (
@@ -207,7 +206,7 @@ async def notify_all_matches_for_session(
 
         logger.info(f"Posted {len(matches)} matches to group for session {session_id}")
 
-        if SEND_PERSONAL_NOTIFICATIONS:
+        if settings.send_personal_notifications:
             personal_sent = 0
             personal_failed = 0
 

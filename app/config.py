@@ -48,6 +48,11 @@ class Settings(BaseSettings):
 
     redis_url: str = Field(default="redis://localhost:6379/0")
 
+    send_personal_notifications: bool = Field(
+        default=True,
+        description="Whether to send personal DMs to matched participants",
+    )
+
     healthcheck_heartbeat_file: str = Field(default="/tmp/healthy")
 
 

@@ -57,12 +57,15 @@ class MatchRepository(BaseRepository[Match]):
         return list(result.scalars().all())
 
     async def get_previous_matches_for_users(
-        self, user_ids: list[int]
+        self,
+        user_ids: list[int],
+        max_sessions: int = 10,
     ) -> set[tuple[int, int]]:
-        """Get all previous match pairs for given users.
+        """Get previous match pairs for given users, limited to recent sessions.
 
         Args:
             user_ids: List of user IDs
+            max_sessions: Only consider matches from the last N sessions
 
         Returns:
             Set of sorted user ID pairs (includes all pairs from triplets)
@@ -70,13 +73,21 @@ class MatchRepository(BaseRepository[Match]):
         if not user_ids:
             return set()
 
+        # Get the IDs of the last N sessions for filtering.
+        from app.models.session import Session
+
+        recent_session_ids_subq = (
+            select(Session.id).order_by(Session.date.desc()).limit(max_sessions).subquery()
+        )
+
         result = await self.session.execute(
             select(Match.user1_id, Match.user2_id, Match.user3_id).where(
+                Match.session_id.in_(recent_session_ids_subq),
                 or_(
                     Match.user1_id.in_(user_ids),
                     Match.user2_id.in_(user_ids),
                     Match.user3_id.in_(user_ids),
-                )
+                ),
             )
         )
 

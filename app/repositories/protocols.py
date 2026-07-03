@@ -122,9 +122,11 @@ class MatchRepositoryProtocol(Protocol):
         ...
 
     async def get_previous_matches_for_users(
-        self, user_ids: list[int]
+        self,
+        user_ids: list[int],
+        max_sessions: int = 10,
     ) -> set[tuple[int, int]]:
-        """Get all previous match pairs for given users."""
+        """Get previous match pairs for given users, limited to recent sessions."""
         ...
 
     async def get_topic_ids_used_by_users(self, *user_ids: int) -> set[int]:

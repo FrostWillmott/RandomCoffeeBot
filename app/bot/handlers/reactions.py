@@ -85,7 +85,7 @@ async def handle_registration_add(
     if not telegram_user.username:
         user_mention = format_user_mention(telegram_user)
         await reaction.bot.send_message(
-            chat_id=reaction.chat.id,
+            chat_id=telegram_user.id,
             text=get_username_required_message(user_mention),
             parse_mode="HTML",
         )
