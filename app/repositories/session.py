@@ -108,8 +108,10 @@ class SessionRepository(BaseRepository[Session]):
     async def claim_for_matching(self, session_id: int) -> bool:
         """Atomically transition session from CLOSED to MATCHING.
 
-        Uses an atomic UPDATE to prevent concurrent matching of the
-        same session. Only one caller will get rowcount > 0.
+        Uses UPDATE ... RETURNING to detect whether this caller won the
+        race.  RETURNING is more reliable than CursorResult.rowcount
+        with asyncpg when two transactions contend for the same row:
+        the winner gets a row back, the loser gets nothing.
 
         Args:
             session_id: Session ID to claim
@@ -126,8 +128,9 @@ class SessionRepository(BaseRepository[Session]):
                 )
             )
             .values(status=SessionStatus.MATCHING)
+            .returning(Session.id)
         )
-        return result.rowcount > 0  # type: ignore[attr-defined, no-any-return]
+        return result.scalar_one_or_none() is not None
 
     async def get_by_announcement_message_id(self, message_id: int) -> Session | None:
         """Get session by announcement message ID.
