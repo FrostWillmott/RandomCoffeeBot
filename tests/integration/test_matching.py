@@ -231,31 +231,23 @@ async def test_claim_for_matching_concurrent(db_engine):
     """Two concurrent claims on same CLOSED session — exactly one wins."""
     test_date = datetime.now(UTC) + timedelta(days=5)
 
-    # Create test data in a transaction that properly commits to the
-    # database so that the concurrent connections below can see it.
-    # (The db_session fixture wraps everything in a savepoint-based
-    # root transaction that is never committed — data created through
-    # it is invisible to separate connections.)
+    # Place test data in a committed transaction so the concurrent
+    # connections opened below can see it.  The db_session fixture
+    # never commits its root transaction, so we use db_engine.begin()
+    # which COMMITs on block exit.
     async with db_engine.begin() as conn:
         s = AsyncSession(bind=conn, expire_on_commit=False, autoflush=False)
-        new_session = Session(
-            date=test_date,
-            registration_deadline=test_date - timedelta(days=1),
-            status=SessionStatus.CLOSED,
-            created_at=datetime.now(UTC),
-        )
-        s.add(new_session)
-        await s.commit()
-        session_id = new_session.id
+        test_session = await create_session(s, test_date)
+        session_id = test_session.id
         await s.close()
 
     async def try_claim() -> bool:
-        async with db_engine.connect() as conn2:
-            s2 = AsyncSession(bind=conn2, expire_on_commit=False, autoflush=False)
-            repo = SessionRepository(s2)
+        async with db_engine.connect() as conn:
+            s = AsyncSession(bind=conn, expire_on_commit=False, autoflush=False)
+            repo = SessionRepository(s)
             result = await repo.claim_for_matching(session_id)
-            await s2.commit()
-            await s2.close()
+            await s.commit()
+            await s.close()
             return result
 
     results = await asyncio.gather(try_claim(), try_claim())
@@ -265,82 +257,40 @@ async def test_claim_for_matching_concurrent(db_engine):
 
 
 @pytest.mark.asyncio
-async def test_run_matching_for_closed_sessions_full_flow(db_engine):
+async def test_run_matching_for_closed_sessions_full_flow(db_engine, monkeypatch):
     """End-to-end test: closed session with registrations gets matched."""
     test_date = datetime.now(UTC) + timedelta(days=5)
     deadline = datetime.now(UTC) - timedelta(hours=1)
 
-    # Create all test data in a transaction that properly commits so
-    # that run_matching_for_closed_sessions (which opens its own
+    # Place test data in a committed transaction so that
+    # run_matching_for_closed_sessions (which opens its own
     # connection) can see it.
     async with db_engine.begin() as conn:
         s = AsyncSession(bind=conn, expire_on_commit=False, autoflush=False)
-
-        topic = Topic(
-            title="Test Topic",
-            description="Test description",
-            category="test",
-            difficulty="middle",
-            questions=["Q1", "Q2"],
-            resources=[],
-            is_active=True,
-        )
-        s.add(topic)
-        await s.commit()
-
-        test_session = Session(
-            date=test_date,
-            registration_deadline=deadline,
-            status=SessionStatus.CLOSED,
-            created_at=datetime.now(UTC),
-        )
-        s.add(test_session)
-        await s.commit()
+        await create_topic(s)
+        test_session = await create_session(s, test_date)
+        # create_session sets a deadline relative to the date; replace
+        # it with an already-expired one so the session is ready.
+        test_session.registration_deadline = deadline
         session_id = test_session.id
 
-        users = []
-        for i in range(1, 5):
-            user = User(
-                telegram_id=800 + i,
-                username=f"u{i}_full",
-                first_name=f"User u{i}_full",
-                is_active=True,
-            )
-            s.add(user)
-            await s.commit()
-            await s.refresh(user)
-            users.append(user)
-
-        for user in users:
-            s.add(Registration(user_id=user.id, session_id=session_id))
-        await s.commit()
-
+        users = [await create_user(s, 800 + i, f"u{i}_full") for i in range(1, 5)]
+        await register_users(s, session_id, users)
         await s.close()
 
-    # Use a session maker backed by the test engine so we don't hit
-    # event-loop mismatches from the app-level engine pool.
     test_maker = async_sessionmaker(
         db_engine, class_=AsyncSession, expire_on_commit=False, autoflush=False
     )
+    monkeypatch.setattr("app.services.matching.async_session_maker", test_maker)
 
-    import app.services.matching as matching_module
-
-    original = matching_module.async_session_maker
-    matching_module.async_session_maker = test_maker
-    try:
-        results = await run_matching_for_closed_sessions()
-    finally:
-        matching_module.async_session_maker = original
+    results = await run_matching_for_closed_sessions()
 
     assert len(results) == 1
     assert results[0].session_id == session_id
     assert results[0].matches_created == 2
     assert len(results[0].unmatched_user_ids) == 0
 
-    # Verify session status changed to MATCHED.
-    async with db_engine.connect() as conn:
-        s = AsyncSession(bind=conn, expire_on_commit=False, autoflush=False)
+    async with test_maker() as s:
         refreshed = await s.get(Session, session_id)
         assert refreshed is not None
         assert refreshed.status == SessionStatus.MATCHED
-        await s.close()

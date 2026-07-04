@@ -168,7 +168,7 @@ async def test_run_matching_returns_results():
             mock_query_result.scalars.return_value.all.return_value = [test_session]
 
             mock_update_result = MagicMock()
-            mock_update_result.rowcount = 1
+            mock_update_result.scalar_one_or_none.return_value = 1
 
             mock_session.execute = AsyncMock(
                 side_effect=[mock_query_result, mock_update_result]

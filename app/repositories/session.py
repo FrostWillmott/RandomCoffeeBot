@@ -108,10 +108,9 @@ class SessionRepository(BaseRepository[Session]):
     async def claim_for_matching(self, session_id: int) -> bool:
         """Atomically transition session from CLOSED to MATCHING.
 
-        Uses UPDATE ... RETURNING to detect whether this caller won the
-        race.  RETURNING is more reliable than CursorResult.rowcount
-        with asyncpg when two transactions contend for the same row:
-        the winner gets a row back, the loser gets nothing.
+        Uses UPDATE ... RETURNING so that exactly one caller in a
+        concurrent race gets a row back: the winner receives the
+        session id, the loser receives None.
 
         Args:
             session_id: Session ID to claim
