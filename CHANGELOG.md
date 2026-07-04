@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Performance indices for database queries (registrations, matches, sessions, topics)
 - Enhanced Dependabot configuration with labels, commit message formatting, and dependency grouping
 - SECURITY.md with vulnerability reporting process and security best practices
-- Comprehensive CLAUDE.md documentation for AI-assisted development
+- Comprehensive project documentation for AI-assisted development
 - Integration test suite with factory fixtures and E2E test flows
 - GitHub Actions CI/CD workflow with PostgreSQL and Redis services
 - Coverage reporting with pytest-cov

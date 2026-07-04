@@ -69,7 +69,6 @@ ignore_errors = true
 
 [[tool.mypy.overrides]]
 module = [
-    "app.services.helpers",
     "app.services.sessions",
     "app.utils.retry",
 ]

@@ -28,9 +28,9 @@ A Telegram bot that automatically organizes random coffee meetings between commu
 
 2. **Matching decoupled from notifications** — `run_matching_for_closed_sessions()` returns pure data (`SessionMatchResult`), and the scheduler orchestrates notification dispatch separately. This keeps the matching algorithm free of Telegram API dependencies, simplifying testing and future transport changes.
 
-3. **Atomic session claiming with `MATCHING` status** — before creating matches, a session transitions `CLOSED → MATCHING` via an atomic `UPDATE ... WHERE status = 'CLOSED'`. Only one worker gets `rowcount > 0`, preventing duplicate matches in concurrent environments without distributed locks.
+3. **Atomic session claiming with `MATCHING` status** — before creating matches, a session transitions `CLOSED → MATCHING` via `UPDATE ... RETURNING id WHERE status = 'CLOSED'`. Exactly one concurrent caller gets a row back, preventing duplicate matches without distributed locks.
 
-4. **Explicit session management** — services never create their own database sessions. The caller (handler middleware or scheduler entry point) owns the session lifecycle, giving full control over transaction boundaries and commit/rollback semantics.
+4. **Explicit session management** — domain services accept repository protocols instead of creating sessions. The caller (handler middleware or scheduler entry point) owns the session lifecycle. Top-level scheduler entry points (`run_matching_for_closed_sessions`, `close_registration_for_expired_sessions`) are the only places that create their own sessions — a deliberate exception to keep the scheduler orchestration self-contained.
 
 5. **Layered architecture** — Handlers → Services → Repositories → Models. Each layer depends only on abstractions of the layer below. Domain logic in services is framework-agnostic and sync-compatible by design.
 

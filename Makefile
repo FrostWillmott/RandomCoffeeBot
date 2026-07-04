@@ -149,7 +149,7 @@ test-coverage:
 
 test-db-up:
 	@docker compose -f docker-compose.test.yml up -d db-test
-	@echo "Test database started on port 5433"
+	@echo "Test database started on port 5434"
 
 test-db-down:
 	@docker compose -f docker-compose.test.yml down

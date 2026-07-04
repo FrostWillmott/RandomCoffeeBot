@@ -79,13 +79,5 @@ uv run pytest tests/unit/ --cov=app.services --cov=app.models --cov-report=term
 
 ## Покрытие
 
-Текущее покрытие: отслеживается бейджем в README (весь проект)
-
-- Models: 100%
-- Services:
-  - announcements: ~90%
-  - sessions: ~86%
-  - notifications: ~78%
-  - matching: ~48% (сложная логика, основные сценарии покрыты интеграционными тестами)
-- Repositories: 35-100%
-- Utils: 93-100%
+Текущее покрытие отслеживается бейджем в README (весь проект, unit + integration).
+Детальная статистика по модулям доступна через `pytest --cov=app --cov-report=term`.

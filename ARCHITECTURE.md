@@ -296,30 +296,29 @@ async def create_matches(session_id: int) -> tuple[int, list[int]]:
 
     matches = []
 
-    # 4. Handle odd-sized group: form a triplet from 3 users
+    # 4. Handle odd-sized group: form a triplet from the last 3 users.
+    #    All 6 permutations of the same 3 users produce identical pairs,
+    #    so there is no "best" ordering — just check for existing repeats
+    #    for logging purposes and create the triplet.
     if len(pool) % 2 == 1 and len(pool) >= 3:
-        u1, u2, u3 = pool[-3:]
-        pool = pool[:-3]
+        u1, u2, u3 = pool.pop(), pool.pop(), pool.pop()
         topic = select_topic_for_users(u1.user_id, u2.user_id, u3.user_id)
         match = create_triple_match(u1, u2, u3, topic)
         matches.append(match)
 
-    # 5. Greedy pair matching
+    # 5. Greedy pair matching: for each user, try to find a partner
+    #    they haven't met before. If all remaining candidates are
+    #    repeats, pair with the first available one.
     while len(pool) >= 2:
         u1 = pool.pop()
         partner = find_fresh_partner(u1, pool, past_matches)
+        if partner is None:
+            partner = pool[0]  # fallback: pair despite previous meeting
 
-        if partner:
-            topic = select_topic_for_users(u1.user_id, partner.user_id)
-            match = create_match(u1, partner, topic)
-            matches.append(match)
-            pool.remove(partner)
-        else:
-            # If all remaining users have already met, pair anyway
-            if len(pool) > 0:
-                partner = pool.pop()
-                topic = select_topic_for_users(u1.user_id, partner.user_id)
-                create_match(u1, partner, topic)
+        pool.remove(partner)
+        topic = select_topic_for_users(u1.user_id, partner.user_id)
+        match = create_match(u1, partner, topic)
+        matches.append(match)
 
     # 6. Return the result
     unmatched = [u.user_id for u in pool]
@@ -469,7 +468,7 @@ pytest
 pytest --cov=app --cov-report=html
 
 # Specific file
-pytest tests/unit/test_matching.py
+pytest tests/unit/test_matching_functions.py
 ```
 
 ### Coverage
@@ -551,6 +550,6 @@ alembic upgrade head
 
 ### Scaling
 
-- Horizontal scaling via multiple bot instances
+- Horizontal scaling via webhooks (see Scaling note above)
 - Redis for shared FSM state
 - PostgreSQL for reliable data storage
