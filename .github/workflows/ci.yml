@@ -47,67 +47,12 @@ jobs:
       - name: Run mypy
         run: uv run mypy app
 
-  unit-tests:
-    name: Unit Tests
+  tests:
+    name: Tests
     runs-on: ubuntu-latest
     needs: lint
     permissions:
       contents: write
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.12"
-
-      - name: Install uv
-        run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
-
-      - name: Cache dependencies
-        uses: actions/cache@v6
-        with:
-          path: |
-            ~/.cache/uv
-            .venv
-          key: ${{ runner.os }}-uv-${{ hashFiles('pyproject.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-uv-
-
-      - name: Install dependencies
-        run: uv sync --all-extras
-
-      - name: Run unit tests
-        env:
-          DEBUG: "true"
-          SECRET_KEY: "test-secret-key-for-ci"
-          TELEGRAM_BOT_TOKEN: "test:token"
-          CHANNEL_ID: "@test_channel"
-          REDIS_URL: "redis://localhost:6379/0"
-        run: |
-          uv run pytest tests/unit/ -v --cov=app --cov-report=xml --cov-report=term
-
-      - name: Generate coverage badge
-        if: >-
-          success() &&
-          (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
-        run: uv run genbadge coverage -i coverage.xml -o coverage.svg
-
-      - name: Push coverage badge
-        if: >-
-          success() &&
-          (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
-        uses: stefanzweifel/git-auto-commit-action@v7
-        with:
-          commit_message: "chore: update coverage badge"
-          file_pattern: coverage.svg
-
-  integration-tests:
-    name: Integration Tests
-    runs-on: ubuntu-latest
-    needs: unit-tests
 
     services:
       postgres:
@@ -179,7 +124,7 @@ jobs:
         run: |
           uv run alembic upgrade head
 
-      - name: Run integration tests
+      - name: Run tests
         env:
           TEST_DATABASE_HOST: localhost
           TEST_DATABASE_PORT: "5434"
@@ -192,7 +137,22 @@ jobs:
           CHANNEL_ID: "@test_channel"
           REDIS_URL: "redis://localhost:6379/0"
         run: |
-          uv run pytest tests/integration/ -v
+          uv run pytest tests/ -v --cov=app --cov-report=xml --cov-report=term --cov-fail-under=70
+
+      - name: Generate coverage badge
+        if: >-
+          success() &&
+          (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+        run: uv run genbadge coverage -i coverage.xml -o coverage.svg
+
+      - name: Push coverage badge
+        if: >-
+          success() &&
+          (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+        uses: stefanzweifel/git-auto-commit-action@v7
+        with:
+          commit_message: "chore: update coverage badge"
+          file_pattern: coverage.svg
 
   security:
     name: Security Scan
@@ -231,7 +191,7 @@ jobs:
   build:
     name: Build Docker Image
     runs-on: ubuntu-latest
-    needs: unit-tests
+    needs: tests
     if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
 
     steps:
