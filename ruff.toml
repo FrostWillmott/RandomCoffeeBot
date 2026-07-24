@@ -78,7 +78,7 @@ inline-quotes = "double"
 
 [lint.per-file-ignores]
 "__init__.py" = ["F401"]
-"tests/*" = ["D"]
+"tests/*" = ["D", "RUF001"]
 "conftest.py" = ["D", "E402"]
 "test_*.py" = ["D"]
 "app/models/*.py" = ["F821"]
