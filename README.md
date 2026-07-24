@@ -351,4 +351,4 @@ MIT
 2. Create a feature branch
 3. Make your changes
 4. Ensure all pre-commit checks pass
-5. Submit a merge request
+5. Submit a pull request
