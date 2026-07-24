@@ -144,7 +144,7 @@ test-coverage:
 	@echo "Starting test database..."
 	@docker compose -f docker-compose.test.yml up -d db-test
 	@sleep 3
-	@uv run pytest tests/ --cov=app --cov-report=html --cov-report=term --cov-fail-under=70
+	@uv run pytest tests/ --cov=app --cov-report=html --cov-report=term --cov-fail-under=80
 	@docker compose -f docker-compose.test.yml down
 
 test-db-up:
