@@ -33,7 +33,7 @@ class BaseRepository(Generic[ModelType]):
             Entity or None if not found
         """
         result = await self.session.get(self.model, entity_id)
-        return result  # type: ignore[no-any-return]
+        return result
 
     async def get_all(self) -> list[ModelType]:
         """Get all entities.

@@ -31,7 +31,7 @@ class SessionRepository(BaseRepository[Session]):
             Session or None if not found
         """
         result = await self.session.execute(select(Session).where(Session.date == date))
-        return result.scalar_one_or_none()  # type: ignore[no-any-return]
+        return result.scalar_one_or_none()
 
     async def get_next_open_session(self, current_time: datetime) -> Session | None:
         """Get next open session with future registration deadline.
@@ -51,7 +51,7 @@ class SessionRepository(BaseRepository[Session]):
             .order_by(Session.date)
             .limit(1)
         )
-        return result.scalars().first()  # type: ignore[no-any-return]
+        return result.scalars().first()
 
     async def get_sessions_by_status(self, status: SessionStatus) -> list[Session]:
         """Get all sessions with a specific status.
@@ -143,7 +143,7 @@ class SessionRepository(BaseRepository[Session]):
         result = await self.session.execute(
             select(Session).where(Session.announcement_message_id == message_id)
         )
-        return result.scalar_one_or_none()  # type: ignore[no-any-return]
+        return result.scalar_one_or_none()
 
     async def get_matched_not_notified_sessions(self) -> list[Session]:
         """Get MATCHED sessions whose notifications have not been sent."""
@@ -189,4 +189,4 @@ class SessionRepository(BaseRepository[Session]):
                 )
             )
         )
-        return result.scalar_one_or_none()  # type: ignore[no-any-return]
+        return result.scalar_one_or_none()

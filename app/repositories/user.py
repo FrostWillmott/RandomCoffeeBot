@@ -30,7 +30,7 @@ class UserRepository(BaseRepository[User]):
         result = await self.session.execute(
             select(User).where(User.telegram_id == telegram_id)
         )
-        return result.scalar_one_or_none()  # type: ignore[no-any-return]
+        return result.scalar_one_or_none()
 
     async def get_by_ids(self, user_ids: list[int]) -> list[User]:
         """Get users by their IDs using a single IN query.

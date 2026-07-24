@@ -9,6 +9,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot.keyboards import get_main_menu_keyboard
 from app.models.enums import MatchStatus
+from app.models.match import Match
+from app.models.registration import Registration
+from app.models.session import Session
 from app.models.user import User
 from app.repositories.match import MatchRepository
 from app.repositories.registration import RegistrationRepository
@@ -56,7 +59,9 @@ async def cmd_help(event: Message | CallbackQuery) -> None:
         await event.answer()
 
 
-async def _get_user_status_data(session: AsyncSession, user: User):
+async def _get_user_status_data(
+    session: AsyncSession, user: User
+) -> tuple[list[tuple[Registration, Session]], list[tuple[Match, Session]]]:
     """Retrieve active registrations and matches for a user."""
     reg_repo = RegistrationRepository(session)
     match_repo = MatchRepository(session)
@@ -65,7 +70,11 @@ async def _get_user_status_data(session: AsyncSession, user: User):
     return registrations, matches
 
 
-def _format_status_message(user: User, registrations: Sequence, matches: Sequence) -> str:
+def _format_status_message(
+    user: User,
+    registrations: Sequence[tuple[Registration, Session]],
+    matches: Sequence[tuple[Match, Session]],
+) -> str:
     """Construct the status text message."""
     text = f"ℹ️ <b>Ваш статус</b>\n\n👤 Имя: {user.first_name or 'Не указано'}\n\n"
 

@@ -4,8 +4,11 @@ import asyncio
 import logging
 import signal
 import sys
+from types import FrameType
 
 import aiofiles
+from aiogram import Bot, Dispatcher
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from app.bot import get_bot, get_dispatcher
 from app.bot.middlewares.throttling import ThrottlingMiddleware
@@ -24,7 +27,7 @@ shutdown_event = asyncio.Event()
 def setup_signal_handlers() -> None:
     """Set up signal handlers for graceful shutdown."""
 
-    def signal_handler(signum: int, _frame) -> None:
+    def signal_handler(signum: int, _frame: FrameType | None) -> None:
         logger.info(f"Received signal {signum}, initiating graceful shutdown...")
         shutdown_event.set()
 
@@ -33,14 +36,14 @@ def setup_signal_handlers() -> None:
 
 
 async def shutdown_services(
-    scheduler,
-    bot,
-    dp,
-    heartbeat_task,
+    scheduler: AsyncIOScheduler,
+    bot: Bot,
+    dp: Dispatcher,
+    heartbeat_task: asyncio.Task[None],
     throttling_mw: ThrottlingMiddleware,
-    polling_task=None,
-    polling_error=None,
-):
+    polling_task: asyncio.Task[None] | None = None,
+    polling_error: BaseException | None = None,
+) -> None:
     """Cleanly shut down all running services."""
     logger.info("Shutting down services...")
 
@@ -82,7 +85,7 @@ async def shutdown_services(
         sys.exit(1)
 
 
-async def main():
+async def main() -> None:
     """Main entry point."""
     setup_signal_handlers()
 
@@ -130,7 +133,7 @@ async def main():
         )
 
 
-async def run_heartbeat():
+async def run_heartbeat() -> None:
     """Update heartbeat file periodically."""
     from app.config import get_settings
 

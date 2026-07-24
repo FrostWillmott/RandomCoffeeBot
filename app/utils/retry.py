@@ -12,6 +12,7 @@ from aiogram.exceptions import (
     TelegramServerError,
 )
 from tenacity import (
+    RetryCallState,
     retry,
     retry_if_exception_type,
     stop_after_attempt,
@@ -48,8 +49,8 @@ class _TelegramRetryWait(wait_base):
             exp_base=exp_base,
         )
 
-    def __call__(self, retry_state):
-        exc = retry_state.outcome.exception()
+    def __call__(self, retry_state: RetryCallState) -> float:
+        exc = retry_state.outcome.exception() if retry_state.outcome else None
         if isinstance(exc, TelegramRetryAfter) and exc.retry_after is not None:
             # Clamp to a reasonable max to avoid extreme waits.
             return min(float(exc.retry_after), 120.0)

@@ -3,9 +3,7 @@
 import logging
 
 from aiogram import Bot
-from apscheduler.schedulers.asyncio import (
-    AsyncIOScheduler,  # type: ignore[import-untyped]
-)
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -249,7 +247,7 @@ def setup_scheduler(bot: Bot) -> AsyncIOScheduler:
     return scheduler
 
 
-async def start_scheduler(scheduler: AsyncIOScheduler):
+async def start_scheduler(scheduler: AsyncIOScheduler) -> None:
     """Start the scheduler."""
     try:
         scheduler.start()
@@ -259,7 +257,7 @@ async def start_scheduler(scheduler: AsyncIOScheduler):
         raise
 
 
-async def shutdown_scheduler(scheduler: AsyncIOScheduler):
+async def shutdown_scheduler(scheduler: AsyncIOScheduler) -> None:
     """Shutdown the scheduler gracefully."""
     try:
         if scheduler.running:

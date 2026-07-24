@@ -14,8 +14,13 @@ repos:
         args: [ --fix ]
       - id: ruff-format
 
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.7.1
+  # Local hook instead of mirrors-mypy: strict mode needs the real project
+  # dependencies (aiogram, sqlalchemy) that the isolated mirror env lacks.
+  - repo: local
     hooks:
       - id: mypy
-        additional_dependencies: [types-requests, types-aiofiles]
+        name: mypy
+        entry: uv run mypy app
+        language: system
+        types: [python]
+        pass_filenames: false

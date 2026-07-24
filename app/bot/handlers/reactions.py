@@ -4,12 +4,18 @@ import logging
 
 from aiogram import Router
 from aiogram.exceptions import TelegramAPIError
-from aiogram.types import MessageReactionUpdated, ReactionTypeEmoji
+from aiogram.types import (
+    MessageReactionUpdated,
+    ReactionTypeEmoji,
+    ReactionTypeUnion,
+    User,
+)
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.constants import REGISTRATION_EMOJI
 from app.models.registration import Registration
+from app.models.session import Session
 from app.repositories.registration import RegistrationRepository
 from app.repositories.session import SessionRepository
 from app.repositories.user import UserRepository
@@ -19,7 +25,7 @@ router = Router()
 logger = logging.getLogger(__name__)
 
 
-def has_emoji(reactions: list, emoji: str) -> bool:
+def has_emoji(reactions: list[ReactionTypeUnion], emoji: str) -> bool:
     """Check if the reactions list contains specific emoji.
 
     Args:
@@ -72,8 +78,8 @@ async def handle_reaction(reaction: MessageReactionUpdated, session: AsyncSessio
 async def handle_registration_add(
     session: AsyncSession,
     reaction: MessageReactionUpdated,
-    coffee_session,
-    telegram_user,
+    coffee_session: Session,
+    telegram_user: User,
 ) -> None:
     """Handle adding registration when a user adds thumbs up.
 
@@ -142,8 +148,8 @@ async def handle_registration_add(
 async def handle_registration_remove(
     session: AsyncSession,
     reaction: MessageReactionUpdated,
-    coffee_session,
-    telegram_user,
+    coffee_session: Session,
+    telegram_user: User,
 ) -> None:
     """Handle removing registration when the user removes thumbs up.
 

@@ -64,7 +64,7 @@ class FeedbackRepository(BaseRepository[Feedback]):
                 )
             )
         )
-        return result.scalar_one_or_none()  # type: ignore[no-any-return]
+        return result.scalar_one_or_none()
 
     async def exists(self, match_id: int, user_id: int) -> bool:
         """Check if feedback exists for match and user.

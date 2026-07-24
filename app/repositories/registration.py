@@ -41,7 +41,7 @@ class RegistrationRepository(BaseRepository[Registration]):
                 )
             )
         )
-        return result.scalar_one_or_none()  # type: ignore[no-any-return]
+        return result.scalar_one_or_none()
 
     async def get_by_session_id(self, session_id: int) -> list[Registration]:
         """Get all registrations for a session.
