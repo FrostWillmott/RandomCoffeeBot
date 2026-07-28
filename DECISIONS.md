@@ -26,4 +26,9 @@ Append-only log of non-obvious choices. Newest entries at the bottom.
   requires the repo to stay public. Needs `relative_files = true` in
   `.coveragerc`. Skipped the companion `workflow_run` workflow the docs
   suggest: it only buys comments on dependabot and fork PRs, where a coverage
-  diff is noise, and the action exits 0 without it.
+  diff is noise, and the action exits 0 without it. The README reads the
+  action's `endpoint.json` through shields.io rather than its `badge.svg`, so
+  the badge matches the other four and is served by an actual image CDN.
+  Known cost: the action appends a commit per master push to the data branch,
+  each carrying a full `htmlcov/` (~1.7 MB, not disableable). Squash the
+  branch with an orphan force-push if it ever gets heavy.
