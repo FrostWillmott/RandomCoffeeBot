@@ -1,5 +1,8 @@
 [run]
 source = app
+# python-coverage-comment-action reads .coverage directly and needs repo-relative
+# paths to map lines back to files in the checkout.
+relative_files = true
 omit =
     */__pycache__/*
     */tests/*
