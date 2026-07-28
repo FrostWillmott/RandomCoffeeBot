@@ -134,7 +134,6 @@ secrets/
 .ruff_cache/
 
 # AI Assistant personal configs
-CLAUDE.md
 .ai/
 
 # Snyk Security Extension - AI Rules (auto-generated)
