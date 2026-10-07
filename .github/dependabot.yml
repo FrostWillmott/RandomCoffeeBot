@@ -1,7 +1,7 @@
 version: 2
 updates:
   # Python dependencies
-  - package-ecosystem: "pip"
+  - package-ecosystem: "uv"
     directory: "/"
     schedule:
       interval: "monthly"
@@ -15,14 +15,26 @@ updates:
     commit-message:
       prefix: "chore"
       include: "scope"
+    # uv doesn't support `dependency-type` in groups, so dev tools are matched
+    # by name. A dependency joins the first group it matches, which leaves
+    # everything else (including python-json-logger, listed in both) to prod.
     groups:
-      production-dependencies:
-        dependency-type: "production"
+      development-dependencies:
+        patterns:
+          - "pytest*"
+          - "httpx"
+          - "pre-commit"
+          - "ruff"
+          - "mypy"
+          - "types-*"
+          - "aiosqlite"
+          - "pygments"
         update-types:
           - "minor"
           - "patch"
-      development-dependencies:
-        dependency-type: "development"
+      production-dependencies:
+        patterns:
+          - "*"
         update-types:
           - "minor"
           - "patch"
