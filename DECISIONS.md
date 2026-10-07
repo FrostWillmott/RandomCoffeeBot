@@ -40,3 +40,11 @@ Append-only log of non-obvious choices. Newest entries at the bottom.
   failing every master run on a missing login hid real failures. The plain
   build still catches a broken Dockerfile. Registry cache is used only when
   pushing, since writing it needs the login.
+
+- **2026-10-07 — Dependabot version updates use the `uv` ecosystem.** The
+  `pip` block never opened a PR in this repo's history; every Python bump came
+  from security updates. With `uv` it reads `uv.lock`. `uv` doesn't support
+  `dependency-type` in groups, so the dev group lists tool names in
+  `patterns` and comes first; everything else falls through to the prod
+  group's `"*"`, since a dependency joins the first group it matches. A new
+  dev tool must be added to that list, or its bumps land in the prod group.
