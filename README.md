@@ -99,8 +99,8 @@ The bot runs on a weekly schedule:
 
 - **[ARCHITECTURE.md](ARCHITECTURE.md)** - System architecture, data flows, and technical design
 - **[docs/MANUAL_TESTING.md](docs/MANUAL_TESTING.md)** - Complete testing guide for QA
+- **[docs/TESTING.md](docs/TESTING.md)** - Developer testing guide (test DB, structure, mocking)
 - **[docs/TOPICS_DESIGN.md](docs/TOPICS_DESIGN.md)** - Discussion topics system design
-- **[tests/README.md](tests/README.md)** - Developer testing guide
 - **[CHANGELOG.md](CHANGELOG.md)** - Version history and changes
 
 ## Requirements
@@ -220,7 +220,7 @@ Tests are organized into:
 - **Unit tests** (`tests/unit/`) - Fast tests with mocks
 - **Integration tests** (`tests/integration/`) - Tests with real database
 
-See [tests/README.md](tests/README.md) for more details.
+See [docs/TESTING.md](docs/TESTING.md) for more details.
 
 
 ## Project Structure
@@ -271,7 +271,6 @@ RandomCoffeeBot/
    ```bash
    cp .env.prod.example .env.prod
    # Edit .env.prod with production values:
-   # - Strong SECRET_KEY (generate with: openssl rand -hex 32)
    # - Production DATABASE_URL
    # - REDIS_URL
    # - DEBUG=False
@@ -306,40 +305,12 @@ RandomCoffeeBot/
 - `REDIS_URL` - Redis connection string for FSM storage
 
 **Optional:**
-- `SECRET_KEY` - Random secret for production (auto-generated if DEBUG=True)
 - `DEBUG` - Enable debug mode (default: False)
 - `LOG_LEVEL` - Logging level (default: INFO)
 - `LOG_FORMAT` - Log format: "json" or "text" (default: text)
 - `HEALTHCHECK_HEARTBEAT_FILE` - Health check file path (default: /tmp/healthy)
 
 See `.env.example` for full configuration options.
-
-## Security Best Practices
-
-### Environment & Secrets
-- ✅ Use strong, randomly generated `SECRET_KEY` in production
-- ✅ Never commit `.env` files to version control
-- ✅ Rotate credentials regularly
-- ✅ Use separate credentials for dev/staging/production
-
-### Database
-- ✅ Use strong passwords for PostgreSQL
-- ✅ Restrict database access to application containers only
-- ✅ Enable SSL/TLS for database connections in production
-- ✅ Regularly backup your database
-
-### Network & Docker
-- ✅ Use firewall rules to restrict access
-- ✅ Don't expose ports publicly (use `127.0.0.1:port:port`)
-- ✅ Use reverse proxy (nginx) in production
-- ✅ Scan images for vulnerabilities regularly
-- ✅ Keep base images up to date
-
-### Monitoring & Updates
-- ✅ Monitor logs for suspicious activity (`LOG_FORMAT=json` in production)
-- ✅ Set up alerting for errors and anomalies
-- ✅ Keep dependencies up to date
-- ✅ Review Dependabot alerts promptly
 
 ## License
 
