@@ -22,17 +22,11 @@ class Settings(BaseSettings):
         default="json",
         description="Log format: text for development, json for production",
     )
-    secret_key: str = Field(default="dev-secret-key-change-in-production")
 
     @model_validator(mode="after")
     def validate_production_settings(self) -> "Settings":
         """Ensure required settings are configured in production."""
         if not self.debug:
-            if (
-                not self.secret_key
-                or self.secret_key == "dev-secret-key-change-in-production"
-            ):
-                raise ValueError("SECRET_KEY must be set in production (DEBUG=false)")
             if not self.telegram_bot_token or not self.telegram_bot_token.strip():
                 raise ValueError("TELEGRAM_BOT_TOKEN must be set in production")
             if not self.channel_id or not self.channel_id.strip():
