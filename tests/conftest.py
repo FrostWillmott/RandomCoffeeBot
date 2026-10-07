@@ -20,7 +20,6 @@ TEST_DATABASE_URL = os.getenv(
 # Mock credentials for testing only (not real secrets)
 os.environ["DATABASE_URL"] = TEST_DATABASE_URL
 os.environ["DEBUG"] = "true"
-os.environ["SECRET_KEY"] = "test-secret-key-for-testing-only"  # nosec
 os.environ["TELEGRAM_BOT_TOKEN"] = "test:token"  # nosec
 os.environ["CHANNEL_ID"] = "@test_channel"
 os.environ["REDIS_URL"] = "redis://localhost:6379/0"

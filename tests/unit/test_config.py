@@ -12,7 +12,6 @@ def test_settings_defaults():
     assert hasattr(settings, "debug")
     assert hasattr(settings, "log_level")
     assert hasattr(settings, "log_format")
-    assert hasattr(settings, "secret_key")
     assert hasattr(settings, "telegram_bot_token")
     assert hasattr(settings, "database_url")
     assert hasattr(settings, "redis_url")
@@ -47,7 +46,7 @@ def test_settings_production_validation():
 
     settings = Settings()
 
-    assert settings.debug is False or settings.secret_key or settings.telegram_bot_token
+    assert settings.debug is False or settings.telegram_bot_token
 
     assert hasattr(Settings, "validate_production_settings")
 
