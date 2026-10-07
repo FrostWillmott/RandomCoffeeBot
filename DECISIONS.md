@@ -48,3 +48,9 @@ Append-only log of non-obvious choices. Newest entries at the bottom.
   `patterns` and comes first; everything else falls through to the prod
   group's `"*"`, since a dependency joins the first group it matches. A new
   dev tool must be added to that list, or its bumps land in the prod group.
+
+- **2026-10-07 — `ruff format` skips Markdown.** With `preview = true`,
+  ruff 0.16 also formats code blocks in `.md` files and mangles the
+  non-Python ones (`LOG_FORMAT=json` became `LOG_FORMAT = json`). Docs
+  snippets are illustrative, not code under test, so `[format] exclude`
+  lists `*.md` rather than dropping preview for the Python sources.

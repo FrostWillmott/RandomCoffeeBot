@@ -16,21 +16,35 @@ TOPICS = [
         "category": "core_python",
         "difficulty": "middle",
         "questions": [
-            "Объясните difference между классическим наследованием и композицией."
-            " Когда использовать каждый подход?",
-            "Как работает Method Resolution Order (MRO) в множественном наследовании?"
-            " Что такое алгоритм C3 linearization?",
-            "В чем разница между __new__ и __init__? Приведите примеры,"
-            " когда нужно переопределять __new__",
-            "Объясните принципы SOLID на конкретных примерах."
-            " Как они помогают в проектировании?",
-            "Что такое дескрипторы и как они используются в Python? Как работают property,"
-            " staticmethod, classmethod?",
-            "Объясните концепцию метаклассов. Когда их стоит использовать,"
-            " а когда это overkill?",
+            (
+                "Объясните difference между классическим наследованием и композицией."
+                " Когда использовать каждый подход?"
+            ),
+            (
+                "Как работает Method Resolution Order (MRO) в множественном наследовании?"
+                " Что такое алгоритм C3 linearization?"
+            ),
+            (
+                "В чем разница между __new__ и __init__? Приведите примеры,"
+                " когда нужно переопределять __new__"
+            ),
+            (
+                "Объясните принципы SOLID на конкретных примерах."
+                " Как они помогают в проектировании?"
+            ),
+            (
+                "Что такое дескрипторы и как они используются в Python?"
+                " Как работают property, staticmethod, classmethod?"
+            ),
+            (
+                "Объясните концепцию метаклассов. Когда их стоит использовать,"
+                " а когда это overkill?"
+            ),
             "Как работает поиск атрибутов в Python? Что происходит при вызове obj.attr?",
-            "В чем разница между абстрактными базовыми классами"
-            " и протоколами для обеспечения полиморфизма?",
+            (
+                "В чем разница между абстрактными базовыми классами"
+                " и протоколами для обеспечения полиморфизма?"
+            ),
         ],
         "resources": [
             "https://docs.python.org/3/reference/datamodel.html",
@@ -46,16 +60,22 @@ TOPICS = [
         "category": "core_python",
         "difficulty": "middle",
         "questions": [
-            "Объясните концепцию замыканий."
-            " Как они работают в Python"
-            " и какие проблемы могут возникнуть?",
+            (
+                "Объясните концепцию замыканий."
+                " Как они работают в Python"
+                " и какие проблемы могут возникнуть?"
+            ),
             "В чем разница между генератором и итератором? Когда использовать каждый?",
             "Как работают декораторы внутри? Что такое wraps и зачем он нужен?",
-            "Объясните lazy evaluation в Python."
-            " Где она используется и какие дает преимущества?",
+            (
+                "Объясните lazy evaluation в Python."
+                " Где она используется и какие дает преимущества?"
+            ),
             "Что такое comprehensions? Какие виды бывают и как они работают под капотом?",
-            "В чем разница между map/filter/reduce и list comprehensions?"
-            " Что быстрее и почему?",
+            (
+                "В чем разница между map/filter/reduce и list comprehensions?"
+                " Что быстрее и почему?"
+            ),
             "Как работает модуль functools? Объясните partial, singledispatch, lru_cache",
             "Что такое context manager и как его создать несколькими способами?",
         ],
@@ -73,16 +93,20 @@ TOPICS = [
         "category": "core_python",
         "difficulty": "middle",
         "questions": [
-            "Как Python управляет памятью? Объясните reference counting"
-            " и циклические ссылки",
+            (
+                "Как Python управляет памятью? Объясните reference counting"
+                " и циклические ссылки"
+            ),
             "Что такое GIL и почему он существует? Как влияет на многопоточность?",
             "Объясните работу garbage collector в Python. Что такое поколения объектов?",
             "В чем разница между CPython, PyPy, Jython? Какие есть альтернативы GIL?",
             "Как работают словари в Python? Почему lookup O(1) и что может это нарушить?",
             "Что такое interning в Python? Для каких объектов он применяется?",
             "Объясните difference между deep copy и shallow copy. Когда важно различие?",
-            "Как профилировать Python код?"
-            " Какие инструменты использовать для поиска bottleneck?",
+            (
+                "Как профилировать Python код?"
+                " Какие инструменты использовать для поиска bottleneck?"
+            ),
             "Что такое slots и когда их использовать? Какие ограничения они накладывают?",
         ],
         "resources": [
@@ -99,16 +123,22 @@ TOPICS = [
         "category": "core_python",
         "difficulty": "middle",
         "questions": [
-            "В чем преимущества статической типизации?"
-            " Как type hints влияют на производительность?",
+            (
+                "В чем преимущества статической типизации?"
+                " Как type hints влияют на производительность?"
+            ),
             "Объясните концепцию structural typing vs nominal typing в Python",
             "Как работают Generic типы? В чем разница между TypeVar, Generic, Protocol?",
-            "Что такое variance в типизации? Объясните covariance,"
-            " contravariance, invariance",
+            (
+                "Что такое variance в типизации? Объясните covariance,"
+                " contravariance, invariance"
+            ),
             "Как типизировать функции высшего порядка и декораторы?",
             "В чем разница между Optional[T] и Union[T, None]? Что лучше использовать?",
-            "Как настроить mypy для legacy проекта?"
-            " Какие стратегии постепенного внедрения?",
+            (
+                "Как настроить mypy для legacy проекта?"
+                " Какие стратегии постепенного внедрения?"
+            ),
             "Объясните концепцию Literal types и когда они полезны",
             "Что такое TypedDict и как он помогает с типизацией словарей?",
         ],
@@ -129,8 +159,10 @@ TOPICS = [
             "Объясните разницу между concurrency и parallelism. Что предоставляет asyncio?",
             "Как работает event loop? Что происходит под капотом при await?",
             "В чем разница между корутиной, задачей и future в asyncio?",
-            "Когда выбрать asyncio, threading или multiprocessing?"
-            " Приведите критерии выбора",
+            (
+                "Когда выбрать asyncio, threading или multiprocessing?"
+                " Приведите критерии выбора"
+            ),
             "Что такое back pressure и как с ним бороться в асинхронных системах?",
             "Объясните проблему function coloring в async/await. Есть ли решения?",
             "Как работает cooperative multitasking? В чем его преимущества и недостатки?",
@@ -152,8 +184,10 @@ TOPICS = [
         "difficulty": "middle",
         "questions": [
             "Объясните разницу между thread-safe и atomic операциями в Python",
-            "Какие проблемы решает модуль concurrent.futures?"
-            " ThreadPoolExecutor vs ProcessPoolExecutor",
+            (
+                "Какие проблемы решает модуль concurrent.futures?"
+                " ThreadPoolExecutor vs ProcessPoolExecutor"
+            ),
             "Что такое race condition? Как их предотвратить в Python?",
             "Объясните различные типы locks: Lock, RLock, Semaphore, Condition",
             "Что такое deadlock и как его избежать? Какие есть стратегии обнаружения?",
@@ -177,12 +211,16 @@ TOPICS = [
         "difficulty": "middle",
         "questions": [
             "Объясните жизненный цикл HTTP запроса от браузера до сервера и обратно",
-            "В чем разница между HTTP/1.1, HTTP/2 и HTTP/3?"
-            " Какие проблемы решает каждая версия?",
+            (
+                "В чем разница между HTTP/1.1, HTTP/2 и HTTP/3?"
+                " Какие проблемы решает каждая версия?"
+            ),
             "Как работает HTTPS? Что происходит во время TLS handshake?",
             "Объясните принципы REST. Что делает API RESTful?",
-            "Какие HTTP статус коды должен знать backend разработчик?"
-            " Когда использовать 4xx vs 5xx?",
+            (
+                "Какие HTTP статус коды должен знать backend разработчик?"
+                " Когда использовать 4xx vs 5xx?"
+            ),
             "Как работают HTTP заголовки? Объясните Cache-Control, ETag, Authorization",
             "Что такое CORS и почему он нужен? Как работают preflight запросы?",
             "Объясните различные методы аутентификации: Basic, Bearer, OAuth 2.0, JWT",
@@ -204,8 +242,10 @@ TOPICS = [
         "questions": [
             "Объясните основные угрозы из OWASP Top 10. Как защититься от каждой?",
             "В чем разница между аутентификацией и авторизацией? Как реализовать RBAC?",
-            "Как работает SQL injection?"
-            " Какие есть методы защиты кроме prepared statements?",
+            (
+                "Как работает SQL injection?"
+                " Какие есть методы защиты кроме prepared statements?"
+            ),
             "Что такое XSS атаки? В чем разница между reflected, stored и DOM-based XSS?",
             "Объясните CSRF атаки. Как CSRF токены защищают от них?",
             "Как безопасно хранить пароли? Что такое salt и почему bcrypt лучше MD5?",
@@ -231,8 +271,10 @@ TOPICS = [
             "Как организовать communication между микросервисами? Sync vs async подходы",
             "Что такое service discovery и зачем он нужен в микросервисах?",
             "Объясните паттерн Circuit Breaker. Как он помогает обеспечить resilience?",
-            "Что такое distributed transactions?"
-            " Объясните паттерны Saga и Two-Phase Commit",
+            (
+                "Что такое distributed transactions?"
+                " Объясните паттерны Saga и Two-Phase Commit"
+            ),
             "Как обеспечить data consistency в distributed системах? CAP theorem",
             "Что такое API Gateway и какие проблемы он решает?",
             "Объясните стратегии деплоя микросервисов: blue-green, canary, rolling updates",
@@ -253,10 +295,14 @@ TOPICS = [
         "difficulty": "middle",
         "questions": [
             "Объясните ACID свойства транзакций. Приведите примеры нарушения каждого",
-            "Что такое нормализация БД? Объясните 1NF, 2NF, 3NF, BCNF."
-            " Когда денормализовать?",
-            "Как работают индексы? B-tree vs Hash vs Bitmap индексы."
-            " Когда использовать каждый?",
+            (
+                "Что такое нормализация БД? Объясните 1NF, 2NF, 3NF, BCNF."
+                " Когда денормализовать?"
+            ),
+            (
+                "Как работают индексы? B-tree vs Hash vs Bitmap индексы."
+                " Когда использовать каждый?"
+            ),
             "В чем разница между clustered и non-clustered индексами?",
             "Объясните уровни изоляции транзакций. Какие проблемы решает каждый уровень?",
             "Что такое deadlock в базе данных? Как СУБД их обнаруживает и разрешает?",
@@ -355,8 +401,10 @@ TOPICS = [
             "Что такое infrastructure as code? Terraform vs Ansible vs CloudFormation",
             "Объясните различные deployment strategies: rolling, blue-green, canary",
             "Как организовать CI/CD pipeline? Какие стадии должны быть обязательно?",
-            "Что такое observability? Metrics, logs,"
-            " traces - как они дополняют друг друга?",
+            (
+                "Что такое observability? Metrics, logs,"
+                " traces - как они дополняют друг друга?"
+            ),
             "Объясните концепцию immutable infrastructure. В чем преимущества?",
             "Как обеспечить security в DevOps pipeline? DevSecOps practices",
             "Что такое chaos engineering и зачем он нужен?",
@@ -399,8 +447,10 @@ TOPICS = [
         "difficulty": "middle",
         "questions": [
             "Объясните принципы SOLID на конкретных примерах. Как они влияют на код?",
-            "Что такое Domain Driven Design? Объясните bounded context,"
-            " aggregates, entities",
+            (
+                "Что такое Domain Driven Design? Объясните bounded context,"
+                " aggregates, entities"
+            ),
             "Объясните Clean Architecture. Как организовать dependency direction?",
             "Что такое CQRS? Когда этот паттерн оправдан, а когда overengineering?",
             "Объясните Event Sourcing. В чем преимущества и сложности этого подхода?",
@@ -423,11 +473,15 @@ TOPICS = [
         "category": "algorithms",
         "difficulty": "middle",
         "questions": [
-            "Объясните Big O notation."
-            " Как анализировать время и пространственную сложность?",
+            (
+                "Объясните Big O notation."
+                " Как анализировать время и пространственную сложность?"
+            ),
             "В чем разница между worst-case, average-case, best-case complexity?",
-            "Объясните работу различных структур данных: array,"
-            " linked list, hash table, tree",
+            (
+                "Объясните работу различных структур данных: array,"
+                " linked list, hash table, tree"
+            ),
             "Как работают hash tables? Что такое collision resolution strategies?",
             "Объясните различные алгоритмы сортировки: их сложность и применимость",
             "Что такое balanced trees? B-trees, Red-Black trees, AVL trees",
@@ -451,8 +505,10 @@ TOPICS = [
         "questions": [
             "Как подойти к оптимизации производительности? Measure first principle",
             "Объясните различные виды bottlenecks: CPU, I/O, memory, network",
-            "Какие инструменты профилирования Python вы знаете?"
-            " cProfile, py-spy, line_profiler",
+            (
+                "Какие инструменты профилирования Python вы знаете?"
+                " cProfile, py-spy, line_profiler"
+            ),
             "Объясните стратегии кеширования: где, что и как долго кешировать?",
             "Что такое cache invalidation? Какие стратегии существуют?",
             "Как оптимизировать работу с базой данных? Query optimization, indexing",
@@ -474,12 +530,16 @@ TOPICS = [
         "category": "system_design",
         "difficulty": "middle",
         "questions": [
-            "Как спроектировать систему для миллионов пользователей?"
-            " Horizontal vs vertical scaling",
+            (
+                "Как спроектировать систему для миллионов пользователей?"
+                " Horizontal vs vertical scaling"
+            ),
             "Объясните CAP theorem на практических примерах разных систем",
             "Что такое consistent hashing? Как он помогает в distributed systems?",
-            "Объясните различные стратегии load balancing: round-robin,"
-            " least connections, etc",
+            (
+                "Объясните различные стратегии load balancing: round-robin,"
+                " least connections, etc"
+            ),
             "Как обеспечить high availability? Fault tolerance patterns",
             "Что такое data partitioning/sharding? Какие стратегии существуют?",
             "Объясните eventual consistency vs strong consistency. Trade-offs",

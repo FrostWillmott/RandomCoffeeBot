@@ -90,6 +90,9 @@ inline-quotes = "double"
 "alembic/versions/*.py" = ["D415"]
 
 [format]
+# Preview mode in ruff 0.16 also formats code blocks inside Markdown and
+# rewrites non-Python snippets (env files, signatures with elisions).
+exclude = ["*.md"]
 preview = true
 quote-style = "double"
 indent-style = "space"
