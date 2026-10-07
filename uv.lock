@@ -1341,7 +1341,6 @@ dev = [
     { name = "pytest-cov" },
     { name = "ruff" },
     { name = "types-aiofiles" },
-    { name = "types-redis" },
 ]
 
 [package.dev-dependencies]
@@ -1352,6 +1351,7 @@ dev = [
     { name = "pytest-cov" },
     { name = "python-json-logger" },
     { name = "types-aiofiles" },
+    { name = "types-redis" },
 ]
 
 [package.metadata]
@@ -1376,7 +1376,6 @@ requires-dist = [
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0.45" },
     { name = "tenacity", specifier = ">=9.0.0" },
     { name = "types-aiofiles", marker = "extra == 'dev'", specifier = ">=25.1.0" },
-    { name = "types-redis", marker = "extra == 'dev'", specifier = ">=4.6.0.20241004" },
 ]
 provides-extras = ["dev"]
 
@@ -1388,6 +1387,7 @@ dev = [
     { name = "pytest-cov", specifier = ">=7.0.0" },
     { name = "python-json-logger", specifier = ">=4.0.0" },
     { name = "types-aiofiles", specifier = ">=25.1.0.20251011" },
+    { name = "types-redis", specifier = ">=4.6.0.20241004" },
 ]
 
 [[package]]
