@@ -1,7 +1,7 @@
 # Testing
 
-This guide covers how the test suite is structured, configured, and run. For the
-end-to-end QA walkthrough of the bot's features, see
+This guide covers how the test suite is structured, configured, and run. For a manual
+smoke check against a real bot and channel, see
 [docs/MANUAL_TESTING.md](MANUAL_TESTING.md).
 
 ## Test database configuration

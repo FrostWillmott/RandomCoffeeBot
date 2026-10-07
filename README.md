@@ -98,7 +98,7 @@ The bot runs on a weekly schedule:
 ## Documentation
 
 - **[ARCHITECTURE.md](ARCHITECTURE.md)** - System architecture, data flows, and technical design
-- **[docs/MANUAL_TESTING.md](docs/MANUAL_TESTING.md)** - Complete testing guide for QA
+- **[docs/MANUAL_TESTING.md](docs/MANUAL_TESTING.md)** - Manual smoke check against a real bot and channel
 - **[docs/TESTING.md](docs/TESTING.md)** - Developer testing guide (test DB, structure, mocking)
 - **[docs/TOPICS_DESIGN.md](docs/TOPICS_DESIGN.md)** - Discussion topics system design
 - **[CHANGELOG.md](CHANGELOG.md)** - Version history and changes
