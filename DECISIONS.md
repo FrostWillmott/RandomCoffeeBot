@@ -32,3 +32,11 @@ Append-only log of non-obvious choices. Newest entries at the bottom.
   Known cost: the action appends a commit per master push to the data branch,
   each carrying a full `htmlcov/` (~1.7 MB, not disableable). Squash the
   branch with an orphan force-push if it ever gets heavy.
+
+- **2026-10-07 — Docker image is pushed only when Docker Hub secrets exist.**
+  The `build` job on master logs in and pushes only if both `DOCKER_USERNAME`
+  and `DOCKER_PASSWORD` are set; otherwise it builds the production image
+  without pushing and leaves a notice. The repo has no such secrets yet, and
+  failing every master run on a missing login hid real failures. The plain
+  build still catches a broken Dockerfile. Registry cache is used only when
+  pushing, since writing it needs the login.

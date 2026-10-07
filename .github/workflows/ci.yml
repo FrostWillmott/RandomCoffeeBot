@@ -197,12 +197,30 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      # Without Docker Hub secrets the image is still built, just not pushed,
+      # so the job keeps checking that the Dockerfile builds.
+      - name: Check Docker Hub credentials
+        id: dockerhub
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+        run: |
+          if [ -n "$DOCKER_USERNAME" ] && [ -n "$DOCKER_PASSWORD" ] \
+            && [ "$GITHUB_REF" = "refs/heads/master" ]; then
+            echo "push=true" >> "$GITHUB_OUTPUT"
+            echo "image=$DOCKER_USERNAME/randomcoffeebot" >> "$GITHUB_OUTPUT"
+          else
+            echo "push=false" >> "$GITHUB_OUTPUT"
+            echo "image=randomcoffeebot" >> "$GITHUB_OUTPUT"
+            echo "::notice::Docker Hub secrets missing or not on master; image will not be pushed"
+          fi
+
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-        if: github.ref == 'refs/heads/master'
+        if: steps.dockerhub.outputs.push == 'true'
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
@@ -210,9 +228,9 @@ jobs:
           context: .
           file: ./docker/Dockerfile
           target: production
-          push: ${{ github.ref == 'refs/heads/master' }}
+          push: ${{ steps.dockerhub.outputs.push == 'true' }}
           tags: |
-            ${{ secrets.DOCKER_USERNAME }}/randomcoffeebot:${{ github.sha }}
-            ${{ secrets.DOCKER_USERNAME }}/randomcoffeebot:latest
-          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/randomcoffeebot:buildcache
-          cache-to: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/randomcoffeebot:buildcache,mode=max
+            ${{ steps.dockerhub.outputs.image }}:${{ github.sha }}
+            ${{ steps.dockerhub.outputs.image }}:latest
+          cache-from: ${{ steps.dockerhub.outputs.push == 'true' && format('type=registry,ref={0}:buildcache', steps.dockerhub.outputs.image) || '' }}
+          cache-to: ${{ steps.dockerhub.outputs.push == 'true' && format('type=registry,ref={0}:buildcache,mode=max', steps.dockerhub.outputs.image) || '' }}
