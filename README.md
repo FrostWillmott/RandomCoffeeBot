@@ -21,7 +21,7 @@
 | app/bot/states/\_\_init\_\_.py      |        3 |        0 |    100% |           |
 | app/bot/states/feedback.py          |        4 |        0 |    100% |           |
 | app/bot/states/registration.py      |        3 |        0 |    100% |           |
-| app/config.py                       |       29 |        6 |     79% |     31-39 |
+| app/config.py                       |       26 |        4 |     85% |     30-33 |
 | app/constants.py                    |        9 |        0 |    100% |           |
 | app/db/\_\_init\_\_.py              |        0 |        0 |    100% |           |
 | app/db/base.py                      |        2 |        0 |    100% |           |
@@ -58,7 +58,7 @@
 | app/utils/logging.py                |       13 |        0 |    100% |           |
 | app/utils/retry.py                  |       38 |        2 |     95% |   105-109 |
 | app/utils/user\_formatting.py       |       14 |        1 |     93% |        28 |
-| **TOTAL**                           | **1612** |  **166** | **90%** |           |
+| **TOTAL**                           | **1609** |  **164** | **90%** |           |
 
 
 ## Setup coverage badge
