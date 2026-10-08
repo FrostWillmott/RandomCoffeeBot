@@ -34,6 +34,10 @@ A Telegram bot that automatically organizes random coffee meetings between commu
 
 5. **Layered architecture** — Handlers → Services → Repositories → Models. Each layer depends only on abstractions of the layer below. Domain logic in services is framework-agnostic and sync-compatible by design.
 
+**How this was built.** Spec, ADRs and acceptance criteria are mine; implementation
+with Claude Code, every change reviewed by hand before commit. The agent configuration
+lives in [developer-os](https://github.com/FrostWillmott/developer-os).
+
 ## Quick Start
 
 Get the bot running in under 2 minutes:
